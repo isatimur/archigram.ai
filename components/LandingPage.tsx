@@ -62,7 +62,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
             </button>
-            <button className="px-8 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all">
+            <button 
+                onClick={onLaunch}
+                className="px-8 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all"
+            >
                 View Demo
             </button>
          </div>

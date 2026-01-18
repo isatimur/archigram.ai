@@ -263,13 +263,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             value={code}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-text resize-none outline-none whitespace-pre overflow-auto z-10 selection:bg-primary/30"
+            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-primary resize-none outline-none whitespace-pre overflow-auto z-10 selection:bg-primary/30 cursor-text"
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
             style={{ 
                 fontFamily: '"JetBrains Mono", monospace',
-                caretColor: 'var(--text)' 
+                caretColor: 'rgb(var(--primary))' // Explicit override to ensure it picks up CSS var
             }}
             />
         </div>

@@ -5,10 +5,10 @@ import DiagramPreview from './components/DiagramPreview.tsx';
 import AIChat from './components/AIChat.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
-import { INITIAL_CODE, STORAGE_KEY } from './constants.ts';
+import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
 import { ViewMode, DiagramTheme, AppView, Project } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
-import { CheckCircle2, Menu } from 'lucide-react';
+import { CheckCircle2, PanelLeftOpen } from 'lucide-react';
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -105,7 +105,7 @@ function App() {
             if (loadedProjects.length === 0) {
                 loadedProjects.push({
                     id: 'init-' + Date.now(),
-                    name: 'Swiirl System Flow',
+                    name: 'Uber System Flow',
                     code: INITIAL_CODE,
                     updatedAt: Date.now()
                 });
@@ -238,6 +238,10 @@ function App() {
       if (window.innerWidth >= 768) {
         setViewMode(ViewMode.Split);
       }
+      // On mobile/tablet, close sidebar to focus on new project
+      if (window.innerWidth < 1024) {
+          setIsSidebarOpen(false);
+      }
   };
 
   const handleSelectProject = (id: string) => {
@@ -247,22 +251,33 @@ function App() {
           setCode(project.code);
           setHistory([project.code]);
           setHistoryIndex(0);
+          
+          if (window.innerWidth < 768) {
+              setIsSidebarOpen(false);
+          }
       }
   };
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
+      e.preventDefault();
+      
       if (projects.length <= 1) {
-          alert("Cannot delete the last project.");
+          alert("Cannot delete the last project. Create a new one first.");
           return;
       }
       
-      if (confirm("Are you sure you want to delete this diagram?")) {
+      if (confirm("Are you sure you want to permanently delete this project?")) {
           const newProjects = projects.filter(p => p.id !== id);
           setProjects(newProjects);
           
+          // If we deleted the active project, switch to the first available
           if (activeProjectId === id) {
-              handleSelectProject(newProjects[0].id);
+              const nextProject = newProjects[0];
+              setActiveProjectId(nextProject.id);
+              setCode(nextProject.code);
+              setHistory([nextProject.code]);
+              setHistoryIndex(0);
           }
       }
   };
@@ -364,11 +379,18 @@ function App() {
     }
   };
 
+  // Launch from Landing Page with specific template
+  const handleLaunch = () => {
+      // If we are launching from landing, check if we have projects.
+      // If only default, we might want to ensure a cool demo is loaded.
+      setCurrentView('app');
+  };
+
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
   if (currentView === 'landing') {
-      return <LandingPage onLaunch={() => setCurrentView('app')} />;
+      return <LandingPage onLaunch={handleLaunch} />;
   }
 
   // Inject Theme Variables
@@ -393,23 +415,26 @@ function App() {
       <main className="flex-1 flex overflow-hidden relative">
         
         {isSidebarOpen && (
-            <div className="hidden md:block">
+            <div className="hidden md:block z-10 h-full relative">
                 <Sidebar 
                     projects={projects}
                     activeProjectId={activeProjectId}
                     onSelectProject={handleSelectProject}
                     onCreateProject={handleCreateProject}
                     onDeleteProject={handleDeleteProject}
+                    onClose={() => setIsSidebarOpen(false)}
                 />
             </div>
         )}
 
+        {/* Sidebar Expand Button (When closed) */}
         {!isSidebarOpen && (
              <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="absolute top-4 left-4 z-20 p-2 bg-surface hover:bg-surface-hover rounded-md text-text-muted hover:text-text border border-border shadow-md"
+                className="absolute top-4 left-4 z-20 p-2 bg-surface hover:bg-surface-hover rounded-md text-text-muted hover:text-text border border-border shadow-lg transition-all"
+                title="Open Projects"
              >
-                 <Menu className="w-4 h-4" />
+                 <PanelLeftOpen className="w-4 h-4" />
              </button>
         )}
 
@@ -417,7 +442,6 @@ function App() {
           <div className={`
             flex flex-col transition-all duration-300 ease-in-out border-r border-border
             ${viewMode === ViewMode.Split ? 'w-1/3' : 'w-full'}
-            ${!isSidebarOpen ? '' : ''}
           `}>
             <CodeEditor 
                 code={code} 

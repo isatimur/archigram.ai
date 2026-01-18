@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, Plus, Trash2, Clock, Box } from 'lucide-react';
+import { Folder, Plus, Trash2, Clock, Box, PanelLeftClose } from 'lucide-react';
 import { Project } from '../types.ts';
 
 interface SidebarProps {
@@ -8,6 +8,7 @@ interface SidebarProps {
   onSelectProject: (id: string) => void;
   onCreateProject: () => void;
   onDeleteProject: (id: string, e: React.MouseEvent) => void;
+  onClose: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -15,10 +16,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeProjectId,
   onSelectProject,
   onCreateProject,
-  onDeleteProject
+  onDeleteProject,
+  onClose
 }) => {
   return (
-    <div className="w-64 bg-background border-r border-border flex flex-col h-full shrink-0">
+    <div className="w-64 bg-background border-r border-border flex flex-col h-full shrink-0 transition-all duration-300">
       
       {/* Sidebar Header */}
       <div className="p-4 border-b border-border">
@@ -27,14 +29,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Folder className="w-3.5 h-3.5" />
                 Projects
             </span>
-            <span className="bg-surface text-text-muted px-1.5 py-0.5 rounded text-[10px] font-mono border border-border">
-                {projects.length}
-            </span>
+            <div className="flex items-center gap-2">
+                <span className="bg-surface text-text-muted px-1.5 py-0.5 rounded text-[10px] font-mono border border-border">
+                    {projects.length}
+                </span>
+                <button 
+                    onClick={onClose}
+                    className="text-text-muted hover:text-text p-1 hover:bg-surface-hover rounded transition-colors"
+                    title="Collapse Sidebar"
+                >
+                    <PanelLeftClose className="w-4 h-4" />
+                </button>
+            </div>
         </div>
         
         <button 
             onClick={onCreateProject}
-            className="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-text-muted hover:text-text border border-border py-2 rounded-lg text-xs font-medium transition-all group"
+            className="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-text-muted hover:text-text border border-border py-2 rounded-lg text-xs font-medium transition-all group shadow-sm"
         >
             <Plus className="w-3.5 h-3.5 text-primary group-hover:text-primary-hover" />
             New Diagram
@@ -60,22 +71,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                              <span className="truncate max-w-[140px]">{project.name}</span>
                          </div>
                          
-                         {projects.length > 1 && (
-                             <button
-                                onClick={(e) => onDeleteProject(project.id, e)}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 hover:text-red-500 rounded transition-all"
-                                title="Delete Project"
-                             >
-                                 <Trash2 className="w-3 h-3" />
-                             </button>
-                         )}
+                         <button
+                            onClick={(e) => onDeleteProject(project.id, e)}
+                            className={`p-1.5 rounded transition-all hover:bg-red-500/10 hover:text-red-500 text-text-muted z-10 ${
+                                projects.length > 1 ? '' : 'hidden'
+                            }`}
+                            title="Delete Project"
+                         >
+                             <Trash2 className="w-3.5 h-3.5" />
+                         </button>
                     </div>
                     
                     <div className="flex items-center gap-1 text-[10px] text-text-muted pl-5.5">
                         <Clock className="w-2.5 h-2.5" />
                         <span>{new Date(project.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                        <span>•</span>
-                        <span>{new Date(project.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     
                     {/* Active Indicator */}
@@ -89,8 +98,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       
       {/* User / Settings Placeholder */}
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border opacity-60">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-500 to-gray-700"></div>
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-500 to-gray-700 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">
+                AG
+            </div>
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-text">Pro Member</span>
                 <span className="text-[10px] text-text-muted">archigram.ai</span>

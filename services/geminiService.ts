@@ -45,7 +45,7 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string):
     throw new Error("No valid Mermaid code generated.");
 
   } catch (error) {
-    console.error("Gemini Generation Error:", error);
+    console.error("Gemini 3 Flash Generation Error:", error);
     throw error;
   }
 };
