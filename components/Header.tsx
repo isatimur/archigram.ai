@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutTemplate, Share2, Palette, FilePlus, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown } from 'lucide-react';
-import { ViewMode, DiagramTheme } from '../types';
-import { TEMPLATES } from '../constants';
+import { ViewMode, DiagramTheme } from '../types.ts';
+import { TEMPLATES } from '../constants.ts';
 
 interface HeaderProps {
   viewMode: ViewMode;

@@ -9,6 +9,7 @@ interface CodeEditorProps {
   canUndo: boolean;
   canRedo: boolean;
   error?: string | null;
+  selectionRequest?: { text: string; ts: number } | null;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -18,12 +19,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   onRedo, 
   canUndo, 
   canRedo,
-  error
+  error,
+  selectionRequest
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(true);
+  const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
 
   // Parse error line number
   const errorLine = useMemo(() => {
@@ -34,6 +37,48 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
     return null;
   }, [error]);
+
+  // Handle external selection request (Search and Jump)
+  useEffect(() => {
+    if (!selectionRequest || !code || !textareaRef.current) return;
+
+    // 1. Find the text in the code
+    const searchText = selectionRequest.text;
+    // Try exact match first
+    let index = code.indexOf(searchText);
+    
+    // Fallback: Try identifying simple node IDs or aliases if full text fails
+    if (index === -1) {
+         // This is a simple fallback for common Mermaid patterns
+         // e.g., if searching for "Sales Team" fails, try looking for just "Sales" if it's an alias? 
+         // For now, we stick to exact text which covers 90% of label clicks.
+    }
+
+    if (index !== -1) {
+        // 2. Focus and Select
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(index, index + searchText.length);
+
+        // 3. Scroll to view
+        const substring = code.substring(0, index);
+        const lineNum = substring.split('\n').length;
+        const lineHeight = 24; // 1.5rem line height
+        const editorHeight = textareaRef.current.clientHeight;
+        
+        // Center the line
+        const scrollTop = Math.max(0, (lineNum * lineHeight) - (editorHeight / 2));
+        
+        textareaRef.current.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        
+        // 4. Trigger visual highlight
+        setHighlightedLine(lineNum);
+        
+        // Clear highlight after animation
+        const timer = setTimeout(() => setHighlightedLine(null), 2000);
+        return () => clearTimeout(timer);
+    }
+  }, [selectionRequest, code]);
+
 
   // Sync scroll
   const handleScroll = () => {
@@ -167,11 +212,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             {Array.from({ length: lineCount }).map((_, i) => {
                 const lineNum = i + 1;
                 const isError = errorLine === lineNum;
+                const isHighlighted = highlightedLine === lineNum;
                 return (
                     <div 
                         key={i} 
                         className={`text-sm leading-6 pr-3 font-mono transition-colors duration-200 relative
-                            ${isError ? 'text-red-400 font-bold bg-red-900/20' : 'text-zinc-600'}
+                            ${isError ? 'text-red-400 font-bold bg-red-900/20' : ''}
+                            ${isHighlighted ? 'text-indigo-400 font-bold' : (!isError && 'text-zinc-600')}
                         `}
                     >
                         {isError && (
@@ -186,19 +233,31 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         {/* Code Area Container */}
         <div className="flex-1 relative overflow-hidden group bg-[#09090b]">
             
-            {/* Error Line Highlight Overlay */}
+            {/* 1. Highlight Overlay Layer (for Jump to definition) */}
+            {highlightedLine !== null && (
+                <div 
+                    className="absolute left-0 right-0 bg-indigo-500/20 border-t border-b border-indigo-500/30 pointer-events-none z-0 animate-fade-in"
+                    style={{ 
+                        top: `calc(1rem + ${(highlightedLine - 1) * 1.5}rem - ${textareaRef.current?.scrollTop || 0}px)`, 
+                        height: '1.5rem',
+                        transition: 'top 0s' // Immediate update during scroll
+                    }}
+                />
+            )}
+
+            {/* 2. Error Line Highlight Overlay */}
             {errorLine !== null && (
                 <div 
                     className="absolute left-0 right-0 bg-red-500/10 border-t border-b border-red-500/20 pointer-events-none z-0"
                     style={{ 
                         top: `calc(1rem + ${(errorLine - 1) * 1.5}rem - ${textareaRef.current?.scrollTop || 0}px)`, 
                         height: '1.5rem',
-                        transition: 'top 0.1s'
+                        transition: 'top 0s'
                     }}
                 />
             )}
 
-            {/* Syntax Highlight Layer */}
+            {/* 3. Syntax Highlight Layer */}
             <pre
             ref={preRef}
             className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden"
@@ -206,13 +265,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             dangerouslySetInnerHTML={{ __html: highlightCode(code) + '<br/>' }} 
             />
             
-            {/* Input Layer */}
+            {/* 4. Input Layer */}
             <textarea
             ref={textareaRef}
             value={code}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-white resize-none outline-none whitespace-pre overflow-auto z-10"
+            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-white resize-none outline-none whitespace-pre overflow-auto z-10 selection:bg-indigo-500/30"
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"

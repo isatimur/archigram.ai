@@ -1,8 +1,5 @@
 export const INITIAL_CODE = `sequenceDiagram
-    %% --- Configuration ---
     autonumber
-    
-    %% --- Participants Setup ---
     participant Sales as Sales Team
     participant Brand as Brand User
     participant Portal as app.swiirl.ai Portal
@@ -18,14 +15,12 @@ export const INITIAL_CODE = `sequenceDiagram
     participant Dashboard as Brand Dashboard
     participant Copilot as Swiirl AI Copilot
 
-    %% --- Phase 1: Setup ---
     Note over Sales,Brand: Phase 1: Initial Setup
     Sales->>Brand: Sign pilot agreement<br/>(5-10 conversations, 1 month)
     Brand->>Portal: Sign up on app.swiirl.ai
     Brand->>Tech: Create brand agent
     Brand->>Tech: Set up project<br/>(brief, goals, budget, demo)
     
-    %% --- Phase 2: Matching Process ---
     Note over Tech,Spreadsheet: Phase 2: Matching & Invitation
     Tech->>Spreadsheet: Match groups to project<br/>(through spreadsheet)
     Note right of Tech: Question: How do we see<br/>the matched groups?
@@ -36,11 +31,8 @@ export const INITIAL_CODE = `sequenceDiagram
     Tech->>Host: Send meeting invite<br/>(invite sent to meeting host)
     Kay->>Host: Nudge meeting host to accept
     
-    %% --- Phase 3: Onboarding ---
     Note over Host,Meeting: Phase 3: Host Onboarding
     Host->>Portal: Host onboards<br/>(confirms or declines participation)
-    
-    %% Logic for host decision
     alt Host Confirms
         Host->>Portal: Move invite to different days<br/>(within project time frame)
         Note right of Host: Host can add people to meetings<br/>(min 7 people, ideal 15, 45 min min)
@@ -49,17 +41,13 @@ export const INITIAL_CODE = `sequenceDiagram
         Note over Tech: Process ends for this host
     end
     
-    %% --- Phase 4: Meeting Execution ---
     Note over Tech,Agent: Phase 4: Meeting Execution
     Tech->>Tech: Monitor meeting start time
     Tech->>Meeting: Swiirl agent joins meeting
     Host->>Meeting: Host admits Swiirl agent
-    
-    %% Agent Interaction
     Agent->>Meeting: Swiirl brand agent does quick chat intro<br/>(who they are, purpose, what they want to learn,<br/>gratitude to the group)
     Agent->>Meeting: Swiirl agent participates lightly<br/>(answers questions, asks clarifying questions,<br/>educates, only as aligns with brand goals,<br/>3 questions max)
     
-    %% --- Phase 5: Processing ---
     Note over Meeting,Analyzer: Phase 5: Post-Meeting Processing
     Meeting->>Storage: Following meeting - audio/text captured<br/>and stored
     Storage->>Redactor: PII redacted
@@ -67,7 +55,6 @@ export const INITIAL_CODE = `sequenceDiagram
     Analyzer->>Dashboard: Initial report shows up in dashboard
     Note right of Dashboard: UX needed: Inform about what<br/>the report is based on before<br/>they can view it (maybe pop-up)
     
-    %% --- Phase 6: Reporting ---
     Note over Tech,Dashboard: Phase 6: Report Generation
     Tech->>Analyzer: Additional conversations added<br/>into dataset for report
     Analyzer->>Dashboard: Final report ready alert
@@ -87,7 +74,7 @@ Rules:
 7. Ensure the logic is sound for software architecture, cloud infrastructure, or business processes.
 `;
 
-export const STORAGE_KEY = 'archigraph_diagram_code';
+export const STORAGE_KEY = 'archigraph_diagram_v2';
 
 export const TEMPLATES: Record<string, string> = {
   "Cloud Architecture": `graph TB

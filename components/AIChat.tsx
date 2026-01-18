@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, RotateCcw, X, Bot, User, History as HistoryIcon, MessageSquare, Clock, ArrowRight, Copy } from 'lucide-react';
-import { generateDiagramCode } from '../services/geminiService';
-import { ChatMessage } from '../types';
+import { Sparkles, Send, Loader2, RotateCcw, X, Bot, User, History as HistoryIcon, MessageSquare, Clock, ArrowRight, Copy, RefreshCw } from 'lucide-react';
+import { generateDiagramCode } from '../services/geminiService.ts';
+import { ChatMessage } from '../types.ts';
 
 interface AIChatProps {
   currentCode: string;
@@ -39,7 +39,39 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
     if (activeTab === 'chat' && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isExpanded, activeTab]);
+  }, [messages, isExpanded, activeTab, isLoading]);
+
+  const processAIRequest = async (userPrompt: string) => {
+    setIsLoading(true);
+    setActiveTab('chat');
+
+    try {
+      const newCode = await generateDiagramCode(userPrompt, currentCode);
+      
+      const aiMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'model',
+        text: 'Diagram updated successfully.',
+        codeSnapshot: newCode,
+        timestamp: Date.now(),
+      };
+      
+      setMessages(prev => [...prev, aiMsg]);
+      onCodeUpdate(newCode);
+    } catch (error) {
+      const errorMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'model',
+        text: 'Failed to update diagram. Please try again.',
+        isError: true,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,36 +86,29 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
 
     setMessages(prev => [...prev, userMsg]);
     setPrompt('');
-    setIsLoading(true);
-    // Force switch to chat when sending
-    setActiveTab('chat');
+    
+    await processAIRequest(userMsg.text);
+  };
 
-    try {
-      const newCode = await generateDiagramCode(userMsg.text, currentCode);
-      
-      const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'model',
-        text: 'Diagram updated successfully.',
-        codeSnapshot: newCode,
-        timestamp: Date.now(),
-      };
-      
-      setMessages(prev => [...prev, aiMsg]);
-      onCodeUpdate(newCode);
-    } catch (error) {
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'model',
-        text: 'Failed to update diagram. Please try again.',
-        isError: true,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, errorMsg]);
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleRegenerate = async () => {
+    if (isLoading) return;
+
+    // Find the last user message to regenerate from
+    const reversedMessages = [...messages].reverse();
+    const lastUserMessage = reversedMessages.find(m => m.role === 'user');
+
+    if (!lastUserMessage) return;
+
+    // Optional: Remove the last AI message if it exists (to replace it)
+    setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.role === 'model') {
+            return prev.slice(0, -1);
+        }
+        return prev;
+    });
+
+    await processAIRequest(lastUserMessage.text);
   };
 
   const handleRestore = (code: string) => {
@@ -94,7 +119,6 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
 
   const handleCopyCode = (code: string) => {
       navigator.clipboard.writeText(code);
-      // Optional: Add a temporary checkmark or toast logic here if needed
   };
 
   const handleClearHistory = () => {
@@ -106,6 +130,10 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
 
   // Filter messages that have code snapshots for the history tab
   const historyItems = messages.filter(m => m.role === 'model' && m.codeSnapshot);
+
+  // Check if we should show regenerate button (last message is from AI)
+  const lastMessage = messages[messages.length - 1];
+  const canRegenerate = !isLoading && lastMessage?.role === 'model';
 
   if (!isExpanded) {
     return (
@@ -179,7 +207,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
                         </div>
                     )}
                     
-                    {messages.map((msg) => (
+                    {messages.map((msg, index) => (
                         <div 
                             key={msg.id} 
                             className={`flex flex-col gap-1 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
@@ -203,18 +231,29 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate }) => {
                         </div>
                     ))}
                     
+                    {/* Regenerate Button for last message */}
+                    {canRegenerate && (
+                        <div className="flex justify-start pl-2">
+                             <button 
+                                onClick={handleRegenerate}
+                                title="Regenerate response"
+                                className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-500 hover:text-indigo-400 transition-colors py-1.5 px-2.5 rounded-lg hover:bg-indigo-500/10"
+                             >
+                                <RefreshCw className="w-3 h-3" />
+                                Regenerate
+                             </button>
+                        </div>
+                    )}
+
                     {isLoading && (
-                        <div className="flex flex-col gap-1 max-w-[85%] mr-auto items-start animate-pulse">
-                             <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                        <div className="flex flex-col gap-2 max-w-[85%] mr-auto items-start animate-pulse">
+                             <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-indigo-400">
                                 <Bot className="w-3 h-3" />
-                                <span>Thinking</span>
+                                <span>AI Processing</span>
                             </div>
-                            <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl rounded-tl-sm text-zinc-500 text-sm">
-                                <div className="flex gap-1">
-                                    <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                    <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                    <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                                </div>
+                            <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl rounded-tl-sm text-zinc-400 text-sm flex items-center gap-3">
+                                <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                                <span>Generating Diagram...</span>
                             </div>
                         </div>
                     )}

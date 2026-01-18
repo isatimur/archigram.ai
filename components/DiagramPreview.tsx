@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { ZoomIn, ZoomOut, Maximize, AlertCircle, Move, RotateCcw, Box, MousePointer2 } from 'lucide-react';
-import { DiagramTheme } from '../types';
+import { DiagramTheme } from '../types.ts';
 
 interface DiagramPreviewProps {
   code: string;
   onError: (error: string | null) => void;
   theme: DiagramTheme;
+  onElementClick?: (text: string) => void;
 }
 
 interface TooltipData {
@@ -17,7 +18,7 @@ interface TooltipData {
   id?: string;
 }
 
-const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme }) => {
+const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, onElementClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>('');
   const [scale, setScale] = useState(1);
@@ -25,6 +26,10 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [isHoveringElement, setIsHoveringElement] = useState(false);
+  
+  // Track dragging to distinguish from clicking
+  const hasDragged = useRef(false);
 
   // Re-initialize mermaid when theme changes
   useEffect(() => {
@@ -73,11 +78,13 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
     setIsPanning(true);
     setStartPan({ x: e.clientX - position.x, y: e.clientY - position.y });
     setTooltip(null);
+    hasDragged.current = false;
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     // 1. Panning Handling
     if (isPanning) {
+      hasDragged.current = true;
       setPosition({
         x: e.clientX - startPan.x,
         y: e.clientY - startPan.y
@@ -91,6 +98,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
     const group = target.closest('.node, .actor, .messageText, .classTitle, .task, .cluster, .statediagram-state');
 
     if (group) {
+        setIsHoveringElement(true);
         // Try to find text content
         let content = '';
         let type = 'Element';
@@ -131,9 +139,43 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
             });
         } else {
             setTooltip(null);
+            setIsHoveringElement(false);
         }
     } else {
         setTooltip(null);
+        setIsHoveringElement(false);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasDragged.current || !onElementClick) return;
+
+    const target = e.target as Element;
+    const group = target.closest('.node, .actor, .messageText, .classTitle, .task, .cluster, .statediagram-state');
+
+    if (group) {
+        let content = '';
+        if (group.classList.contains('actor')) {
+            const textEl = group.querySelector('text');
+            content = textEl?.textContent || '';
+        } else if (group.classList.contains('node') || group.classList.contains('statediagram-state')) {
+            const div = group.querySelector('div');
+            const textEl = group.querySelector('text');
+            content = div?.textContent || textEl?.textContent || '';
+        } else if (group.classList.contains('messageText')) {
+            content = group.textContent || '';
+        } else if (group.classList.contains('task')) {
+            const textEl = group.querySelector('text');
+            content = textEl?.textContent || '';
+        } else if (group.classList.contains('cluster')) {
+            const textEl = group.querySelector('.cluster-label');
+            content = textEl?.textContent || '';
+        }
+
+        content = content.trim();
+        if (content) {
+            onElementClick(content);
+        }
     }
   };
 
@@ -141,6 +183,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
   const handleMouseLeave = () => {
       setIsPanning(false);
       setTooltip(null);
+      setIsHoveringElement(false);
   };
 
   const resetView = () => {
@@ -213,11 +256,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme })
 
       {/* Render Area */}
       <div 
-        className={`flex-1 overflow-hidden relative ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`flex-1 overflow-hidden relative ${isPanning ? 'cursor-grabbing' : isHoveringElement ? 'cursor-pointer' : 'cursor-grab'}`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
         <div 
             id="diagram-output-container"

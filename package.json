@@ -9,12 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.3",
-    "lucide-react": "^0.562.0",
-    "@google/genai": "^1.37.0",
     "react": "^19.2.3",
-    "mermaid": "^11.12.2",
-    "lz-string": "^1.5.0"
+    "react-dom": "^19.2.3",
+    "lucide-react": "0.469.0",
+    "@google/genai": "1.37.0",
+    "mermaid": "11.4.1",
+    "lz-string": "1.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

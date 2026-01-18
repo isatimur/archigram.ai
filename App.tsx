@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import CodeEditor from './components/CodeEditor';
-import DiagramPreview from './components/DiagramPreview';
-import AIChat from './components/AIChat';
-import { INITIAL_CODE, STORAGE_KEY } from './constants';
-import { ViewMode, DiagramTheme } from './types';
-import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url';
+import Header from './components/Header.tsx';
+import CodeEditor from './components/CodeEditor.tsx';
+import DiagramPreview from './components/DiagramPreview.tsx';
+import AIChat from './components/AIChat.tsx';
+import { INITIAL_CODE, STORAGE_KEY } from './constants.ts';
+import { ViewMode, DiagramTheme } from './types.ts';
+import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2 } from 'lucide-react';
 
 function App() {
@@ -17,6 +17,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<DiagramTheme>('dark');
   const [showToast, setShowToast] = useState(false);
+  
+  // State for navigating from diagram to code
+  const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
 
   // --- 2. Initialization & Effects ---
   
@@ -123,6 +126,16 @@ function App() {
 
   const handleSelectTemplate = (templateCode: string) => {
       handleAIUpdate(templateCode); // Use AI update to push to history immediately
+  };
+
+  const handleDiagramElementClick = (text: string) => {
+      // Trigger selection request
+      setSelectionRequest({ text, ts: Date.now() });
+      
+      // If we are in preview-only mode, switch to split to show where we jumped
+      if (viewMode === ViewMode.Preview) {
+          setViewMode(ViewMode.Split);
+      }
   };
 
   const getSvgElement = () => {
@@ -242,6 +255,7 @@ function App() {
                 canUndo={canUndo}
                 canRedo={canRedo}
                 error={error}
+                selectionRequest={selectionRequest}
             />
           </div>
         )}
@@ -249,7 +263,12 @@ function App() {
         {/* Preview Pane */}
         {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
           <div className={`${viewMode === ViewMode.Split ? 'w-2/3' : 'w-full'} bg-surface relative`}>
-            <DiagramPreview code={code} onError={setError} theme={theme} />
+            <DiagramPreview 
+                code={code} 
+                onError={setError} 
+                theme={theme} 
+                onElementClick={handleDiagramElementClick}
+            />
             
             {/* AI Overlay */}
             <AIChat currentCode={code} onCodeUpdate={handleAIUpdate} />
