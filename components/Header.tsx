@@ -32,7 +32,8 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none">
             <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-0.5">
-              <span className="drop-shadow-sm">Archigram</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-primary font-extrabold drop-shadow-sm">Archi</span>
+              <span className="drop-shadow-sm">Gram</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-primary font-extrabold drop-shadow-sm">.ai</span>
             </h1>
             <p className="text-[9px] text-text-muted font-mono tracking-[0.2em] uppercase opacity-80">Workspace</p>

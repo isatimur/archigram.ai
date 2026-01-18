@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header.tsx';
 import CodeEditor from './components/CodeEditor.tsx';
 import DiagramPreview from './components/DiagramPreview.tsx';
@@ -8,7 +8,7 @@ import Sidebar from './components/Sidebar.tsx';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
 import { ViewMode, DiagramTheme, AppView, Project } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
-import { CheckCircle2, PanelLeftOpen } from 'lucide-react';
+import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle } from 'lucide-react';
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -62,6 +62,9 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   // --- 2. Editor Level State ---
   const [code, setCode] = useState<string>('');
@@ -73,6 +76,12 @@ function App() {
   const [theme, setTheme] = useState<DiagramTheme>('dark');
   const [showToast, setShowToast] = useState(false);
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
+
+  // Ref for cleanup/persistence safety
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
 
   // --- 3. Initialization Logic ---
   
@@ -151,11 +160,38 @@ function App() {
 
   // --- 4. Persistence & Project Management ---
 
+  const isFirstRender = useRef(true);
+
+  // Debounced auto-save
   useEffect(() => {
-     if (projects.length > 0) {
-         localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+     if (projects.length === 0) return;
+
+     if (isFirstRender.current) {
+         isFirstRender.current = false;
+         return;
      }
+
+     setSaveStatus('saving');
+
+     const saveTimeout = setTimeout(() => {
+         localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+         setLastSaved(new Date());
+         setSaveStatus('saved');
+     }, 1000); // 1s debounce
+
+     return () => clearTimeout(saveTimeout);
   }, [projects]);
+
+  // Safety: Save on tab close
+  useEffect(() => {
+      const handleBeforeUnload = () => {
+          if (projectsRef.current.length > 0) {
+              localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsRef.current));
+          }
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   useEffect(() => {
     if (!activeProjectId) return;
@@ -229,7 +265,11 @@ function App() {
           code: `graph TD\n    A[Start] --> B[Process]\n    B --> C[End]`,
           updatedAt: Date.now()
       };
-      setProjects(prev => [newProject, ...prev]);
+      
+      const updatedProjects = [newProject, ...projects];
+      setProjects(updatedProjects);
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects)); // Immediate save on create
+      
       setActiveProjectId(newProject.id);
       setCode(newProject.code);
       setHistory([newProject.code]);
@@ -238,7 +278,6 @@ function App() {
       if (window.innerWidth >= 768) {
         setViewMode(ViewMode.Split);
       }
-      // On mobile/tablet, close sidebar to focus on new project
       if (window.innerWidth < 1024) {
           setIsSidebarOpen(false);
       }
@@ -258,28 +297,37 @@ function App() {
       }
   };
 
+  // Safe deletion handler that doesn't use blocked native confirmation
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
       e.preventDefault();
+      e.stopPropagation();
       
-      if (projects.length <= 1) {
-          alert("Cannot delete the last project. Create a new one first.");
-          return;
-      }
+      if (projects.length <= 1) return;
       
-      if (confirm("Are you sure you want to permanently delete this project?")) {
-          const newProjects = projects.filter(p => p.id !== id);
-          setProjects(newProjects);
+      // Instead of confirm(), we set state to show a modal
+      setPendingDeleteId(id);
+  };
+
+  const confirmDeleteProject = () => {
+      if (!pendingDeleteId) return;
+
+      const id = pendingDeleteId;
+      setProjects(prev => {
+          const next = prev.filter(p => p.id !== id);
           
-          // If we deleted the active project, switch to the first available
-          if (activeProjectId === id) {
-              const nextProject = newProjects[0];
+          if (id === activeProjectId && next.length > 0) {
+              const nextProject = next[0];
               setActiveProjectId(nextProject.id);
               setCode(nextProject.code);
               setHistory([nextProject.code]);
               setHistoryIndex(0);
           }
-      }
+          
+          localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(next));
+          return next;
+      });
+      
+      setPendingDeleteId(null);
   };
 
   // --- 7. Export/Share Handlers ---
@@ -423,6 +471,8 @@ function App() {
                     onCreateProject={handleCreateProject}
                     onDeleteProject={handleDeleteProject}
                     onClose={() => setIsSidebarOpen(false)}
+                    lastSaved={lastSaved}
+                    saveStatus={saveStatus}
                 />
             </div>
         )}
@@ -476,6 +526,39 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Confirmation Modal for Deletion */}
+      {pendingDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all scale-100 animate-slide-up">
+                <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                        <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-text">Delete Project?</h3>
+                        <p className="text-sm text-text-muted mt-2">
+                            Are you sure you want to delete this project? This action cannot be undone.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 w-full mt-2">
+                        <button 
+                            onClick={() => setPendingDeleteId(null)}
+                            className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text transition-colors text-sm font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={confirmDeleteProject}
+                            className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium shadow-lg shadow-red-500/20"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
 
       {showToast && (
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-surface border border-primary/30 text-primary px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 z-50 animate-fade-in">
