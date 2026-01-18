@@ -20,3 +20,13 @@ export interface DiagramState {
   lastValidCode: string;
   error: string | null;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  code: string;
+  updatedAt: number;
+  thumbnail?: string; // Optional future proofing
+}
+
+export type AppView = 'landing' | 'app';

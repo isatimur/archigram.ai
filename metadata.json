@@ -1,5 +1,5 @@
 {
   "name": "ArchiGraph AI",
-  "description": "A high-fidelity, AI-powered diagramming tool for architects and engineers. Features real-time Mermaid.js rendering, Gemini-powered diagram generation, and a professional-grade dark mode interface.",
+  "description": "A high-fidelity, AI-powered diagramming tool for architects and engineers. Features real-time Mermaid.js rendering, Gemini 3 Flash powered generation, and a professional-grade dark mode interface.",
   "requestFramePermissions": []
 }

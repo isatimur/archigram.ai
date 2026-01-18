@@ -44,16 +44,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
     // 1. Find the text in the code
     const searchText = selectionRequest.text;
-    // Try exact match first
     let index = code.indexOf(searchText);
     
-    // Fallback: Try identifying simple node IDs or aliases if full text fails
-    if (index === -1) {
-         // This is a simple fallback for common Mermaid patterns
-         // e.g., if searching for "Sales Team" fails, try looking for just "Sales" if it's an alias? 
-         // For now, we stick to exact text which covers 90% of label clicks.
-    }
-
     if (index !== -1) {
         // 2. Focus and Select
         textareaRef.current.focus();
@@ -125,13 +117,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     if (!text) return '';
 
     const patterns = [
-      { regex: /(%%.*)/, className: 'text-zinc-500 italic' }, // Comments
-      { regex: /("[^"]*")/, className: 'text-emerald-400' }, // Strings
-      { regex: /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/, className: 'text-violet-400 font-bold' }, // Types
-      { regex: /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/, className: 'text-blue-400 font-semibold' }, // Keywords
-      { regex: /(\-\-\>\>|\-\-\>|\-\-\-|\-\>|\-\>\>|\=\=\>|\=\=|\-\.->|\-\.\-)/, className: 'text-cyan-400 font-bold' }, // Arrows
-      { regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/, className: 'text-orange-400' }, // Directions
-      { regex: /([\[\]\(\)\{\}])/, className: 'text-yellow-400' }, // Brackets & Shapes
+      { regex: /(%%.*)/, className: 'text-text-muted italic' }, // Comments
+      { regex: /("[^"]*")/, className: 'text-emerald-500' }, // Strings
+      { regex: /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/, className: 'text-accent font-bold' }, // Types
+      { regex: /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/, className: 'text-primary font-semibold' }, // Keywords
+      { regex: /(\-\-\>\>|\-\-\>|\-\-\-|\-\>|\-\>\>|\=\=\>|\=\=|\-\.->|\-\.\-)/, className: 'text-cyan-500 font-bold' }, // Arrows
+      { regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/, className: 'text-orange-500' }, // Directions
+      { regex: /([\[\]\(\)\{\}])/, className: 'text-yellow-500' }, // Brackets & Shapes
     ];
 
     const combinedSource = patterns.map(p => p.regex.source).join('|');
@@ -178,25 +170,25 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const lineCount = code.split('\n').length;
 
   return (
-    <div className="h-full w-full flex flex-col bg-[#0d0d0f]">
+    <div className="h-full w-full flex flex-col bg-background">
       {/* Editor Toolbar */}
-      <div className="px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex justify-between items-center shrink-0 h-10 box-border">
+      <div className="px-4 py-2 bg-surface border-b border-border flex justify-between items-center shrink-0 h-10 box-border">
         <div className="flex items-center gap-4">
-            <span className="text-xs font-mono text-zinc-400 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+            <span className="text-xs font-mono text-text-muted flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"></span>
                 diagram.mmd
             </span>
-            <div className="h-4 w-px bg-zinc-800"></div>
+            <div className="h-4 w-px bg-border"></div>
             <div className="flex items-center gap-1">
-                <button onClick={onUndo} disabled={!canUndo} className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 transition-colors rounded hover:bg-zinc-800" title="Undo">
+                <button onClick={onUndo} disabled={!canUndo} className="p-1.5 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Undo">
                     <Undo className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={onRedo} disabled={!canRedo} className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 transition-colors rounded hover:bg-zinc-800" title="Redo">
+                <button onClick={onRedo} disabled={!canRedo} className="p-1.5 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Redo">
                     <Redo className="w-3.5 h-3.5" />
                 </button>
             </div>
         </div>
-        <div className="text-[10px] text-zinc-600 font-mono flex items-center gap-2">
+        <div className="text-[10px] text-text-muted font-mono flex items-center gap-2">
             <Terminal className="w-3 h-3" />
             Mermaid Syntax
         </div>
@@ -206,7 +198,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
          {/* Line Numbers Gutter */}
          <div 
             ref={gutterRef}
-            className="w-12 pt-4 pb-4 bg-zinc-950 border-r border-zinc-800 text-right select-none overflow-hidden shrink-0 z-10"
+            className="w-12 pt-4 pb-4 bg-background border-r border-border text-right select-none overflow-hidden shrink-0 z-10"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}
          >
             {Array.from({ length: lineCount }).map((_, i) => {
@@ -217,8 +209,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                     <div 
                         key={i} 
                         className={`text-sm leading-6 pr-3 font-mono transition-colors duration-200 relative
-                            ${isError ? 'text-red-400 font-bold bg-red-900/20' : ''}
-                            ${isHighlighted ? 'text-indigo-400 font-bold' : (!isError && 'text-zinc-600')}
+                            ${isError ? 'text-red-500 font-bold bg-red-500/10' : ''}
+                            ${isHighlighted ? 'text-primary font-bold' : (!isError && 'text-text-muted')}
                         `}
                     >
                         {isError && (
@@ -231,16 +223,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
          </div>
 
         {/* Code Area Container */}
-        <div className="flex-1 relative overflow-hidden group bg-[#09090b]">
+        <div className="flex-1 relative overflow-hidden group bg-background">
             
-            {/* 1. Highlight Overlay Layer (for Jump to definition) */}
+            {/* 1. Highlight Overlay Layer */}
             {highlightedLine !== null && (
                 <div 
-                    className="absolute left-0 right-0 bg-indigo-500/20 border-t border-b border-indigo-500/30 pointer-events-none z-0 animate-fade-in"
+                    className="absolute left-0 right-0 bg-primary/20 border-t border-b border-primary/30 pointer-events-none z-0 animate-fade-in"
                     style={{ 
                         top: `calc(1rem + ${(highlightedLine - 1) * 1.5}rem - ${textareaRef.current?.scrollTop || 0}px)`, 
                         height: '1.5rem',
-                        transition: 'top 0s' // Immediate update during scroll
+                        transition: 'top 0s'
                     }}
                 />
             )}
@@ -260,7 +252,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             {/* 3. Syntax Highlight Layer */}
             <pre
             ref={preRef}
-            className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden"
+            className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden text-text"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}
             dangerouslySetInnerHTML={{ __html: highlightCode(code) + '<br/>' }} 
             />
@@ -271,41 +263,41 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             value={code}
             onChange={(e) => onChange(e.target.value)}
             onScroll={handleScroll}
-            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-white resize-none outline-none whitespace-pre overflow-auto z-10 selection:bg-indigo-500/30"
+            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent text-sm font-mono leading-6 caret-text resize-none outline-none whitespace-pre overflow-auto z-10 selection:bg-primary/30"
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
             style={{ 
                 fontFamily: '"JetBrains Mono", monospace',
-                caretColor: 'white'
+                caretColor: 'var(--text)' 
             }}
             />
         </div>
       </div>
 
       {/* Diagnostics / Problems Panel */}
-      <div className={`border-t border-zinc-800 bg-[#09090b] transition-all duration-300 ease-in-out flex flex-col ${isDiagnosticsOpen ? 'h-32' : 'h-8'}`}>
+      <div className={`border-t border-border bg-background transition-all duration-300 ease-in-out flex flex-col ${isDiagnosticsOpen ? 'h-32' : 'h-8'}`}>
         {/* Panel Header */}
         <div 
-            className="flex items-center justify-between px-4 h-8 bg-zinc-900/50 cursor-pointer hover:bg-zinc-900 transition-colors select-none border-b border-zinc-800"
+            className="flex items-center justify-between px-4 h-8 bg-surface cursor-pointer hover:bg-surface-hover transition-colors select-none border-b border-border"
             onClick={() => setIsDiagnosticsOpen(!isDiagnosticsOpen)}
         >
             <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                     <AlertCircle className="w-3 h-3" />
                     Problems
                 </span>
                 {error ? (
-                    <span className="flex items-center gap-1 text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-full">
                         1 Error
                     </span>
                 ) : (
-                    <span className="flex items-center gap-1 text-[10px] text-zinc-600 px-1.5 py-0.5">
+                    <span className="flex items-center gap-1 text-[10px] text-text-muted px-1.5 py-0.5">
                         0 Errors
                     </span>
                 )}
             </div>
-            <div className="text-zinc-600">
+            <div className="text-text-muted">
                 {isDiagnosticsOpen ? (
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 ) : (
@@ -329,16 +321,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                     >
                         <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                         <div className="flex-1">
-                            <p className="text-zinc-300 group-hover:text-white transition-colors">
+                            <p className="text-text group-hover:text-text transition-colors">
                                 {error}
                             </p>
-                            <p className="text-zinc-500 mt-1">
+                            <p className="text-text-muted mt-1">
                                 {errorLine ? `Source: mermaid-parser (Line ${errorLine})` : 'Source: mermaid-parser'}
                             </p>
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-2 opacity-50">
+                    <div className="flex flex-col items-center justify-center h-full text-text-muted gap-2 opacity-50">
                         <CheckCircle2 className="w-6 h-6" />
                         <p>No problems detected. Diagram is valid.</p>
                     </div>

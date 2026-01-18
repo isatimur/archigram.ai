@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ArchiGraph AI</title>
+    
+    <!-- SEO & Branding -->
+    <title>Archigram.ai | Enterprise AI Architecture Platform</title>
+    <meta name="description" content="The world's most advanced AI-powered diagramming suite for architects and engineers. Generate complex Mermaid.js diagrams instantly with Gemini 3 Flash and Archigram.ai." />
+    <meta name="keywords" content="mermaid.js, ai architecture, diagram generator, software architecture, system design, sequence diagram, engineering tools, gemini 3" />
+    <meta property="og:title" content="Archigram.ai - Architecture at the Speed of Thought" />
+    <meta property="og:description" content="Build complex diagrams in seconds with Gemini 3 Flash and Mermaid.js." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#09090b" />
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -13,6 +22,7 @@
       }
       
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -20,15 +30,21 @@
               mono: ['JetBrains Mono', 'monospace'],
             },
             colors: {
-              background: '#09090b',
-              surface: '#18181b',
-              primary: '#6366f1',
+              // Semantic Colors mapped to CSS Variables
+              background: 'rgb(var(--bg) / <alpha-value>)',
+              surface: 'rgb(var(--surface) / <alpha-value>)',
+              'surface-hover': 'rgb(var(--surface-hover) / <alpha-value>)',
+              border: 'rgb(var(--border) / <alpha-value>)',
+              text: 'rgb(var(--text) / <alpha-value>)',
+              'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
+              primary: 'rgb(var(--primary) / <alpha-value>)',
+              'primary-hover': 'rgb(var(--primary-hover) / <alpha-value>)',
               accent: '#8b5cf6',
-              'surface-hover': '#27272a',
             },
             animation: {
-              'fade-in': 'fadeIn 0.2s ease-in-out',
-              'slide-up': 'slideUp 0.3s ease-out',
+              'fade-in': 'fadeIn 0.4s ease-in-out',
+              'slide-up': 'slideUp 0.5s ease-out',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
               fadeIn: {
@@ -36,7 +52,7 @@
                 '100%': { opacity: '1' },
               },
               slideUp: {
-                '0%': { transform: 'translateY(10px)', opacity: '0' },
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
                 '100%': { transform: 'translateY(0)', opacity: '1' },
               }
             }
@@ -45,31 +61,48 @@
       }
     </script>
     <style>
+      /* Base Variables (Default Dark) */
+      :root {
+        --bg: 9 9 11;
+        --surface: 24 24 27;
+        --surface-hover: 39 39 42;
+        --border: 63 63 70;
+        --text: 228 228 231;
+        --text-muted: 161 161 170;
+        --primary: 99 102 241;
+        --primary-hover: 79 70 229;
+      }
+
       /* Custom Scrollbar for a premium feel */
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #09090b; 
+        background: rgb(var(--bg)); 
       }
       ::-webkit-scrollbar-thumb {
-        background: #3f3f46; 
+        background: rgb(var(--border)); 
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #52525b; 
+        background: rgb(var(--text-muted)); 
       }
       body {
-        background-color: #09090b;
-        color: #e4e4e7;
+        background-color: rgb(var(--bg));
+        color: rgb(var(--text));
         overflow: hidden; /* App handles scrolling */
       }
       .glass-panel {
-        background: rgba(24, 24, 27, 0.7);
+        background: rgba(var(--surface), 0.7);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(var(--border), 0.2);
+      }
+      .landing-grid {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
       }
     </style>
     <script type="importmap">
