@@ -39,7 +39,7 @@
               'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
               primary: 'rgb(var(--primary) / <alpha-value>)',
               'primary-hover': 'rgb(var(--primary-hover) / <alpha-value>)',
-              accent: '#8b5cf6',
+              accent: 'rgb(var(--accent) / <alpha-value>)',
             },
             animation: {
               'fade-in': 'fadeIn 0.4s ease-in-out',
@@ -71,6 +71,7 @@
         --text-muted: 161 161 170;
         --primary: 99 102 241;
         --primary-hover: 79 70 229;
+        --accent: 168 85 247;
       }
 
       /* Custom Scrollbar for a premium feel */
@@ -79,14 +80,14 @@
         height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: rgb(var(--bg)); 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: rgb(var(--border)); 
+        background: rgba(var(--border), 0.5); 
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgb(var(--text-muted)); 
+        background: rgba(var(--text-muted), 0.8); 
       }
       body {
         background-color: rgb(var(--bg));

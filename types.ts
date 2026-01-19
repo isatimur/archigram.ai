@@ -13,7 +13,7 @@ export enum ViewMode {
   Preview = 'PREVIEW'
 }
 
-export type DiagramTheme = 'dark' | 'forest' | 'neutral' | 'base';
+export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
 
 export interface DiagramState {
   code: string;

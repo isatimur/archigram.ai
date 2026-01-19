@@ -33,9 +33,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
 
   // Re-initialize mermaid when theme changes
   useEffect(() => {
+    // Map custom themes to standard Mermaid themes
+    const mermaidTheme = theme === 'midnight' ? 'dark' : theme;
+
     mermaid.initialize({
       startOnLoad: false,
-      theme: theme,
+      theme: mermaidTheme,
       securityLevel: 'loose',
       fontFamily: '"Inter", sans-serif',
       themeVariables: {

@@ -25,6 +25,14 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showThemes, setShowThemes] = useState(false);
 
+  // Helper for Theme Previews
+  const themeColors: Record<DiagramTheme, string> = {
+      dark: '#6366f1',    // Indigo
+      midnight: '#38bdf8', // Sky
+      forest: '#4ade80',  // Green
+      neutral: '#f43f5e',  // Rose
+  };
+
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
       
@@ -32,9 +40,9 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none">
             <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-0.5">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-primary font-extrabold drop-shadow-sm">Archi</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary font-extrabold drop-shadow-sm">Archi</span>
               <span className="drop-shadow-sm">Gram</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-primary font-extrabold drop-shadow-sm">.ai</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary font-extrabold drop-shadow-sm">.ai</span>
             </h1>
             <p className="text-[9px] text-text-muted font-mono tracking-[0.2em] uppercase opacity-80">Workspace</p>
         </div>
@@ -74,25 +82,31 @@ const Header: React.FC<HeaderProps> = ({
                 className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-text-muted hover:text-text hover:bg-surface rounded-lg transition-colors border border-transparent hover:border-border"
             >
                 <Palette className="w-4 h-4 text-accent" />
-                Theme
+                <span className="capitalize">{currentTheme}</span>
                 <ChevronDown className="w-3 h-3 opacity-50" />
             </button>
             
             {showThemes && (
                 <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
-                     <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50">Visual Style</div>
-                    {['dark', 'forest', 'neutral', 'base'].map((t) => (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                     <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">Theme Preset</div>
+                    {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
                         <button
                             key={t}
                             onClick={() => {
-                                setTheme(t as DiagramTheme);
+                                setTheme(t);
                                 setShowThemes(false);
                             }}
-                            className="text-left px-4 py-2 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between"
+                            className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
                         >
-                            <span className="capitalize">{t}</span>
+                            <div className="flex items-center gap-3">
+                                <div 
+                                    className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: themeColors[t] }}
+                                ></div>
+                                <span className="capitalize">{t}</span>
+                            </div>
                             {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
                         </button>
                     ))}

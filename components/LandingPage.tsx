@@ -16,7 +16,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                 <LayoutTemplate className="w-6 h-6 text-white" />
              </div>
              <div>
-                <h1 className="text-xl font-bold tracking-tight">Archigram<span className="text-indigo-400">.ai</span></h1>
+                <h1 className="text-xl font-bold tracking-tight"><span className="text-indigo-400">Archi</span>Gram<span className="text-indigo-400">.ai</span></h1>
                 <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono">Enterprise Edition</p>
              </div>
          </div>

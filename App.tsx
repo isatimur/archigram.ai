@@ -12,9 +12,10 @@ import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle } from 'lucide-react
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
-// Theme Configuration for CSS Variables
+// Theme Configuration for CSS Variables (RGB Tuples)
 const THEMES: Record<DiagramTheme, React.CSSProperties> = {
   dark: {
+    // Obsidian / Zinc (Professional Default)
     '--bg': '9 9 11',              // zinc-950
     '--surface': '24 24 27',       // zinc-900
     '--surface-hover': '39 39 42', // zinc-800
@@ -23,36 +24,43 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--text-muted': '161 161 170', // zinc-400
     '--primary': '99 102 241',     // indigo-500
     '--primary-hover': '79 70 229',// indigo-600
+    '--accent': '168 85 247',      // purple-500
+  } as any,
+  midnight: {
+    // Deep Space / Slate (Sci-Fi)
+    '--bg': '2 6 23',              // slate-950
+    '--surface': '15 23 42',       // slate-900
+    '--surface-hover': '30 41 59', // slate-800
+    '--border': '51 65 85',        // slate-700
+    '--text': '241 245 249',       // slate-100
+    '--text-muted': '148 163 184', // slate-400
+    '--primary': '56 189 248',     // sky-400
+    '--primary-hover': '14 165 233',// sky-500
+    '--accent': '236 72 153',      // pink-500
   } as any,
   forest: {
-    '--bg': '2 4 4',               // dark green/black
-    '--surface': '6 25 18',        // deep green
-    '--surface-hover': '10 40 30',
-    '--border': '20 83 45',        // emerald-800
+    // Matrix / Terminal (Hacker)
+    '--bg': '2 10 5',              // Deep green/black
+    '--surface': '5 25 15',        // Dark jungle
+    '--surface-hover': '10 40 25',
+    '--border': '20 60 40',
     '--text': '236 253 245',       // emerald-50
-    '--text-muted': '110 231 183', // emerald-300
-    '--primary': '16 185 129',     // emerald-500
-    '--primary-hover': '5 150 105',
+    '--text-muted': '52 211 153',  // emerald-400 (bright for muted in terminal)
+    '--primary': '74 222 128',     // green-400
+    '--primary-hover': '34 197 94',// green-500
+    '--accent': '250 204 21',      // yellow-400
   } as any,
   neutral: {
+    // Paper / Print (Clean)
     '--bg': '255 255 255',         // white
-    '--surface': '244 244 245',    // zinc-100
-    '--surface-hover': '228 228 231', // zinc-200
-    '--border': '212 212 216',     // zinc-300
-    '--text': '24 24 27',          // zinc-900
-    '--text-muted': '82 82 91',    // zinc-600
-    '--primary': '37 99 235',      // blue-600
-    '--primary-hover': '29 78 216',
-  } as any,
-  base: {
-    '--bg': '255 255 255',
     '--surface': '248 250 252',    // slate-50
     '--surface-hover': '241 245 249', // slate-100
-    '--border': '203 213 225',     // slate-300
+    '--border': '226 232 240',     // slate-200
     '--text': '15 23 42',          // slate-900
-    '--text-muted': '71 85 105',   // slate-600
-    '--primary': '79 70 229',      // indigo-600
-    '--primary-hover': '67 56 202',
+    '--text-muted': '100 116 139', // slate-500
+    '--primary': '15 23 42',       // slate-900 (Monochrome)
+    '--primary-hover': '51 65 85', // slate-700
+    '--accent': '244 63 94',       // rose-500
   } as any,
 };
 
@@ -297,14 +305,12 @@ function App() {
       }
   };
 
-  // Safe deletion handler that doesn't use blocked native confirmation
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       
       if (projects.length <= 1) return;
       
-      // Instead of confirm(), we set state to show a modal
       setPendingDeleteId(id);
   };
 
@@ -410,7 +416,7 @@ function App() {
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            ctx.fillStyle = theme === 'base' || theme === 'neutral' ? '#ffffff' : '#131316'; 
+            ctx.fillStyle = theme === 'neutral' ? '#ffffff' : '#131316'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
@@ -427,10 +433,7 @@ function App() {
     }
   };
 
-  // Launch from Landing Page with specific template
   const handleLaunch = () => {
-      // If we are launching from landing, check if we have projects.
-      // If only default, we might want to ensure a cool demo is loaded.
       setCurrentView('app');
   };
 
@@ -446,7 +449,7 @@ function App() {
 
   return (
     <div 
-        className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500"
+        className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
         style={appStyle}
     >
       <Header 
@@ -477,7 +480,6 @@ function App() {
             </div>
         )}
 
-        {/* Sidebar Expand Button (When closed) */}
         {!isSidebarOpen && (
              <button 
                 onClick={() => setIsSidebarOpen(true)}

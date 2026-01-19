@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, RotateCcw, X, Bot, User, History as HistoryIcon, MessageSquare, Clock, ArrowRight, Copy, RefreshCw, Check } from 'lucide-react';
+import { Sparkles, Send, Loader2, RotateCcw, X, Bot, User, History as HistoryIcon, MessageSquare, Clock, ArrowRight, Copy, RefreshCw, Check, Zap } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
 import { ChatMessage, DiagramTheme } from '../types.ts';
 
@@ -12,6 +12,13 @@ interface AIChatProps {
 const CHAT_STORAGE_KEY = 'archigraph_chat_history';
 
 type Tab = 'chat' | 'history';
+
+const SUGGESTED_PROMPTS = [
+    "Add a payment gateway service",
+    "Show a loop for retries",
+    "Add a database with a cylinder shape",
+    "Group these into a subgraph"
+];
 
 const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dark' }) => {
   const [prompt, setPrompt] = useState('');
@@ -72,14 +79,16 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() || isLoading) return;
+  const handleSubmit = async (e: React.FormEvent | string) => {
+    if (typeof e !== 'string') e.preventDefault();
+    const textToProcess = typeof e === 'string' ? e : prompt;
+    
+    if (!textToProcess.trim() || isLoading) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      text: prompt.trim(),
+      text: textToProcess.trim(),
       timestamp: Date.now(),
     };
 
@@ -134,41 +143,47 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     return (
         <button 
             onClick={() => setIsExpanded(true)}
-            className="absolute bottom-6 left-6 z-30 p-4 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 transition-transform"
+            className="absolute bottom-6 left-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
             title="Open AI Architect"
         >
-            <Sparkles className="w-6 h-6" />
+            <Sparkles className="w-6 h-6 animate-pulse-slow" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
         </button>
     );
   }
-
-  // Define dynamic style classes based on theme for the chat window
-  // Using tailwind generic classes like bg-surface/95 ensures it adapts to the global variables
   
   return (
-    <div className="absolute bottom-6 left-6 z-30 w-96 flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
-      <div className="bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-border/20">
+    <div className="absolute bottom-6 left-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
+      <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         
         {/* Header with Tabs */}
-        <div className="border-b border-border bg-surface-hover/50 flex flex-col shrink-0">
-            <div className="flex justify-between items-center p-3 pb-0">
-                 <div className="flex items-center gap-2 text-text font-bold text-sm tracking-tight px-1">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span>AI Architect</span>
+        <div className="border-b border-border/50 bg-gradient-to-r from-surface-hover/50 to-transparent flex flex-col shrink-0">
+            <div className="flex justify-between items-center p-4 pb-2">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+                        <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-text font-bold text-sm tracking-tight">Gemini Copilot</span>
+                        <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Architecture Assistant</span>
+                    </div>
                 </div>
                 <button 
                     onClick={() => setIsExpanded(false)}
-                    className="text-text-muted hover:text-text transition-colors p-1 hover:bg-surface-hover rounded-md"
+                    className="text-text-muted hover:text-text transition-colors p-1.5 hover:bg-surface-hover rounded-lg"
                     title="Minimize"
                 >
                     <X className="w-4 h-4" />
                 </button>
             </div>
             
-            <div className="flex px-2 mt-3 gap-1">
+            <div className="flex px-4 mt-2 gap-4">
                 <button
                     onClick={() => setActiveTab('chat')}
-                    className={`flex-1 pb-2 text-xs font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+                    className={`pb-2 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all ${
                         activeTab === 'chat' 
                         ? 'border-primary text-primary' 
                         : 'border-transparent text-text-muted hover:text-text'
@@ -179,7 +194,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                 </button>
                 <button
                     onClick={() => setActiveTab('history')}
-                    className={`flex-1 pb-2 text-xs font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+                    className={`pb-2 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all ${
                         activeTab === 'history' 
                         ? 'border-primary text-primary' 
                         : 'border-transparent text-text-muted hover:text-text'
@@ -187,50 +202,64 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                 >
                     <HistoryIcon className="w-3.5 h-3.5" />
                     History
-                    <span className="bg-surface-hover text-text-muted px-1.5 rounded-full text-[9px]">{historyItems.length}</span>
+                    <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{historyItems.length}</span>
                 </button>
             </div>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-background/30 relative">
+        <div className="flex-1 overflow-y-auto bg-background/40 relative">
             
             {/* --- TAB: CHAT --- */}
             {activeTab === 'chat' && (
-                <div ref={scrollRef} className="p-4 space-y-4 min-h-[200px] h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border">
+                <div ref={scrollRef} className="p-4 space-y-6 min-h-[300px] h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border">
                      {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs py-8 gap-3 opacity-60">
-                            <Bot className="w-8 h-8 opacity-20" />
-                            <p>Ask me to create or modify a diagram.</p>
+                        <div className="flex flex-col h-full">
+                            <div className="flex-1 flex flex-col items-center justify-center text-text-muted text-xs gap-4 opacity-70">
+                                <Bot className="w-10 h-10 text-primary opacity-50" />
+                                <p>How can I help you build today?</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-auto">
+                                {SUGGESTED_PROMPTS.map((txt, i) => (
+                                    <button 
+                                        key={i}
+                                        onClick={() => handleSubmit(txt)}
+                                        className="p-3 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-xl text-[10px] text-text-muted hover:text-text transition-all duration-200"
+                                    >
+                                        {txt}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                     
                     {messages.map((msg, index) => (
                         <div 
                             key={msg.id} 
-                            className={`flex flex-col gap-1 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                            className={`flex flex-col gap-1.5 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
                         >
                             <div className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider ${msg.role === 'user' ? 'text-primary flex-row-reverse' : 'text-text-muted'}`}>
-                                {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
-                                <span>{msg.role === 'user' ? 'You' : 'Architect'}</span>
+                                <span>{msg.role === 'user' ? 'You' : 'Gemini'}</span>
                             </div>
 
                             <div className={`
-                                p-3 rounded-2xl text-sm leading-relaxed shadow-sm break-words max-w-full
+                                p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm break-words max-w-full backdrop-blur-sm
                                 ${msg.role === 'user' 
-                                    ? 'bg-surface-hover text-text rounded-tr-sm border border-border' 
+                                    ? 'bg-primary text-white rounded-br-sm shadow-primary/20' 
                                     : msg.isError 
-                                        ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-tl-sm'
-                                        : 'bg-primary/10 text-text border border-primary/20 rounded-tl-sm'
+                                        ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-bl-sm'
+                                        : 'bg-surface border border-border text-text rounded-bl-sm'
                                 }
                             `}>
                                 {msg.text}
                                 
-                                {/* Code Snapshot Block inside Chat Bubble */}
                                 {msg.codeSnapshot && (
                                     <div className="mt-3 rounded-lg overflow-hidden border border-border bg-background/50">
                                         <div className="flex justify-between items-center px-2 py-1 bg-surface-hover/30 border-b border-border/50">
-                                            <span className="text-[10px] font-mono text-text-muted">Mermaid Preview</span>
+                                            <span className="text-[10px] font-mono text-text-muted flex items-center gap-1">
+                                                <Zap className="w-3 h-3 text-accent" />
+                                                Updated Diagram
+                                            </span>
                                             <button 
                                                 onClick={() => handleCopyCode(msg.codeSnapshot!, msg.id)}
                                                 className="p-1 hover:bg-surface-hover rounded text-text-muted hover:text-primary transition-colors"
@@ -266,12 +295,11 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                     {isLoading && (
                         <div className="flex flex-col gap-2 max-w-[85%] mr-auto items-start animate-pulse">
                              <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-primary">
-                                <Bot className="w-3 h-3" />
-                                <span>AI Processing</span>
+                                <span>Generating</span>
                             </div>
-                            <div className="bg-surface border border-border p-3 rounded-2xl rounded-tl-sm text-text-muted text-sm flex items-center gap-3">
+                            <div className="bg-surface border border-border p-4 rounded-2xl rounded-bl-sm text-text-muted text-sm flex items-center gap-3">
                                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                <span>Generating Diagram...</span>
+                                <span>Thinking...</span>
                             </div>
                         </div>
                     )}
@@ -297,21 +325,21 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                                     <div key={item.id} className="relative pl-6 group">
                                         <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-surface border border-border group-hover:border-primary group-hover:bg-primary transition-colors"></div>
                                         
-                                        <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all">
+                                        <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all shadow-sm">
                                             <div className="flex justify-between items-start mb-2">
                                                 <span className="text-[10px] font-mono text-text-muted">
-                                                    {new Date(item.timestamp).toLocaleString()}
+                                                    {new Date(item.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' })}
                                                 </span>
-                                                <span className="text-[9px] bg-surface-hover text-text-muted px-1.5 rounded uppercase tracking-wider">
+                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 rounded uppercase tracking-wider font-bold">
                                                     v{messages.filter(m => m.codeSnapshot && m.timestamp <= item.timestamp).length}
                                                 </span>
                                             </div>
                                             
-                                            <p className="text-xs text-text font-medium line-clamp-2 mb-3 italic">
+                                            <p className="text-xs text-text font-medium line-clamp-2 mb-3">
                                                 "{promptText}"
                                             </p>
 
-                                            <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center justify-between gap-2 border-t border-border pt-2 mt-2">
                                                 <div className="text-[10px] text-text-muted font-mono">
                                                     {item.codeSnapshot?.length} chars
                                                 </div>
@@ -344,13 +372,13 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
 
         {/* Input Area */}
         {activeTab === 'chat' && (
-             <div className="p-3 border-t border-border bg-surface-hover/50 shrink-0">
+             <div className="p-3 border-t border-border bg-surface/80 shrink-0 backdrop-blur-md">
                 <form onSubmit={handleSubmit} className="relative">
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="Describe changes..."
-                        className="w-full bg-background border border-border rounded-xl p-3 pr-10 text-sm text-text placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-primary resize-none h-14 scrollbar-none"
+                        className="w-full bg-background/50 border border-border rounded-xl p-3 pr-10 text-sm text-text placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 resize-none h-14 scrollbar-none transition-all shadow-inner"
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -361,13 +389,14 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                     <button 
                         type="submit"
                         disabled={isLoading || !prompt.trim()}
-                        className="absolute bottom-3 right-3 p-1.5 bg-primary rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+                        className="absolute bottom-3 right-3 p-1.5 bg-gradient-to-br from-primary to-accent rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                     >
                         {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
                     </button>
                 </form>
                 <div className="flex justify-between items-center mt-2 px-1">
-                     <p className="text-[9px] text-text-muted font-mono">
+                     <p className="text-[9px] text-text-muted font-mono flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-accent" />
                         Powered by Gemini 3 Flash
                     </p>
                     {messages.length > 0 && (
@@ -375,7 +404,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                             onClick={handleClearHistory}
                             className="text-[9px] text-text-muted hover:text-red-500 transition-colors"
                         >
-                            Clear History
+                            Clear Chat
                         </button>
                     )}
                 </div>
