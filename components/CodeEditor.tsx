@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { Undo, Redo, AlertCircle, AlertTriangle, CheckCircle2, XCircle, Terminal, FileJson } from 'lucide-react';
+import { DiagramTheme } from '../types.ts';
 
 interface CodeEditorProps {
   code: string;
@@ -10,6 +11,7 @@ interface CodeEditorProps {
   canRedo: boolean;
   error?: string | null;
   selectionRequest?: { text: string; ts: number } | null;
+  theme?: DiagramTheme;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -20,7 +22,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   canUndo, 
   canRedo,
   error,
-  selectionRequest
+  selectionRequest,
+  theme = 'dark'
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -104,15 +107,17 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   // Robust Tokenizer using Theme Variables for Consistency
   const highlightCode = (text: string) => {
     if (!text) return '';
+    
+    const isLight = theme === 'neutral';
 
     const patterns = [
-      { regex: /(%%.*)/, className: 'text-text-muted italic opacity-70' }, // Comments
-      { regex: /("[^"]*")/, className: 'text-emerald-400' }, // Strings - using standard color that works well on dark
-      { regex: /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/, className: 'text-accent font-bold' }, // Types -> Accent Color
-      { regex: /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/, className: 'text-primary font-semibold' }, // Keywords -> Primary Color
-      { regex: /(\-\-\>\>|\-\-\>|\-\-\-|\-\>|\-\>\>|\=\=\>|\=\=|\-\.->|\-\.\-)/, className: 'text-cyan-400 font-bold' }, // Arrows
-      { regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/, className: 'text-orange-400' }, // Directions
-      { regex: /([\[\]\(\)\{\}])/, className: 'text-yellow-400' }, // Brackets & Shapes
+      { regex: /(%%.*)/, className: isLight ? 'text-slate-500 italic opacity-80' : 'text-text-muted italic opacity-70' }, // Comments
+      { regex: /("[^"]*")/, className: isLight ? 'text-emerald-600 font-medium' : 'text-emerald-400' }, // Strings
+      { regex: /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/, className: isLight ? 'text-purple-600 font-bold' : 'text-accent font-bold' }, // Types -> Accent Color
+      { regex: /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/, className: isLight ? 'text-blue-600 font-semibold' : 'text-primary font-semibold' }, // Keywords -> Primary Color
+      { regex: /(\-\-\>\>|\-\-\>|\-\-\-|\-\>|\-\>\>|\=\=\>|\=\=|\-\.->|\-\.\-)/, className: isLight ? 'text-cyan-600 font-bold' : 'text-cyan-400 font-bold' }, // Arrows
+      { regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/, className: isLight ? 'text-orange-600' : 'text-orange-400' }, // Directions
+      { regex: /([\[\]\(\)\{\}])/, className: isLight ? 'text-yellow-600 font-bold' : 'text-yellow-400' }, // Brackets & Shapes
     ];
 
     const combinedSource = patterns.map(p => p.regex.source).join('|');
@@ -159,10 +164,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const lineCount = code.split('\n').length;
 
   return (
-    <div className="h-full w-full flex flex-col bg-background relative">
+    <div className="h-full w-full flex flex-col bg-background relative transition-colors duration-300">
       
       {/* Refined Toolbar */}
-      <div className="px-4 py-2 bg-surface/80 border-b border-border flex justify-between items-center shrink-0 h-10 box-border backdrop-blur-sm z-20">
+      <div className="px-4 py-2 bg-surface/80 border-b border-border flex justify-between items-center shrink-0 h-10 box-border backdrop-blur-sm z-20 transition-colors duration-300">
         <div className="flex items-center gap-4">
              <div className="flex items-center gap-2 text-xs font-medium text-text-muted group cursor-pointer hover:text-text transition-colors">
                 <FileJson className="w-3.5 h-3.5 text-primary" />
@@ -184,11 +189,11 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 flex relative overflow-hidden">
+      <div className="flex-1 flex relative overflow-hidden bg-background transition-colors duration-300">
          {/* Line Numbers Gutter */}
          <div 
             ref={gutterRef}
-            className="w-12 pt-4 pb-4 bg-background border-r border-border text-right select-none overflow-hidden shrink-0 z-10"
+            className="w-12 pt-4 pb-4 bg-background border-r border-border text-right select-none overflow-hidden shrink-0 z-10 transition-colors duration-300"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}
          >
             {Array.from({ length: lineCount }).map((_, i) => {
@@ -213,7 +218,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
          </div>
 
         {/* Code Area Container */}
-        <div className="flex-1 relative overflow-hidden group bg-background">
+        <div className="flex-1 relative overflow-hidden group bg-background transition-colors duration-300">
             
             {/* Highlight Overlay Layer */}
             {highlightedLine !== null && (
@@ -242,7 +247,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             {/* Syntax Highlight Layer */}
             <pre
             ref={preRef}
-            className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden text-text"
+            className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden text-text transition-colors duration-300"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}
             dangerouslySetInnerHTML={{ __html: highlightCode(code) + '<br/>' }} 
             />

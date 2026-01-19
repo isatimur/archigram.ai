@@ -1,5 +1,7 @@
+
 import { GoogleGenAI } from "@google/genai";
-import { SYSTEM_INSTRUCTION } from "../constants.ts";
+import { DOMAIN_INSTRUCTIONS } from "../constants.ts";
+import { CopilotDomain } from "../types.ts";
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -13,8 +15,10 @@ const getAI = (): GoogleGenAI => {
   return aiInstance;
 };
 
-export const generateDiagramCode = async (prompt: string, currentCode?: string): Promise<string> => {
+export const generateDiagramCode = async (prompt: string, currentCode?: string, domain: CopilotDomain = 'General'): Promise<string> => {
   const ai = getAI();
+  const instruction = DOMAIN_INSTRUCTIONS[domain] || DOMAIN_INSTRUCTIONS["General"];
+  
   const fullPrompt = currentCode 
     ? `Current Diagram Code:\n\`\`\`mermaid\n${currentCode}\n\`\`\`\n\nUser Request: ${prompt}\n\nUpdate the diagram based on the request. Return the FULL updated mermaid code.`
     : `User Request: ${prompt}\n\nGenerate a mermaid diagram for this request.`;
@@ -24,7 +28,7 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string):
       model: 'gemini-3-flash-preview',
       contents: fullPrompt,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: instruction,
         temperature: 0.2, // Low temperature for deterministic code generation
       },
     });

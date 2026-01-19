@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush } from 'lucide-react';
+import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig } from '../types.ts';
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ interface HeaderProps {
   onRenameProject: (id: string, name: string) => void;
   customStyle?: DiagramStyleConfig;
   onUpdateStyle: (style: DiagramStyleConfig) => void;
+  onPublish: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -29,12 +30,14 @@ const Header: React.FC<HeaderProps> = ({
   activeProject,
   onRenameProject,
   customStyle = {},
-  onUpdateStyle
+  onUpdateStyle,
+  onPublish
 }) => {
   const [showThemes, setShowThemes] = useState(false);
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [isDeploying, setIsDeploying] = useState(false);
 
   // Sync title when active project changes
   useEffect(() => {
@@ -73,16 +76,26 @@ const Header: React.FC<HeaderProps> = ({
       onUpdateStyle({ ...customStyle, [key]: value });
   };
 
+  const handleDeploy = () => {
+      setIsDeploying(true);
+      setTimeout(() => {
+          setIsDeploying(false);
+          alert("Enterprise Deployment Gateway:\n\nTo deploy this pipeline to production, please upgrade to the Enterprise Edition for SLA guarantees and RBAC controls.");
+      }, 1500);
+  };
+
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
       
       {/* 1. Brand Identity & Project Title */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none shrink-0">
-            <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-0.5">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary font-extrabold drop-shadow-sm">Archi</span>
-              <span className="drop-shadow-sm">Gram</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary font-extrabold drop-shadow-sm">.ai</span>
+            <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer">
+              <div className="w-6 h-6 rounded bg-gradient-to-tr from-primary to-accent flex items-center justify-center">
+                  <Rocket className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-text font-bold">ArchiGram</span>
+              <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-text-muted font-mono uppercase">.OSS</span>
             </h1>
         </div>
         
@@ -152,17 +165,6 @@ const Header: React.FC<HeaderProps> = ({
                     <span className="capitalize hidden lg:inline">{currentTheme}</span>
                     <ChevronDown className="w-3 h-3 opacity-50" />
                 </button>
-                {/* 
-                // Removed Custom Brush as requested
-                <div className="w-px h-4 bg-border/50"></div>
-                <button
-                    onClick={() => setShowStyleEditor(!showStyleEditor)}
-                    className={`flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors ${showStyleEditor ? 'text-primary bg-primary/10' : ''}`}
-                    title="Customize Colors"
-                >
-                    <Paintbrush className="w-3.5 h-3.5" />
-                </button>
-                */}
             </div>
             
             {showThemes && (
@@ -192,60 +194,33 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 </>
             )}
-
-            {showStyleEditor && (
-                <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowStyleEditor(false)}></div>
-                <div className="absolute top-full right-0 mt-2 w-64 p-4 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col gap-4 ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                        <span className="text-xs font-bold text-text uppercase tracking-wider">Style Editor</span>
-                        <button onClick={() => onUpdateStyle({})} className="text-[10px] text-primary hover:underline">Reset</button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-text-muted font-medium">Node Color</label>
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    type="color" 
-                                    value={customStyle.nodeColor || '#6366f1'} 
-                                    onChange={(e) => handleStyleChange('nodeColor', e.target.value)}
-                                    className="w-full h-8 rounded cursor-pointer bg-background border border-border" 
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-text-muted font-medium">Line/Stroke Color</label>
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    type="color" 
-                                    value={customStyle.lineColor || '#6366f1'} 
-                                    onChange={(e) => handleStyleChange('lineColor', e.target.value)}
-                                    className="w-full h-8 rounded cursor-pointer bg-background border border-border" 
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-text-muted font-medium">Text Color</label>
-                            <div className="flex items-center gap-2">
-                                <input 
-                                    type="color" 
-                                    value={customStyle.textColor || '#ffffff'} 
-                                    onChange={(e) => handleStyleChange('textColor', e.target.value)}
-                                    className="w-full h-8 rounded cursor-pointer bg-background border border-border" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                </>
-            )}
         </div>
 
       </div>
 
       {/* 3. Actions */}
       <div className="flex items-center gap-3">
+         
+         {/* Deploy Button (Phase 2 Feature) */}
+         <button 
+            onClick={handleDeploy}
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
+            title="Deploy to Staging (One-Click)"
+         >
+            {isDeploying ? <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div> : <Rocket className="w-3.5 h-3.5" />}
+            {isDeploying ? 'Deploying...' : 'Deploy Pipeline'}
+         </button>
+
+         {/* Publish Button */}
+         <button 
+            onClick={onPublish}
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+            title="Publish to Community Gallery"
+         >
+            <UploadCloud className="w-3.5 h-3.5" />
+            Publish
+        </button>
+
          <button 
             onClick={onNewProject}
             className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"

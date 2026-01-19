@@ -6,10 +6,12 @@ import AIChat from './components/AIChat.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import Documentation from './components/Documentation.tsx';
+import CommunityGallery from './components/CommunityGallery.tsx'; 
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
-import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig } from './types.ts';
+import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
-import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle, UploadCloud, X, Loader2 } from 'lucide-react';
+import { publishDiagram } from './services/supabaseClient.ts';
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -52,16 +54,16 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--accent': '250 204 21',      // yellow-400
   } as any,
   neutral: {
-    // Paper / Print (Clean)
+    // Paper / Print (Clean Light Mode)
     '--bg': '255 255 255',         // white
-    '--surface': '248 250 252',    // slate-50
-    '--surface-hover': '241 245 249', // slate-100
-    '--border': '226 232 240',     // slate-200
+    '--surface': '241 245 249',    // slate-100
+    '--surface-hover': '226 232 240', // slate-200
+    '--border': '203 213 225',     // slate-300
     '--text': '15 23 42',          // slate-900
     '--text-muted': '100 116 139', // slate-500
-    '--primary': '15 23 42',       // slate-900 (Monochrome)
-    '--primary-hover': '51 65 85', // slate-700
-    '--accent': '244 63 94',       // rose-500
+    '--primary': '37 99 235',      // blue-600
+    '--primary-hover': '29 78 216', // blue-700
+    '--accent': '236 72 153',      // pink-500
   } as any,
 };
 
@@ -87,11 +89,16 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Split);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<DiagramTheme>('dark');
-  const [showToast, setShowToast] = useState(false);
+  const [showToast, setShowToast] = useState<{message: string, visible: boolean}>({ message: '', visible: false });
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
 
   // --- 3. Style State ---
   const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
+  
+  // --- 4. Publish Modal State ---
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishData, setPublishData] = useState({ title: '', author: '', description: '', tags: '' });
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Ref for cleanup/persistence safety
   const projectsRef = useRef(projects);
@@ -99,7 +106,7 @@ function App() {
     projectsRef.current = projects;
   }, [projects]);
 
-  // --- 4. Initialization Logic ---
+  // --- 5. Initialization Logic ---
   
   useEffect(() => {
     const hasHash = window.location.hash.length > 1;
@@ -178,7 +185,7 @@ function App() {
 
   }, []);
 
-  // --- 5. Persistence & Project Management ---
+  // --- 6. Persistence & Project Management ---
 
   const isFirstRender = useRef(true);
 
@@ -242,7 +249,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 6. Undo/Redo Logic ---
+  // --- 7. Undo/Redo Logic ---
   useEffect(() => {
       if (history.length > 0 && code === history[historyIndex]) return;
 
@@ -282,7 +289,7 @@ function App() {
       setCode(newCode);
   };
 
-  // --- 7. Project Actions ---
+  // --- 8. Project Actions ---
 
   const handleCreateProject = () => {
       const newProject: Project = {
@@ -336,6 +343,31 @@ function App() {
       if (window.innerWidth < 1024) {
           setIsSidebarOpen(false);
       }
+  };
+  
+  // FORK FUNCTIONALITY
+  const handleFork = (diagram: CommunityDiagram) => {
+      const newProject: Project = {
+          id: `fork-${Date.now()}`,
+          name: `Fork: ${diagram.title}`,
+          code: diagram.code,
+          updatedAt: Date.now(),
+          styleConfig: {}
+      };
+
+      const updatedProjects = [newProject, ...projects];
+      setProjects(updatedProjects);
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+      setActiveProjectId(newProject.id);
+      setCode(newProject.code);
+      setCustomStyle({});
+      setHistory([newProject.code]);
+      setHistoryIndex(0);
+
+      setCurrentView('app');
+      setShowToast({ message: 'Forked successfully to workspace', visible: true });
+      setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
   };
 
   const handleSelectProject = (id: string) => {
@@ -395,26 +427,21 @@ function App() {
       setPendingDeleteId(null);
   };
 
-  // --- 8. Export/Share Handlers ---
+  // --- 9. Export/Share Handlers ---
 
   const handleShare = () => {
     const hash = encodeCodeToUrl(code);
-    
-    // SAFE URL CONSTRUCTION: Avoid history.replaceState to prevent SecurityError
-    // We only want to generate a shareable link for the user to copy.
     let shareUrl = window.location.href.split('#')[0];
     if (shareUrl.endsWith('/')) {
         shareUrl = shareUrl.slice(0, -1);
     }
     const fullUrl = `${shareUrl}#${hash}`;
 
-    // Copy to clipboard directly without updating browser history
     navigator.clipboard.writeText(fullUrl).then(() => {
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+        setShowToast({ message: 'Link copied to clipboard', visible: true });
+        setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
     }).catch(e => {
         console.error("Clipboard failed", e);
-        // Fallback or alert if needed
     });
   };
 
@@ -502,11 +529,57 @@ function App() {
       console.error("PNG Export failed:", e);
     }
   };
+  
+  // Publish Handlers
+  const openPublishModal = () => {
+      const activeP = projects.find(p => p.id === activeProjectId);
+      setPublishData({
+          title: activeP?.name || '',
+          author: localStorage.getItem('archigram_author') || '',
+          description: '',
+          tags: ''
+      });
+      setIsPublishModalOpen(true);
+  };
+
+  const submitPublish = async () => {
+      if (!publishData.title.trim() || !code.trim()) return;
+
+      setIsPublishing(true);
+      
+      // Save author for next time
+      if(publishData.author) localStorage.setItem('archigram_author', publishData.author);
+
+      const tagsArray = publishData.tags.split(',').map(t => t.trim()).filter(Boolean);
+
+      const success = await publishDiagram({
+          title: publishData.title,
+          author: publishData.author || 'Anonymous',
+          description: publishData.description,
+          code: code,
+          tags: tagsArray
+      });
+
+      setIsPublishing(false);
+
+      if (success) {
+          setIsPublishModalOpen(false);
+          setShowToast({ message: 'Diagram successfully published to Gallery!', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 4000);
+      } else {
+          setShowToast({ message: 'Failed to publish. Try again.', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+      }
+  };
+
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
   const activeProject = projects.find(p => p.id === activeProjectId);
+
+  // Inject Theme Variables
+  const appStyle = THEMES[theme] || THEMES.dark;
 
   if (currentView === 'landing') {
       return <LandingPage onNavigate={setCurrentView} />;
@@ -516,8 +589,9 @@ function App() {
       return <Documentation onNavigate={setCurrentView} />;
   }
 
-  // Inject Theme Variables
-  const appStyle = THEMES[theme] || THEMES.dark;
+  if (currentView === 'gallery') {
+      return <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />;
+  }
 
   return (
     <div 
@@ -537,13 +611,14 @@ function App() {
         onRenameProject={handleRenameProject}
         customStyle={customStyle}
         onUpdateStyle={setCustomStyle}
+        onPublish={openPublishModal}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
         
         {isSidebarOpen && (
             <div className={`
-                hidden md:block h-full relative z-10 transition-all duration-300 ease-in-out
+                hidden md:block h-full relative z-10 transition-[width] duration-300 ease-in-out
                 ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
             `}>
                 <Sidebar 
@@ -559,6 +634,7 @@ function App() {
                     onRenameProject={handleRenameProject}
                     isCollapsed={isSidebarCollapsed}
                     toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    onOpenGallery={() => setCurrentView('gallery')}
                 />
             </div>
         )}
@@ -589,6 +665,10 @@ function App() {
                     onRenameProject={handleRenameProject}
                     isCollapsed={false}
                     toggleCollapse={() => {}} // No collapse on mobile
+                    onOpenGallery={() => {
+                        setCurrentView('gallery');
+                        setIsSidebarOpen(false);
+                    }}
                 />
              </div>
              <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
@@ -619,6 +699,7 @@ function App() {
                 canRedo={canRedo}
                 error={error}
                 selectionRequest={selectionRequest}
+                theme={theme}
             />
           </div>
         )}
@@ -656,7 +737,7 @@ function App() {
                     <div>
                         <h3 className="text-lg font-bold text-text">Delete Project?</h3>
                         <p className="text-sm text-text-muted mt-2">
-                            Are you sure you want to delete this project? This action cannot be undone.
+                            Are you sure you want to delete this project? This action cannot be undone. 
                         </p>
                     </div>
                     <div className="flex items-center gap-3 w-full mt-2">
@@ -678,10 +759,92 @@ function App() {
         </div>
       )}
 
-      {showToast && (
+      {/* Publish Modal */}
+      {isPublishModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden animate-slide-up ring-1 ring-white/10">
+                <div className="flex items-center justify-between p-4 border-b border-border bg-surface-hover/30">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <UploadCloud className="w-5 h-5 text-primary" />
+                        Publish to Community
+                    </h3>
+                    <button 
+                        onClick={() => setIsPublishModalOpen(false)}
+                        className="text-text-muted hover:text-white transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Title</label>
+                        <input 
+                            type="text"
+                            value={publishData.title}
+                            onChange={e => setPublishData({...publishData, title: e.target.value})}
+                            className="w-full bg-background border border-border rounded-lg p-2.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="My Awesome Diagram"
+                        />
+                    </div>
+                    
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Author Name</label>
+                        <input 
+                            type="text"
+                            value={publishData.author}
+                            onChange={e => setPublishData({...publishData, author: e.target.value})}
+                            className="w-full bg-background border border-border rounded-lg p-2.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="Your Name (Optional)"
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Description</label>
+                        <textarea 
+                            value={publishData.description}
+                            onChange={e => setPublishData({...publishData, description: e.target.value})}
+                            className="w-full bg-background border border-border rounded-lg p-2.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary h-20 resize-none"
+                            placeholder="Briefly describe what this diagram shows..."
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Tags (Comma Separated)</label>
+                        <input 
+                            type="text"
+                            value={publishData.tags}
+                            onChange={e => setPublishData({...publishData, tags: e.target.value})}
+                            className="w-full bg-background border border-border rounded-lg p-2.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="Architecture, API, Flowchart..."
+                        />
+                    </div>
+                </div>
+
+                <div className="p-4 border-t border-border bg-surface-hover/30 flex justify-end gap-3">
+                    <button 
+                        onClick={() => setIsPublishModalOpen(false)}
+                        className="px-4 py-2 rounded-lg text-sm font-medium text-text-muted hover:text-text transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={submitPublish}
+                        disabled={isPublishing || !publishData.title.trim()}
+                        className="px-6 py-2 rounded-lg text-sm font-bold bg-primary hover:bg-primary-hover text-white shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                        {isPublishing ? 'Publishing...' : 'Publish Diagram'}
+                    </button>
+                </div>
+            </div>
+          </div>
+      )}
+
+      {showToast.visible && (
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-surface border border-primary/30 text-primary px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 z-50 animate-fade-in">
               <CheckCircle2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Link copied to clipboard</span>
+              <span className="text-sm font-medium">{showToast.message}</span>
           </div>
       )}
     </div>

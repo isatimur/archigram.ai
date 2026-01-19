@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, RotateCcw, X, Bot, User, History as HistoryIcon, MessageSquare, Clock, ArrowRight, Copy, RefreshCw, Check, Zap } from 'lucide-react';
+import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
-import { ChatMessage, DiagramTheme } from '../types.ts';
+import { ChatMessage, DiagramTheme, CopilotDomain } from '../types.ts';
 
 interface AIChatProps {
   currentCode: string;
@@ -9,16 +9,18 @@ interface AIChatProps {
   theme?: DiagramTheme;
 }
 
-const CHAT_STORAGE_KEY = 'archigraph_chat_history';
+const CHAT_STORAGE_KEY = 'aistudio_chat_history';
 
 type Tab = 'chat' | 'history';
 
 const SUGGESTED_PROMPTS = [
-    "Add a payment gateway service",
-    "Show a loop for retries",
-    "Add a database with a cylinder shape",
-    "Group these into a subgraph"
+    "Add a validation step",
+    "Deploy to Kubernetes",
+    "Add an encryption layer",
+    "Connect to Data Lake"
 ];
+
+const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
 
 const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dark' }) => {
   const [prompt, setPrompt] = useState('');
@@ -26,6 +28,8 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [justCopied, setJustCopied] = useState<string | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<CopilotDomain>('General');
+  const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
@@ -53,12 +57,12 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     setActiveTab('chat');
 
     try {
-      const newCode = await generateDiagramCode(userPrompt, currentCode);
+      const newCode = await generateDiagramCode(userPrompt, currentCode, selectedDomain);
       
       const aiMsg: ChatMessage = {
         id: Date.now().toString(),
         role: 'model',
-        text: 'I have updated the diagram based on your request.',
+        text: `I have updated the pipeline for the ${selectedDomain} domain.`,
         codeSnapshot: newCode,
         timestamp: Date.now(),
       };
@@ -116,10 +120,10 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     await processAIRequest(lastUserMessage.text);
   };
 
-  const handleRestore = (code: string) => {
-    if (confirm('Revert diagram to this version? Current unsaved changes will be lost.')) {
-        onCodeUpdate(code);
-    }
+  const handleFeedback = (msgId: string, type: 'helpful' | 'unhelpful') => {
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, feedback: type } : m));
+      // In a real implementation, this would send an event to the backend analytics
+      console.log(`[Phase 1 Feedback Loop] User rated message ${msgId} as ${type}`);
   };
 
   const handleCopyCode = (code: string, id: string) => {
@@ -144,7 +148,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
         <button 
             onClick={() => setIsExpanded(true)}
             className="absolute bottom-6 left-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
-            title="Open AI Architect"
+            title="Open ArchiGram Copilot"
         >
             <Sparkles className="w-6 h-6 animate-pulse-slow" />
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -159,16 +163,49 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     <div className="absolute bottom-6 left-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
       <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         
-        {/* Header with Tabs */}
+        {/* Header with Domain Selector (Phase 1 Wedge) */}
         <div className="border-b border-border/50 bg-gradient-to-r from-surface-hover/50 to-transparent flex flex-col shrink-0">
             <div className="flex justify-between items-center p-4 pb-2">
                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
                         <Bot className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-text font-bold text-sm tracking-tight">Gemini Copilot</span>
-                        <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Architecture Assistant</span>
+                    <div className="flex flex-col relative">
+                        <span className="text-text font-bold text-sm tracking-tight flex items-center gap-1">
+                            AI Copilot
+                            <span className="px-1.5 py-0.5 rounded text-[9px] bg-primary/20 text-primary uppercase">Beta</span>
+                        </span>
+                        
+                        {/* Domain Dropdown */}
+                        <div className="relative mt-0.5">
+                             <button 
+                                onClick={() => setShowDomainDropdown(!showDomainDropdown)}
+                                className="text-[10px] text-text-muted font-mono uppercase tracking-wider flex items-center gap-1 hover:text-white transition-colors"
+                             >
+                                Domain: {selectedDomain}
+                                <ChevronDown className="w-3 h-3" />
+                             </button>
+                             
+                             {showDomainDropdown && (
+                                 <>
+                                 <div className="fixed inset-0 z-10" onClick={() => setShowDomainDropdown(false)}></div>
+                                 <div className="absolute top-full left-0 mt-1 w-32 bg-surface border border-border rounded-lg shadow-xl z-20 py-1">
+                                     {DOMAINS.map(d => (
+                                         <button
+                                            key={d}
+                                            onClick={() => {
+                                                setSelectedDomain(d);
+                                                setShowDomainDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-1.5 text-xs hover:bg-surface-hover ${selectedDomain === d ? 'text-primary font-bold' : 'text-text-muted'}`}
+                                         >
+                                            {d}
+                                         </button>
+                                     ))}
+                                 </div>
+                                 </>
+                             )}
+                        </div>
                     </div>
                 </div>
                 <button 
@@ -201,7 +238,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                     }`}
                 >
                     <HistoryIcon className="w-3.5 h-3.5" />
-                    History
+                    Runs
                     <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{historyItems.length}</span>
                 </button>
             </div>
@@ -217,7 +254,8 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                         <div className="flex flex-col h-full">
                             <div className="flex-1 flex flex-col items-center justify-center text-text-muted text-xs gap-4 opacity-70">
                                 <Bot className="w-10 h-10 text-primary opacity-50" />
-                                <p>How can I help you build today?</p>
+                                <p>Describe your ML pipeline or system.</p>
+                                <span className="px-2 py-1 bg-surface border border-border rounded text-[10px]">Active Domain: {selectedDomain}</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 mt-auto">
                                 {SUGGESTED_PROMPTS.map((txt, i) => (
@@ -239,7 +277,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                             className={`flex flex-col gap-1.5 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
                         >
                             <div className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider ${msg.role === 'user' ? 'text-primary flex-row-reverse' : 'text-text-muted'}`}>
-                                <span>{msg.role === 'user' ? 'You' : 'Gemini'}</span>
+                                <span>{msg.role === 'user' ? 'You' : 'ArchiGram.ai'}</span>
                             </div>
 
                             <div className={`
@@ -258,7 +296,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                                         <div className="flex justify-between items-center px-2 py-1 bg-surface-hover/30 border-b border-border/50">
                                             <span className="text-[10px] font-mono text-text-muted flex items-center gap-1">
                                                 <Zap className="w-3 h-3 text-accent" />
-                                                Updated Diagram
+                                                Pipeline Updated
                                             </span>
                                             <button 
                                                 onClick={() => handleCopyCode(msg.codeSnapshot!, msg.id)}
@@ -276,6 +314,26 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                                     </div>
                                 )}
                             </div>
+
+                            {/* Phase 1: Feedback Loop */}
+                            {msg.role === 'model' && !msg.isError && (
+                                <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        onClick={() => handleFeedback(msg.id, 'helpful')}
+                                        className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
+                                        title="Helpful"
+                                    >
+                                        <ThumbsUp className="w-3 h-3" />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleFeedback(msg.id, 'unhelpful')}
+                                        className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
+                                        title="Unhelpful"
+                                    >
+                                        <ThumbsDown className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))}
                     
@@ -299,7 +357,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                             </div>
                             <div className="bg-surface border border-border p-4 rounded-2xl rounded-bl-sm text-text-muted text-sm flex items-center gap-3">
                                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                <span>Thinking...</span>
+                                <span>Designing Pipeline...</span>
                             </div>
                         </div>
                     )}
@@ -312,7 +370,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                      {historyItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
                             <Clock className="w-8 h-8 opacity-20" />
-                            <p>No version history available yet.</p>
+                            <p>No pipeline history yet.</p>
                         </div>
                     ) : (
                         <div className="relative border-l border-border ml-3 space-y-6">
@@ -330,40 +388,29 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                                                 <span className="text-[10px] font-mono text-text-muted">
                                                     {new Date(item.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' })}
                                                 </span>
-                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 rounded uppercase tracking-wider font-bold">
-                                                    v{messages.filter(m => m.codeSnapshot && m.timestamp <= item.timestamp).length}
-                                                </span>
+                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">v{historyItems.length - index}</span>
                                             </div>
+                                            <p className="text-xs text-text mb-3 line-clamp-2">{promptText}</p>
                                             
-                                            <p className="text-xs text-text font-medium line-clamp-2 mb-3">
-                                                "{promptText}"
-                                            </p>
-
-                                            <div className="flex items-center justify-between gap-2 border-t border-border pt-2 mt-2">
-                                                <div className="text-[10px] text-text-muted font-mono">
-                                                    {item.codeSnapshot?.length} chars
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <button
-                                                        onClick={() => handleCopyCode(item.codeSnapshot!, item.id)}
-                                                        className="p-1.5 text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
-                                                        title="Copy Code"
-                                                    >
-                                                        {justCopied === item.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRestore(item.codeSnapshot!)}
-                                                        className="flex items-center gap-1.5 text-[10px] font-bold text-primary hover:text-white bg-primary/10 hover:bg-primary px-2.5 py-1.5 rounded-lg transition-all"
-                                                    >
-                                                        <RotateCcw className="w-3 h-3" />
-                                                        Restore
-                                                    </button>
-                                                </div>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => onCodeUpdate(item.codeSnapshot!)}
+                                                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors"
+                                                >
+                                                    <RotateCcw className="w-3 h-3" />
+                                                    Restore
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleCopyCode(item.codeSnapshot!, item.id)}
+                                                    className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
+                                                >
+                                                    {justCopied === item.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 );
-                            }).reverse()} 
+                            })}
                         </div>
                     )}
                 </div>
@@ -371,45 +418,41 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
         </div>
 
         {/* Input Area */}
-        {activeTab === 'chat' && (
-             <div className="p-3 border-t border-border bg-surface/80 shrink-0 backdrop-blur-md">
-                <form onSubmit={handleSubmit} className="relative">
-                    <textarea
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Describe changes..."
-                        className="w-full bg-background/50 border border-border rounded-xl p-3 pr-10 text-sm text-text placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 resize-none h-14 scrollbar-none transition-all shadow-inner"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSubmit(e);
-                            }
-                        }}
-                    />
-                    <button 
-                        type="submit"
-                        disabled={isLoading || !prompt.trim()}
-                        className="absolute bottom-3 right-3 p-1.5 bg-gradient-to-br from-primary to-accent rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-                    >
-                        {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+        <div className="p-3 bg-surface border-t border-border">
+            <form 
+                onSubmit={handleSubmit}
+                className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
+            >
+                <textarea 
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSubmit(e);
+                        }
+                    }}
+                    placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
+                    className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
+                    disabled={isLoading}
+                />
+                <button 
+                    type="submit"
+                    disabled={isLoading || !prompt.trim()}
+                    className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+                >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+            </form>
+            <div className="flex justify-between items-center px-1 mt-2">
+                <span className="text-[9px] text-text-muted">Gemini 3 Flash • {selectedDomain} Context</span>
+                {messages.length > 0 && (
+                    <button onClick={handleClearHistory} className="text-[9px] text-text-muted hover:text-red-500 transition-colors">
+                        Clear History
                     </button>
-                </form>
-                <div className="flex justify-between items-center mt-2 px-1">
-                     <p className="text-[9px] text-text-muted font-mono flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-accent" />
-                        Powered by Gemini 3 Flash
-                    </p>
-                    {messages.length > 0 && (
-                        <button 
-                            onClick={handleClearHistory}
-                            className="text-[9px] text-text-muted hover:text-red-500 transition-colors"
-                        >
-                            Clear Chat
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
-        )}
+        </div>
       </div>
     </div>
   );

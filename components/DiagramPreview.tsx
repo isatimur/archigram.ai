@@ -39,25 +39,43 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
     const themeVariables: any = {
         fontFamily: '"Inter", sans-serif',
+        // High-Fidelity Sequence Diagram Colors (Indigo/Midnight Palette)
+        actorBkg: '#1e1e24',
+        actorBorder: '#6366f1',
+        actorTextColor: '#eef2ff',
+        actorLineColor: '#818cf8',
+        signalColor: '#a5b4fc',
+        signalTextColor: '#eef2ff',
+        labelBoxBkgColor: '#1e1e24',
+        labelBoxBorderColor: '#818cf8',
+        noteBkgColor: 'rgba(99, 102, 241, 0.1)',
+        noteBorderColor: 'rgba(99, 102, 241, 0.3)',
+        noteTextColor: '#c7d2fe',
+        loopTextColor: '#c7d2fe',
+        activationBorderColor: '#6366f1',
+        activationBkgColor: '#312e81',
+        sequenceNumberColor: '#ffffff'
     };
 
     if (customStyle) {
         if (customStyle.nodeColor) {
             themeVariables.primaryColor = customStyle.nodeColor;
             themeVariables.primaryBorderColor = customStyle.nodeColor;
-            themeVariables.mainBkg = customStyle.nodeColor; // For some diagrams
+            themeVariables.mainBkg = customStyle.nodeColor;
+            themeVariables.actorBkg = customStyle.nodeColor;
+            themeVariables.actorBorder = customStyle.nodeColor;
         }
         if (customStyle.lineColor) {
             themeVariables.lineColor = customStyle.lineColor;
             themeVariables.arrowheadColor = customStyle.lineColor;
+            themeVariables.actorLineColor = customStyle.lineColor;
+            themeVariables.signalColor = customStyle.lineColor;
         }
         if (customStyle.textColor) {
             themeVariables.textColor = customStyle.textColor;
-        }
-        // Additional mermaid variables for thorough coloring
-        if (customStyle.nodeColor) {
-             themeVariables.nodeBorder = customStyle.nodeColor;
-             themeVariables.clusterBkg = customStyle.nodeColor + '20'; // transparent
+            themeVariables.actorTextColor = customStyle.textColor;
+            themeVariables.signalTextColor = customStyle.textColor;
+            themeVariables.noteTextColor = customStyle.textColor;
         }
     }
 
@@ -66,7 +84,18 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       theme: mermaidTheme,
       securityLevel: 'loose',
       fontFamily: '"Inter", sans-serif',
-      themeVariables: themeVariables
+      themeVariables: themeVariables,
+      sequence: {
+          showSequenceNumbers: false,
+          actorMargin: 50,
+          boxMargin: 10,
+          boxTextMargin: 5,
+          noteMargin: 10,
+          messageMargin: 35,
+          mirrorActors: false,
+          bottomMarginAdj: 1,
+          useMaxWidth: true,
+      }
     });
     // Force re-render by clearing content momentarily
     setSvgContent(''); 

@@ -6,6 +6,7 @@ export interface ChatMessage {
   isError?: boolean;
   codeSnapshot?: string;
   timestamp: number;
+  feedback?: 'helpful' | 'unhelpful'; // Phase 1: Data Feedback Loop
 }
 
 export enum ViewMode {
@@ -15,6 +16,8 @@ export enum ViewMode {
 }
 
 export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
+
+export type CopilotDomain = 'General' | 'Healthcare' | 'Finance' | 'E-commerce';
 
 export interface DiagramStyleConfig {
   nodeColor?: string;
@@ -34,8 +37,20 @@ export interface Project {
   name: string;
   code: string;
   updatedAt: number;
-  thumbnail?: string; // Optional future proofing
+  thumbnail?: string; 
   styleConfig?: DiagramStyleConfig;
 }
 
-export type AppView = 'landing' | 'app' | 'docs';
+export interface CommunityDiagram {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  code: string;
+  likes: number;
+  views: number;
+  tags: string[];
+  createdAt: string;
+}
+
+export type AppView = 'landing' | 'app' | 'docs' | 'gallery';

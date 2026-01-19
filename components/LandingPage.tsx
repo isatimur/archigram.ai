@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutTemplate, ArrowRight, Zap, CheckCircle2, Cpu, Share2, Shield, Code2, Globe, FileJson, Layers, Command } from 'lucide-react';
+import { LayoutTemplate, ArrowRight, Zap, CheckCircle2, Cpu, Share2, Shield, Code2, Globe, FileJson, Layers, Command, Rocket, Bot } from 'lucide-react';
 import { AppView } from '../types.ts';
 
 interface LandingPageProps {
@@ -20,16 +20,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl px-6 h-20 flex items-center justify-between">
          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <LayoutTemplate className="w-6 h-6 text-white" />
+                <Rocket className="w-6 h-6 text-white" />
              </div>
              <div>
-                <h1 className="text-xl font-bold tracking-tight"><span className="text-indigo-400">Archi</span>Gram<span className="text-indigo-400">.ai</span></h1>
-                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono">Enterprise Edition</p>
+                <h1 className="text-xl font-bold tracking-tight">ArchiGram.ai<span className="text-indigo-400">.oss</span></h1>
+                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono">Open Core Platform</p>
              </div>
          </div>
          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
             <button onClick={() => scrollTo('features')} className="hover:text-white transition-colors">Features</button>
-            <button onClick={() => scrollTo('solutions')} className="hover:text-white transition-colors">Solutions</button>
+            <button onClick={() => onNavigate('gallery')} className="hover:text-indigo-400 text-indigo-200 transition-colors flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" />Community</button>
             <button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors">Pricing</button>
             <button onClick={() => onNavigate('docs')} className="hover:text-white transition-colors">Docs</button>
          </div>
@@ -39,7 +39,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('app')}
                 className="bg-white text-black px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)]"
              >
-                Launch App
+                Launch Studio
              </button>
          </div>
       </nav>
@@ -48,18 +48,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       <div className="relative pt-40 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center text-center z-10">
          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium mb-8 animate-fade-in">
             <Zap className="w-3.5 h-3.5" />
-            <span>Powered by Gemini 3 Flash</span>
+            <span>v0.1 Public Beta • Powered by Gemini 3 Flash</span>
          </div>
 
          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-zinc-500 animate-slide-up">
-            Architecture at the <br className="hidden md:block"/>
-            Speed of Thought.
+            Build ML Pipelines <br className="hidden md:block"/>
+            at the Speed of Thought.
          </h1>
          
          <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            The professional diagramming suite for technical architects. 
-            Combine the power of Mermaid.js with Gemini 3 Flash to generate, 
-            iterate, and manage complex systems in seconds.
+            The open-source ArchiGram.ai for technical architects. 
+            Design domain-specific ML workflows, visualize systems, and deploy with one click.
          </p>
 
          <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -69,15 +68,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <span className="relative flex items-center gap-2">
-                    Start Building Free
+                    Open Studio
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
             </button>
             <button 
-                onClick={() => scrollTo('features')}
-                className="px-8 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all"
+                onClick={() => onNavigate('gallery')}
+                className="px-8 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all flex items-center gap-2"
             >
-                Learn More
+                <Globe className="w-5 h-5" />
+                View Templates
             </button>
          </div>
       </div>
@@ -88,15 +88,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <div className="rounded-xl overflow-hidden border border-white/5 bg-[#09090b] aspect-[16/9] flex items-center justify-center relative group cursor-default">
                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#09090b]/80 z-10"></div>
                  <pre className="text-xs font-mono text-zinc-600 absolute left-6 top-6 opacity-50">
-{`sequenceDiagram
-    participant User
-    participant System
-    User->>System: Login
-    System-->>User: 200 OK`}
+{`graph LR
+    A[Raw Text] --> B[Tokenizer]
+    B --> C[Transformer]
+    C --> D[Classification]
+    
+    subgraph MLOps
+    E[Registry] -.-> C
+    end`}
                  </pre>
                  <div className="z-20 text-center">
-                    <p className="text-zinc-500 text-sm font-mono mb-2">Live Preview Engine</p>
-                    <button onClick={() => onNavigate('app')} className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-sm font-bold border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">Try Interactive Demo</button>
+                    <p className="text-zinc-500 text-sm font-mono mb-2">Domain-Specific Copilot Active</p>
+                    <button onClick={() => onNavigate('app')} className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg text-sm font-bold border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors">Start Building Pipeline</button>
                  </div>
             </div>
         </div>
@@ -105,89 +108,65 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       {/* Features Grid */}
       <div id="features" className="max-w-7xl mx-auto px-6 py-24 scroll-mt-20">
          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything you need to ship faster.</h2>
-            <p className="text-zinc-400 max-w-2xl mx-auto">Stop wrestling with GUI tools. Code your diagrams or let AI handle the syntax while you focus on the architecture.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">The Differentiated Wedge</h2>
+            <p className="text-zinc-400 max-w-2xl mx-auto">Why architects and ML engineers choose ArchiGram.ai over generic diagramming tools.</p>
          </div>
          <div className="grid md:grid-cols-3 gap-8">
             <FeatureCard 
-                icon={<Cpu className="w-6 h-6 text-indigo-400" />}
-                title="Gemini 3 Native"
-                desc="Describe your system in plain English. Our engine leverages Gemini 3 Flash for sub-second diagram generation."
+                icon={<Bot className="w-6 h-6 text-indigo-400" />}
+                title="Domain Copilot"
+                desc="Pre-loaded with context for Healthcare (HIPAA), Finance (PCI-DSS), and E-commerce architectures."
             />
              <FeatureCard 
-                icon={<Code2 className="w-6 h-6 text-pink-400" />}
-                title="Code-First Editor"
-                desc="Full Mermaid.js syntax support with syntax highlighting, error detection, and line numbers."
+                icon={<Zap className="w-6 h-6 text-pink-400" />}
+                title="One-Click Pipelines"
+                desc="Instantly instantiate RAG, Text Classification, or Fraud Detection workflows from our proven templates."
             />
             <FeatureCard 
-                icon={<Shield className="w-6 h-6 text-emerald-400" />}
-                title="Enterprise Storage"
-                desc="Secure local persistence for all your projects. Manage multiple diagrams in a unified workspace."
+                icon={<Rocket className="w-6 h-6 text-emerald-400" />}
+                title="Deploy Ready"
+                desc="Design with deployment in mind. Visualize the path from Ingestion to Production before writing code."
             />
             <FeatureCard 
                 icon={<Share2 className="w-6 h-6 text-purple-400" />}
                 title="Export & Share"
-                desc="One-click export to SVG/PNG for presentations, or share live editable links with your team."
+                desc="Export as SVG for presentations or share live links with your engineering team."
             />
             <FeatureCard 
                 icon={<Globe className="w-6 h-6 text-blue-400" />}
-                title="C4 Model Support"
-                desc="Generate C4 Context, Container, and Component diagrams with specialized prompts."
+                title="Community Hub"
+                desc="Access thousands of public diagrams. Fork, improve, and contribute back to the ecosystem."
             />
             <FeatureCard 
-                icon={<FileJson className="w-6 h-6 text-amber-400" />}
-                title="Versioning"
-                desc="Auto-saving and local history ensure you never lose your flow state or your diagram iterations."
+                icon={<Shield className="w-6 h-6 text-amber-400" />}
+                title="Open Core"
+                desc="Free for individuals. Enterprise-ready with RBAC, Audit Logs, and SLAs for teams."
             />
-         </div>
-      </div>
-
-      {/* Solutions / Diagrams */}
-      <div id="solutions" className="bg-zinc-900/30 py-24 border-y border-white/5 scroll-mt-20">
-         <div className="max-w-7xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row gap-12 items-center">
-                <div className="flex-1 space-y-8">
-                    <h2 className="text-3xl md:text-4xl font-bold">Supported Diagram Types</h2>
-                    <div className="space-y-4">
-                        <SolutionItem title="Sequence Diagrams" desc="Visualize API flows, authentications, and system interactions." />
-                        <SolutionItem title="Flowcharts" desc="Map out decision trees, user journeys, and complex logic." />
-                        <SolutionItem title="Class Diagrams" desc="Model your database schema and object-oriented structures." />
-                        <SolutionItem title="State Diagrams" desc="Define lifecycle states for orders, payments, and processes." />
-                        <SolutionItem title="Gantt & Pie Charts" desc="Project management visualization baked right in." />
-                    </div>
-                </div>
-                <div className="flex-1">
-                    <div className="bg-[#09090b] border border-white/10 rounded-2xl p-8 aspect-square flex items-center justify-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent"></div>
-                        <Layers className="w-32 h-32 text-indigo-500/50" />
-                    </div>
-                </div>
-            </div>
          </div>
       </div>
 
       {/* Pricing */}
       <div id="pricing" className="max-w-7xl mx-auto px-6 py-24 scroll-mt-20">
          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-zinc-400">Start for free, upgrade for power.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Open Core Pricing</h2>
+            <p className="text-zinc-400">Generous OSS tier for developers. Powerful controls for Enterprise.</p>
          </div>
          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <PricingCard 
-                title="Community" 
+                title="OSS Community" 
                 price="$0" 
-                features={['Unlimited Diagrams (Local)', 'Gemini 3 Flash (Limited)', 'SVG Export', 'Standard Themes']}
+                features={['Unlimited Local Diagrams', 'Domain Copilots (Basic)', 'Community Templates', 'Public Gallery Access']}
                 cta="Start Building"
                 active={false}
                 onClick={() => onNavigate('app')}
             />
             <PricingCard 
-                title="Pro Architect" 
-                price="$19" 
-                features={['Everything in Free', 'Gemini 3 Pro Access', 'Unlimited History', 'Priority Support', 'Custom Branding']}
-                cta="Go Pro"
+                title="Enterprise" 
+                price="Custom" 
+                features={['Everything in OSS', 'SSO & RBAC', 'Audit Logs', 'Priority Support', 'Private Cloud Deployment']}
+                cta="Contact Sales"
                 active={true}
-                onClick={() => onNavigate('app')}
+                onClick={() => window.location.href = 'mailto:sales@archigram.ai'}
             />
          </div>
       </div>
@@ -199,17 +178,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                 <h4 className="text-white font-bold mb-4">Product</h4>
                 <ul className="space-y-2 text-sm text-zinc-500">
                     <li><button onClick={() => scrollTo('features')} className="hover:text-indigo-400">Features</button></li>
+                    <li><button onClick={() => onNavigate('gallery')} className="hover:text-indigo-400">Gallery</button></li>
                     <li><button onClick={() => scrollTo('pricing')} className="hover:text-indigo-400">Pricing</button></li>
                     <li><button onClick={() => onNavigate('docs')} className="hover:text-indigo-400">Documentation</button></li>
-                    <li><button onClick={() => onNavigate('app')} className="hover:text-indigo-400">Changelog</button></li>
                 </ul>
             </div>
             <div>
                 <h4 className="text-white font-bold mb-4">Use Cases</h4>
                 <ul className="space-y-2 text-sm text-zinc-500">
-                    <li><button className="hover:text-indigo-400">Software Architecture</button></li>
+                    <li><button className="hover:text-indigo-400">ML Pipelines</button></li>
                     <li><button className="hover:text-indigo-400">Cloud Infrastructure</button></li>
-                    <li><button className="hover:text-indigo-400">Database Design</button></li>
+                    <li><button className="hover:text-indigo-400">Microservices</button></li>
                 </ul>
             </div>
              <div>
@@ -229,7 +208,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             </div>
         </div>
         <div className="text-center text-zinc-600 text-sm">
-            <p>&copy; {new Date().getFullYear()} Archigram.ai. Built with Gemini 3.</p>
+            <p>&copy; {new Date().getFullYear()} ArchiGram.ai OSS. Built with Gemini 3.</p>
         </div>
       </footer>
       
@@ -246,18 +225,6 @@ const FeatureCard = ({ icon, title, desc }: { icon: React.ReactNode, title: stri
         </div>
         <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
         <p className="text-zinc-400 text-sm leading-relaxed">{desc}</p>
-    </div>
-);
-
-const SolutionItem = ({ title, desc }: { title: string, desc: string }) => (
-    <div className="flex items-start gap-4">
-        <div className="mt-1">
-            <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-        </div>
-        <div>
-            <h4 className="text-white font-bold">{title}</h4>
-            <p className="text-zinc-500 text-sm">{desc}</p>
-        </div>
     </div>
 );
 
