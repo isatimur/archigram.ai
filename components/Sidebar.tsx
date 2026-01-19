@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight, LayoutTemplate, FileCode } from 'lucide-react';
 import { Project } from '../types.ts';
+import { TEMPLATES } from '../constants.ts';
 
 interface SidebarProps {
   projects: Project[];
   activeProjectId: string;
   onSelectProject: (id: string) => void;
   onCreateProject: () => void;
+  onCreateFromTemplate: (name: string, code: string) => void;
   onDeleteProject: (id: string, e: React.MouseEvent) => void;
   onClose: () => void;
   lastSaved: Date | null;
@@ -21,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeProjectId,
   onSelectProject,
   onCreateProject,
+  onCreateFromTemplate,
   onDeleteProject,
   onClose,
   lastSaved,
@@ -78,6 +81,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       return name.substring(0, 2).toUpperCase();
   };
 
+  // Helper to highlight matching text
+  const highlightMatch = (text: string, query: string) => {
+    if (!query || !text) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <span key={i} className="bg-primary/20 text-primary font-bold rounded-[2px] px-0.5">{part}</span>
+      ) : (
+        part
+      )
+    );
+  };
+
   return (
     <div className="w-full h-full bg-surface/80 border-r border-border flex flex-col backdrop-blur-xl relative transition-all duration-300 pt-5">
       
@@ -111,8 +127,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* 2. Project List */}
+      {/* 2. Scrollable Area: Templates & Project List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border px-2">
+
+        {/* PROJECTS SECTION */}
         {!isCollapsed && (
             <div className="px-2 mb-2 flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider">
                 <span>Projects</span>
@@ -166,7 +184,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 ) : (
                                     <>
                                         <span className={`text-sm font-medium truncate ${isActive ? 'text-text' : ''}`}>
-                                            {project.name}
+                                            {highlightMatch(project.name, searchQuery)}
                                         </span>
                                         <span className="text-[10px] text-text-muted flex items-center gap-1">
                                             {new Date(project.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -234,6 +252,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             )}
         </div>
+
+        {/* TEMPLATES SECTION (Hidden during search or collapse) */}
+        {!isCollapsed && !searchQuery && (
+            <div className="mt-2 mb-6 border-t border-border/40 pt-4">
+                <div className="px-2 mb-2 flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider opacity-80">
+                    <span>Templates</span>
+                </div>
+                <div className="space-y-1">
+                    {Object.entries(TEMPLATES).map(([name, code]) => (
+                        <button
+                            key={name}
+                            onClick={() => onCreateFromTemplate(name, code)}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-transparent hover:bg-surface-hover text-text-muted hover:text-text hover:border-border/50 transition-all text-left group"
+                        >
+                            <div className="w-8 h-8 rounded-md bg-surface border border-border flex items-center justify-center group-hover:bg-background transition-colors">
+                                <LayoutTemplate className="w-4 h-4 text-text-muted group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-sm font-medium">{name}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
       </div>
       
       {/* 3. Footer / Toggle */}

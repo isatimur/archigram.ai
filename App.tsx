@@ -310,6 +310,33 @@ function App() {
       }
   };
 
+  const handleCreateFromTemplate = (templateName: string, templateCode: string) => {
+      const newProject: Project = {
+          id: Date.now().toString(),
+          name: templateName,
+          code: templateCode,
+          updatedAt: Date.now(),
+          styleConfig: {}
+      };
+
+      const updatedProjects = [newProject, ...projects];
+      setProjects(updatedProjects);
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+      setActiveProjectId(newProject.id);
+      setCode(newProject.code);
+      setCustomStyle({});
+      setHistory([newProject.code]);
+      setHistoryIndex(0);
+
+      if (window.innerWidth >= 768) {
+        setViewMode(ViewMode.Split);
+      }
+      if (window.innerWidth < 1024) {
+          setIsSidebarOpen(false);
+      }
+  };
+
   const handleSelectProject = (id: string) => {
       const project = projects.find(p => p.id === id);
       if (project) {
@@ -523,6 +550,7 @@ function App() {
                     activeProjectId={activeProjectId}
                     onSelectProject={handleSelectProject}
                     onCreateProject={handleCreateProject}
+                    onCreateFromTemplate={handleCreateFromTemplate}
                     onDeleteProject={handleDeleteProject}
                     onClose={() => setIsSidebarOpen(false)}
                     lastSaved={lastSaved}
@@ -547,6 +575,10 @@ function App() {
                     }}
                     onCreateProject={() => {
                         handleCreateProject();
+                        setIsSidebarOpen(false);
+                    }}
+                    onCreateFromTemplate={(name, code) => {
+                        handleCreateFromTemplate(name, code);
                         setIsSidebarOpen(false);
                     }}
                     onDeleteProject={handleDeleteProject}

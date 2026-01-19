@@ -152,6 +152,8 @@ const Header: React.FC<HeaderProps> = ({
                     <span className="capitalize hidden lg:inline">{currentTheme}</span>
                     <ChevronDown className="w-3 h-3 opacity-50" />
                 </button>
+                {/* 
+                // Removed Custom Brush as requested
                 <div className="w-px h-4 bg-border/50"></div>
                 <button
                     onClick={() => setShowStyleEditor(!showStyleEditor)}
@@ -160,6 +162,7 @@ const Header: React.FC<HeaderProps> = ({
                 >
                     <Paintbrush className="w-3.5 h-3.5" />
                 </button>
+                */}
             </div>
             
             {showThemes && (
