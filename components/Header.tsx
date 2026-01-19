@@ -91,11 +91,10 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none shrink-0">
             <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer">
-              <div className="w-6 h-6 rounded bg-gradient-to-tr from-primary to-accent flex items-center justify-center">
+              <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                   <Rocket className="w-3 h-3 text-white" />
               </div>
-              <span className="text-text font-bold">ArchiGram</span>
-              <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-text-muted font-mono uppercase">.OSS</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">Archi</span><span className="text-text font-bold">Gram</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">.ai</span>
             </h1>
         </div>
         

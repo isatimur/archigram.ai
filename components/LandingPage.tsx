@@ -19,12 +19,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl px-6 h-20 flex items-center justify-between">
          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Rocket className="w-6 h-6 text-white" />
              </div>
              <div>
-                <h1 className="text-xl font-bold tracking-tight">ArchiGram.ai<span className="text-indigo-400">.oss</span></h1>
-                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono">Open Core Platform</p>
+                <div className="text-xl tracking-tight flex items-center">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">Archi</span>
+                    <span className="text-white font-bold">Gram</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">.ai</span>
+                </div>
+                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono leading-none">Open Core Platform</p>
              </div>
          </div>
          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
