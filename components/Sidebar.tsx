@@ -1,5 +1,5 @@
-import React from 'react';
-import { Folder, Plus, Trash2, Clock, Box, PanelLeftClose, Save, LayoutGrid, Users, Star, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Project } from '../types.ts';
 
 interface SidebarProps {
@@ -11,6 +11,9 @@ interface SidebarProps {
   onClose: () => void;
   lastSaved: Date | null;
   saveStatus: 'saved' | 'saving';
+  onRenameProject: (id: string, name: string) => void;
+  isCollapsed: boolean;
+  toggleCollapse: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -21,138 +24,250 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeleteProject,
   onClose,
   lastSaved,
-  saveStatus
+  saveStatus,
+  onRenameProject,
+  isCollapsed,
+  toggleCollapse
 }) => {
-  return (
-    <div className="w-72 bg-background border-r border-border flex flex-col h-full shrink-0 transition-all duration-300">
-      
-      {/* 1. Header & Workspace Selector */}
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2 text-text font-bold text-sm tracking-tight">
-                <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
-                    <LayoutGrid className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span>Workspace</span>
-            </div>
-            <button 
-                onClick={onClose}
-                className="text-text-muted hover:text-text p-1.5 hover:bg-surface-hover rounded-md transition-colors"
-                title="Collapse Sidebar"
-            >
-                <PanelLeftClose className="w-4 h-4" />
-            </button>
-        </div>
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-        <button 
+  // Filter projects based on search query
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    return projects.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [projects, searchQuery]);
+
+  const startEditing = (project: Project, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setEditingId(project.id);
+      setEditName(project.name);
+  };
+
+  const submitRename = (id: string) => {
+      if (editName.trim()) {
+          onRenameProject(id, editName.trim());
+      }
+      setEditingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
+      if (e.key === 'Enter') {
+          submitRename(id);
+      } else if (e.key === 'Escape') {
+          setEditingId(null);
+      }
+  };
+
+  // Generate a consistent color for the project icon
+  const getProjectColor = (id: string) => {
+    const colors = [
+        'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-orange-500', 
+        'bg-pink-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-rose-500'
+    ];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const getInitials = (name: string) => {
+      return name.substring(0, 2).toUpperCase();
+  };
+
+  return (
+    <div className="w-full h-full bg-surface/80 border-r border-border flex flex-col backdrop-blur-xl relative transition-all duration-300 pt-5">
+      
+      {/* 1. Actions & Search */}
+      <div className={`flex flex-col gap-3 transition-all duration-300 ${isCollapsed ? 'p-2' : 'px-4 pb-4'}`}>
+         {/* New Project Button */}
+         <button 
             onClick={onCreateProject}
-            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] group"
+            className={`
+                flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-all shadow-lg shadow-primary/20 group hover:scale-[1.02] active:scale-[0.98]
+                ${isCollapsed ? 'w-10 h-10 rounded-xl mx-auto' : 'w-full py-2.5 px-4'}
+            `}
+            title="Create New Diagram"
         >
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-            New Diagram
+            <Plus className={`transition-transform duration-300 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4 group-hover:rotate-90'}`} />
+            {!isCollapsed && <span className="text-sm font-semibold">New Diagram</span>}
         </button>
+
+        {/* Search Bar (Expanded Only) */}
+        {!isCollapsed && (
+            <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
+                <input 
+                    type="text"
+                    placeholder="Search diagrams..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-surface-hover/50 border border-border/50 rounded-lg pl-9 pr-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-surface-hover transition-all"
+                />
+            </div>
+        )}
       </div>
 
-      {/* 2. Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin scrollbar-thumb-border">
-        
-        {/* Quick Links (Visual only for now) */}
-        <div className="space-y-1 mb-8">
-            <div className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-hover rounded-lg cursor-pointer flex items-center gap-3 transition-colors text-sm font-medium">
-                <Folder className="w-4 h-4" />
-                All Projects
+      {/* 2. Project List */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border px-2">
+        {!isCollapsed && (
+            <div className="px-2 mb-2 flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                <span>Projects</span>
+                <span className="bg-surface border border-border px-1.5 rounded">{filteredProjects.length}</span>
             </div>
-            <div className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-hover rounded-lg cursor-pointer flex items-center gap-3 transition-colors text-sm font-medium">
-                <Star className="w-4 h-4" />
-                Favorites
-            </div>
-            <div className="px-3 py-2 text-text-muted hover:text-text hover:bg-surface-hover rounded-lg cursor-pointer flex items-center gap-3 transition-colors text-sm font-medium">
-                <Users className="w-4 h-4" />
-                Shared with me
-            </div>
-        </div>
+        )}
 
-        {/* Project List */}
-        <div className="mb-2 px-3 flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-wider">
-            <span>Recent Diagrams</span>
-            <span className="bg-surface-hover px-1.5 rounded border border-border">{projects.length}</span>
-        </div>
-
-        <div className="space-y-1">
-            {projects.map((project) => {
+        <div className="space-y-1 pb-4">
+            {filteredProjects.map((project) => {
                 const isActive = activeProjectId === project.id;
+                const isEditing = editingId === project.id;
+                const colorClass = getProjectColor(project.id);
                 
                 return (
                     <div 
                         key={project.id}
-                        onClick={() => onSelectProject(project.id)}
-                        className={`group relative flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border transition-all duration-200
+                        onClick={() => !isEditing && onSelectProject(project.id)}
+                        className={`
+                            group relative flex items-center rounded-lg cursor-pointer transition-all duration-200
+                            ${isCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}
                             ${isActive
-                                ? 'bg-surface border-border shadow-sm'
-                                : 'border-transparent hover:bg-surface-hover hover:border-transparent text-text-muted hover:text-text'
+                                ? 'bg-surface border border-border/50 shadow-sm'
+                                : 'border border-transparent hover:bg-surface-hover text-text-muted hover:text-text'
                             }
                         `}
+                        title={isCollapsed ? project.name : ''}
                     >
-                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'bg-surface border border-border text-text-muted'}`}>
-                            <Box className="w-4 h-4" />
+                        {/* Project Icon / Avatar */}
+                        <div className={`
+                            shrink-0 flex items-center justify-center font-bold text-[10px] text-white shadow-inner transition-all
+                            ${isCollapsed ? 'w-8 h-8 rounded-lg text-xs' : 'w-8 h-8 rounded-md'}
+                            ${colorClass}
+                        `}>
+                            {isCollapsed ? getInitials(project.name) : <Box className="w-4 h-4 text-white" />}
                         </div>
 
-                        <div className="flex flex-col min-w-0 flex-1">
-                            <span className={`text-sm font-medium truncate ${isActive ? 'text-text' : ''}`}>
-                                {project.name}
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-text-muted flex items-center gap-1">
-                                    {new Date(project.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
-                                {isActive && saveStatus === 'saving' && (
-                                     <span className="flex h-1.5 w-1.5 relative">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
-                                    </span>
+                        {/* Project Name (Expanded Only) */}
+                        {!isCollapsed && (
+                            <div className="flex flex-col min-w-0 flex-1">
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        onBlur={() => submitRename(project.id)}
+                                        onKeyDown={(e) => handleKeyDown(e, project.id)}
+                                        autoFocus
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="bg-background border border-primary/50 text-text text-sm rounded px-1 py-0.5 focus:outline-none w-full"
+                                    />
+                                ) : (
+                                    <>
+                                        <span className={`text-sm font-medium truncate ${isActive ? 'text-text' : ''}`}>
+                                            {project.name}
+                                        </span>
+                                        <span className="text-[10px] text-text-muted flex items-center gap-1">
+                                            {new Date(project.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        </span>
+                                    </>
                                 )}
                             </div>
-                        </div>
+                        )}
 
-                        {/* Delete Action */}
-                        {projects.length > 1 && (
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    e.nativeEvent.stopImmediatePropagation();
-                                    onDeleteProject(project.id, e);
-                                }}
-                                className={`
-                                    p-1.5 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100
-                                    hover:bg-red-500/10 hover:text-red-500 text-text-muted
-                                `}
-                                title="Delete Project"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                        {/* Actions (Expanded Only) */}
+                        {!isCollapsed && !isEditing && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={(e) => startEditing(project, e)}
+                                    className="p-1.5 rounded-md hover:bg-surface hover:text-text text-text-muted transition-colors"
+                                    title="Rename"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                {projects.length > 1 && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            e.nativeEvent.stopImmediatePropagation();
+                                            onDeleteProject(project.id, e);
+                                        }}
+                                        className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-text-muted transition-colors"
+                                        title="Delete"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Tooltip for collapsed mode */}
+                        {isCollapsed && (
+                            <div className="absolute left-full ml-3 px-2 py-1 bg-zinc-900 border border-border text-white text-xs rounded shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                                {project.name}
+                                {/* Small arrow pointing left */}
+                                <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-transparent border-r-zinc-900"></div>
+                            </div>
                         )}
                         
-                        {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r-full"></div>}
+                        {isActive && !isCollapsed && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r-full"></div>}
+                        
+                        {/* Saving Indicator */}
+                        {isActive && saveStatus === 'saving' && (
+                            <div className="absolute right-2 top-2">
+                                <span className="flex h-1.5 w-1.5 relative">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
+                                </span>
+                            </div>
+                        )}
                     </div>
                 );
             })}
+            
+            {filteredProjects.length === 0 && searchQuery && (
+                <div className="px-4 py-8 text-center text-text-muted text-xs">
+                    <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    No diagrams found.
+                </div>
+            )}
         </div>
       </div>
       
-      {/* 3. Footer / User Profile */}
-      <div className="p-4 border-t border-border bg-surface/30">
-        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface transition-colors cursor-pointer group">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-xs font-bold text-white shadow-md ring-2 ring-background group-hover:ring-primary/20 transition-all">
+      {/* 3. Footer / Toggle */}
+      <div className={`border-t border-border bg-surface/30 flex flex-col ${isCollapsed ? 'items-center p-2 gap-4' : 'p-3 gap-2'}`}>
+        
+        {/* User Profile */}
+        <div className={`
+            flex items-center rounded-xl hover:bg-surface transition-colors cursor-pointer group
+            ${isCollapsed ? 'justify-center p-0 w-10 h-10' : 'p-2 gap-3'}
+        `}>
+             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-background group-hover:ring-primary/20 transition-all shrink-0">
                 AG
             </div>
-            <div className="flex flex-col overflow-hidden">
-                <span className="text-xs font-bold text-text truncate">Pro Architect</span>
-                <span className="text-[10px] text-text-muted truncate flex items-center gap-1">
-                   {lastSaved ? 'Synced just now' : 'Online'}
-                </span>
-            </div>
+            {!isCollapsed && (
+                <div className="flex flex-col overflow-hidden">
+                    <span className="text-xs font-bold text-text truncate">Pro Architect</span>
+                    <span className="text-[10px] text-text-muted truncate">
+                       {lastSaved ? 'Synced just now' : 'Online'}
+                    </span>
+                </div>
+            )}
         </div>
+
+        {/* Collapse Toggle */}
+        <button 
+            onClick={toggleCollapse}
+            className={`
+                flex items-center justify-center rounded-lg hover:bg-surface transition-colors text-text-muted hover:text-text
+                ${isCollapsed ? 'w-8 h-8' : 'w-full py-1.5 hover:bg-surface-hover mt-1'}
+            `}
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
       </div>
     </div>
   );

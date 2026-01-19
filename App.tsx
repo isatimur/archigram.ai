@@ -6,7 +6,7 @@ import AIChat from './components/AIChat.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
-import { ViewMode, DiagramTheme, AppView, Project } from './types.ts';
+import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle } from 'lucide-react';
 
@@ -69,7 +69,11 @@ function App() {
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string>('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Navigation State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile toggle
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop mini-mode
+
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -85,13 +89,16 @@ function App() {
   const [showToast, setShowToast] = useState(false);
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
 
+  // --- 3. Style State ---
+  const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
+
   // Ref for cleanup/persistence safety
   const projectsRef = useRef(projects);
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
 
-  // --- 3. Initialization Logic ---
+  // --- 4. Initialization Logic ---
   
   useEffect(() => {
     const hasHash = window.location.hash.length > 1;
@@ -135,6 +142,10 @@ function App() {
                 setActiveProjectId(mostRecent.id);
                 setCode(mostRecent.code);
                 setHistory([mostRecent.code]);
+                // Load saved style if exists
+                if (mostRecent.styleConfig) {
+                    setCustomStyle(mostRecent.styleConfig);
+                }
             }
         } catch (e) {
             console.error("Failed to load projects", e);
@@ -166,7 +177,7 @@ function App() {
 
   }, []);
 
-  // --- 4. Persistence & Project Management ---
+  // --- 5. Persistence & Project Management ---
 
   const isFirstRender = useRef(true);
 
@@ -201,22 +212,28 @@ function App() {
       return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // Persist Style Changes to Project
   useEffect(() => {
     if (!activeProjectId) return;
 
     setProjects(prev => prev.map(p => {
-        if (p.id === activeProjectId && p.code !== code) {
-            return { ...p, code, updatedAt: Date.now() };
+        if (p.id === activeProjectId) {
+            // Only update if code or style changed
+            if(p.code !== code || JSON.stringify(p.styleConfig) !== JSON.stringify(customStyle)) {
+                 return { ...p, code, styleConfig: customStyle, updatedAt: Date.now() };
+            }
         }
         return p;
     }));
-  }, [code, activeProjectId]);
+  }, [code, customStyle, activeProjectId]);
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
         setViewMode(ViewMode.Preview);
         setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
       }
     };
     window.addEventListener('resize', handleResize);
@@ -224,7 +241,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 5. Undo/Redo Logic ---
+  // --- 6. Undo/Redo Logic ---
   useEffect(() => {
       if (history.length > 0 && code === history[historyIndex]) return;
 
@@ -264,14 +281,15 @@ function App() {
       setCode(newCode);
   };
 
-  // --- 6. Project Actions ---
+  // --- 7. Project Actions ---
 
   const handleCreateProject = () => {
       const newProject: Project = {
           id: Date.now().toString(),
           name: `Diagram ${projects.length + 1}`,
           code: `graph TD\n    A[Start] --> B[Process]\n    B --> C[End]`,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
+          styleConfig: {}
       };
       
       const updatedProjects = [newProject, ...projects];
@@ -280,6 +298,7 @@ function App() {
       
       setActiveProjectId(newProject.id);
       setCode(newProject.code);
+      setCustomStyle({});
       setHistory([newProject.code]);
       setHistoryIndex(0);
       
@@ -296,6 +315,7 @@ function App() {
       if (project) {
           setActiveProjectId(id);
           setCode(project.code);
+          setCustomStyle(project.styleConfig || {});
           setHistory([project.code]);
           setHistoryIndex(0);
           
@@ -303,6 +323,16 @@ function App() {
               setIsSidebarOpen(false);
           }
       }
+  };
+
+  const handleRenameProject = (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    setProjects(prev => prev.map(p => {
+        if (p.id === id) {
+            return { ...p, name: newName, updatedAt: Date.now() };
+        }
+        return p;
+    }));
   };
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
@@ -325,6 +355,7 @@ function App() {
               const nextProject = next[0];
               setActiveProjectId(nextProject.id);
               setCode(nextProject.code);
+              setCustomStyle(nextProject.styleConfig || {});
               setHistory([nextProject.code]);
               setHistoryIndex(0);
           }
@@ -336,15 +367,26 @@ function App() {
       setPendingDeleteId(null);
   };
 
-  // --- 7. Export/Share Handlers ---
+  // --- 8. Export/Share Handlers ---
 
   const handleShare = () => {
     const hash = encodeCodeToUrl(code);
-    const url = `${window.location.origin}${window.location.pathname}#${hash}`;
-    window.history.replaceState(null, '', `#${hash}`);
-    navigator.clipboard.writeText(url).then(() => {
+    
+    // SAFE URL CONSTRUCTION: Avoid history.replaceState to prevent SecurityError
+    // We only want to generate a shareable link for the user to copy.
+    let shareUrl = window.location.href.split('#')[0];
+    if (shareUrl.endsWith('/')) {
+        shareUrl = shareUrl.slice(0, -1);
+    }
+    const fullUrl = `${shareUrl}#${hash}`;
+
+    // Copy to clipboard directly without updating browser history
+    navigator.clipboard.writeText(fullUrl).then(() => {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
+    }).catch(e => {
+        console.error("Clipboard failed", e);
+        // Fallback or alert if needed
     });
   };
 
@@ -440,6 +482,8 @@ function App() {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  const activeProject = projects.find(p => p.id === activeProjectId);
+
   if (currentView === 'landing') {
       return <LandingPage onLaunch={handleLaunch} />;
   }
@@ -461,12 +505,19 @@ function App() {
         setTheme={setTheme}
         onShare={handleShare}
         onNewProject={handleCreateProject}
+        activeProject={activeProject}
+        onRenameProject={handleRenameProject}
+        customStyle={customStyle}
+        onUpdateStyle={setCustomStyle}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
         
         {isSidebarOpen && (
-            <div className="hidden md:block z-10 h-full relative">
+            <div className={`
+                hidden md:block h-full relative z-10 transition-all duration-300 ease-in-out
+                ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
+            `}>
                 <Sidebar 
                     projects={projects}
                     activeProjectId={activeProjectId}
@@ -476,8 +527,39 @@ function App() {
                     onClose={() => setIsSidebarOpen(false)}
                     lastSaved={lastSaved}
                     saveStatus={saveStatus}
+                    onRenameProject={handleRenameProject}
+                    isCollapsed={isSidebarCollapsed}
+                    toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 />
             </div>
+        )}
+
+        {/* Mobile Sidebar Overlay (Only visible on small screens) */}
+        {isSidebarOpen && (
+           <div className="md:hidden absolute inset-0 z-40 flex">
+             <div className="w-72 h-full shadow-2xl relative z-50">
+               <Sidebar 
+                    projects={projects}
+                    activeProjectId={activeProjectId}
+                    onSelectProject={(id) => {
+                        handleSelectProject(id);
+                        setIsSidebarOpen(false);
+                    }}
+                    onCreateProject={() => {
+                        handleCreateProject();
+                        setIsSidebarOpen(false);
+                    }}
+                    onDeleteProject={handleDeleteProject}
+                    onClose={() => setIsSidebarOpen(false)}
+                    lastSaved={lastSaved}
+                    saveStatus={saveStatus}
+                    onRenameProject={handleRenameProject}
+                    isCollapsed={false}
+                    toggleCollapse={() => {}} // No collapse on mobile
+                />
+             </div>
+             <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
+           </div>
         )}
 
         {!isSidebarOpen && (
@@ -513,7 +595,8 @@ function App() {
             <DiagramPreview 
                 code={code} 
                 onError={setError} 
-                theme={theme} 
+                theme={theme}
+                customStyle={customStyle} 
                 onElementClick={(text) => {
                      setSelectionRequest({ text, ts: Date.now() });
                      if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);

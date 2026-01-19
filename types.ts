@@ -1,3 +1,4 @@
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -15,6 +16,13 @@ export enum ViewMode {
 
 export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
 
+export interface DiagramStyleConfig {
+  nodeColor?: string;
+  lineColor?: string;
+  textColor?: string;
+  backgroundColor?: string;
+}
+
 export interface DiagramState {
   code: string;
   lastValidCode: string;
@@ -27,6 +35,7 @@ export interface Project {
   code: string;
   updatedAt: number;
   thumbnail?: string; // Optional future proofing
+  styleConfig?: DiagramStyleConfig;
 }
 
 export type AppView = 'landing' | 'app';

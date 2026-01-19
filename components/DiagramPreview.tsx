@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
-import { ZoomIn, ZoomOut, Maximize, AlertCircle, Move, RotateCcw, Box, MousePointer2 } from 'lucide-react';
-import { DiagramTheme } from '../types.ts';
+import { ZoomIn, ZoomOut, Maximize, AlertCircle, Move, RotateCcw, Box, MousePointer2, Minus, Plus } from 'lucide-react';
+import { DiagramTheme, DiagramStyleConfig } from '../types.ts';
 
 interface DiagramPreviewProps {
   code: string;
   onError: (error: string | null) => void;
   theme: DiagramTheme;
+  customStyle?: DiagramStyleConfig;
   onElementClick?: (text: string) => void;
 }
 
@@ -18,7 +19,7 @@ interface TooltipData {
   id?: string;
 }
 
-const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, onElementClick }) => {
+const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, customStyle, onElementClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>('');
   const [scale, setScale] = useState(1);
@@ -31,23 +32,45 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
   // Track dragging to distinguish from clicking
   const hasDragged = useRef(false);
 
-  // Re-initialize mermaid when theme changes
+  // Re-initialize mermaid when theme or custom style changes
   useEffect(() => {
     // Map custom themes to standard Mermaid themes
     const mermaidTheme = theme === 'midnight' ? 'dark' : theme;
+
+    const themeVariables: any = {
+        fontFamily: '"Inter", sans-serif',
+    };
+
+    if (customStyle) {
+        if (customStyle.nodeColor) {
+            themeVariables.primaryColor = customStyle.nodeColor;
+            themeVariables.primaryBorderColor = customStyle.nodeColor;
+            themeVariables.mainBkg = customStyle.nodeColor; // For some diagrams
+        }
+        if (customStyle.lineColor) {
+            themeVariables.lineColor = customStyle.lineColor;
+            themeVariables.arrowheadColor = customStyle.lineColor;
+        }
+        if (customStyle.textColor) {
+            themeVariables.textColor = customStyle.textColor;
+        }
+        // Additional mermaid variables for thorough coloring
+        if (customStyle.nodeColor) {
+             themeVariables.nodeBorder = customStyle.nodeColor;
+             themeVariables.clusterBkg = customStyle.nodeColor + '20'; // transparent
+        }
+    }
 
     mermaid.initialize({
       startOnLoad: false,
       theme: mermaidTheme,
       securityLevel: 'loose',
       fontFamily: '"Inter", sans-serif',
-      themeVariables: {
-        fontFamily: '"Inter", sans-serif',
-      }
+      themeVariables: themeVariables
     });
     // Force re-render by clearing content momentarily
     setSvgContent(''); 
-  }, [theme]);
+  }, [theme, customStyle]);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +96,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
 
     renderDiagram();
     return () => { isMounted = false; };
-  }, [code, theme, onError]);
+  }, [code, theme, customStyle, onError]);
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -218,7 +241,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
   };
 
   return (
-    <div className="relative w-full h-full bg-[#131316] overflow-hidden flex flex-col select-none">
+    <div className="relative w-full h-full bg-[#131316] overflow-hidden flex flex-col select-none group/canvas">
       
       {/* Background Grid Pattern */}
       <div className="absolute inset-0 opacity-[0.03]" 
@@ -226,35 +249,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
              backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', 
              backgroundSize: '20px 20px' 
            }}>
-      </div>
-
-      {/* Architect's HUD (Heads-Up Display) */}
-      <div className="absolute top-6 right-6 z-20 flex flex-col gap-1 glass-panel rounded-xl p-1.5 shadow-2xl animate-fade-in">
-         <div className="flex flex-col gap-1 items-center">
-            <button 
-                onClick={() => setScale(s => Math.min(s + 0.1, 5))}
-                className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                title="Zoom In"
-            >
-                <ZoomIn className="w-4 h-4" />
-            </button>
-            <div className="text-[10px] font-mono text-zinc-500 font-medium">{Math.round(scale * 100)}%</div>
-            <button 
-                onClick={() => setScale(s => Math.max(s - 0.1, 0.2))}
-                className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                title="Zoom Out"
-            >
-                <ZoomOut className="w-4 h-4" />
-            </button>
-         </div>
-         <div className="w-full h-px bg-white/10 my-1"></div>
-         <button 
-            onClick={resetView}
-            className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"
-            title="Reset View"
-         >
-            <RotateCcw className="w-4 h-4" />
-         </button>
       </div>
 
       {/* Render Area */}
@@ -290,6 +284,44 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
             </div>
         )}
       </div>
+
+      {/* Architect's HUD (Heads-Up Display) - Bottom Floating Bar */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-surface/90 backdrop-blur-xl border border-white/10 rounded-full px-2 py-1.5 shadow-2xl animate-slide-up ring-1 ring-black/20 transition-all opacity-0 group-hover/canvas:opacity-100 hover:!opacity-100 duration-300">
+         
+         <button 
+            onClick={() => setScale(s => Math.max(s - 0.1, 0.2))}
+            className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
+            title="Zoom Out"
+         >
+            <Minus className="w-4 h-4" />
+         </button>
+         
+         <div 
+            className="px-2 w-12 text-center text-xs font-mono text-zinc-300 font-medium cursor-pointer hover:text-white transition-colors select-none"
+            onClick={resetView}
+            title="Click to Reset"
+         >
+            {Math.round(scale * 100)}%
+         </div>
+         
+         <button 
+            onClick={() => setScale(s => Math.min(s + 0.1, 5))}
+            className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
+            title="Zoom In"
+         >
+            <Plus className="w-4 h-4" />
+         </button>
+
+         <div className="w-px h-4 bg-white/10 mx-1"></div>
+         
+         <button 
+            onClick={resetView}
+            className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
+            title="Reset View"
+         >
+            <RotateCcw className="w-3.5 h-3.5" />
+         </button>
+      </div>
       
       {/* Interactive Tooltip */}
       {tooltip && (
@@ -312,8 +344,8 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, o
         </div>
       )}
 
-      {/* Legend / Info Overlay */}
-      <div className="absolute bottom-6 right-6 pointer-events-none opacity-40">
+      {/* Legend / Info Overlay - Fades out when idle */}
+      <div className="absolute bottom-6 right-6 pointer-events-none opacity-0 group-hover/canvas:opacity-40 transition-opacity duration-300">
         <p className="text-[10px] font-mono text-white text-right">
             X: {Math.round(position.x)} Y: {Math.round(position.y)}
         </p>
