@@ -38,4 +38,4 @@ export interface Project {
   styleConfig?: DiagramStyleConfig;
 }
 
-export type AppView = 'landing' | 'app';
+export type AppView = 'landing' | 'app' | 'docs';

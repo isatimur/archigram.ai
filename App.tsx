@@ -5,6 +5,7 @@ import DiagramPreview from './components/DiagramPreview.tsx';
 import AIChat from './components/AIChat.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
+import Documentation from './components/Documentation.tsx';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
 import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
@@ -502,17 +503,17 @@ function App() {
     }
   };
 
-  const handleLaunch = () => {
-      setCurrentView('app');
-  };
-
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   if (currentView === 'landing') {
-      return <LandingPage onLaunch={handleLaunch} />;
+      return <LandingPage onNavigate={setCurrentView} />;
+  }
+  
+  if (currentView === 'docs') {
+      return <Documentation onNavigate={setCurrentView} />;
   }
 
   // Inject Theme Variables
