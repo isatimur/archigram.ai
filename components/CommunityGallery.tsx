@@ -267,55 +267,55 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                     </button>
                 </div>
             )}
-
         </div>
+      </main>
 
-        {/* Import Modal */}
-        {showImport && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md animate-slide-up">
-                    <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                        <LinkIcon className="w-5 h-5 text-primary" />
-                        Import from Link
-                    </h3>
-                    <p className="text-sm text-text-muted mb-4">
-                        Paste a shared Archigram URL to fork the diagram into your workspace.
-                    </p>
-                    
-                    <input 
-                        type="text"
-                        value={importUrl}
-                        onChange={(e) => setImportUrl(e.target.value)}
-                        placeholder="https://archigram.ai/#..."
-                        className="w-full bg-background border border-border rounded-lg p-3 text-sm text-text focus:outline-none focus:border-primary mb-2"
-                        autoFocus
-                    />
-                    
-                    {importError && (
-                        <p className="text-xs text-red-500 mb-3">{importError}</p>
-                    )}
-                    
-                    <div className="flex justify-end gap-3 mt-4">
-                        <button 
-                            onClick={() => {
-                                setShowImport(false);
-                                setImportUrl('');
-                                setImportError('');
-                            }}
-                            className="px-4 py-2 text-sm text-text-muted hover:text-text"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={handleImport}
-                            className="px-4 py-2 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-lg"
-                        >
-                            Import Diagram
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+      {/* Import Modal */}
+      {showImport && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md animate-slide-up">
+                  <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                      <LinkIcon className="w-5 h-5 text-primary" />
+                      Import from Link
+                  </h3>
+                  <p className="text-sm text-text-muted mb-4">
+                      Paste a shared Archigram URL to fork the diagram into your workspace.
+                  </p>
+                  
+                  <input 
+                      type="text"
+                      value={importUrl}
+                      onChange={(e) => setImportUrl(e.target.value)}
+                      placeholder="https://archigram.ai/#..."
+                      className="w-full bg-background border border-border rounded-lg p-3 text-sm text-text focus:outline-none focus:border-primary mb-2"
+                      autoFocus
+                  />
+                  
+                  {importError && (
+                      <p className="text-xs text-red-500 mb-3">{importError}</p>
+                  )}
+                  
+                  <div className="flex justify-end gap-3 mt-4">
+                      <button 
+                          onClick={() => {
+                              setShowImport(false);
+                              setImportUrl('');
+                              setImportError('');
+                          }}
+                          className="px-4 py-2 text-sm text-text-muted hover:text-text"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={handleImport}
+                          className="px-4 py-2 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-lg"
+                      >
+                          Import Diagram
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
     </div>
   );

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 
-console.log("Initializing ArchiGraph AI...");
+console.log("Initializing ArchiGram AI...");
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
