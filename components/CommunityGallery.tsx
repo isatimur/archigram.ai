@@ -4,7 +4,7 @@ import { AppView, CommunityDiagram } from '../types.ts';
 import { COMMUNITY_DATA } from '../constants.ts';
 import DiagramPreview from './DiagramPreview.tsx';
 import { decodeCodeFromUrl } from '../utils/url.ts';
-import { fetchCommunityDiagrams, updateDiagramLikes } from '../services/supabaseClient.ts';
+import { fetchCommunityDiagrams, updateDiagramLikes, incrementDiagramViews } from '../services/supabaseClient.ts';
 
 interface CommunityGalleryProps {
   onNavigate: (view: AppView) => void;
@@ -86,6 +86,13 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
               return reverted;
           });
       }
+  };
+
+  const handleForkWithStats = (diagram: CommunityDiagram) => {
+      // Fire and forget view increment for analytics
+      incrementDiagramViews(diagram.id);
+      // Execute original fork behavior
+      onFork(diagram);
   };
 
   const handleImport = () => {
@@ -219,7 +226,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                             onMouseLeave={() => setHoveredId(null)}
                         >
                             {/* Preview Area */}
-                            <div className="relative h-48 bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer" onClick={() => onFork(diagram)}>
+                            <div className="relative h-48 bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer" onClick={() => handleForkWithStats(diagram)}>
                                 <div className="absolute inset-0 pointer-events-none transform scale-[0.6] origin-top-left w-[166%] h-[166%]">
                                     <DiagramPreview 
                                         code={diagram.code} 
@@ -234,7 +241,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                                     <button 
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onFork(diagram);
+                                            handleForkWithStats(diagram);
                                         }}
                                         className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl transform scale-90 group-hover:scale-100 transition-all"
                                     >

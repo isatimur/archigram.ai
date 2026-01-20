@@ -19,11 +19,17 @@ export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
 
 export type CopilotDomain = 'General' | 'Healthcare' | 'Finance' | 'E-commerce';
 
+export type BackgroundPattern = 'solid' | 'dots' | 'grid' | 'crossline';
+export type DiagramLook = 'classic' | 'handDrawn';
+
 export interface DiagramStyleConfig {
   nodeColor?: string;
   lineColor?: string;
   textColor?: string;
   backgroundColor?: string;
+  backgroundPattern?: BackgroundPattern;
+  backgroundOpacity?: number; // 0 to 1
+  diagramLook?: DiagramLook;
 }
 
 export interface DiagramState {

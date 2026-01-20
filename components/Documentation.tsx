@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Book, Code2, Keyboard, Zap, LayoutTemplate, ArrowLeft, Search, FileText, Share2, Copy, Check, GitBranch, Database, Clock, Network, BrainCircuit } from 'lucide-react';
 import { AppView } from '../types.ts';
+import LiveDiagramBlock from './LiveDiagramBlock.tsx';
 
 interface DocumentationProps {
   onNavigate: (view: AppView) => void;
@@ -158,7 +159,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Used to show interactions between objects or systems in sequential order. Essential for API design and communication flows.
                 </p>
-                <CodeBlock code={`sequenceDiagram
+                <LiveDiagramBlock title="Sequence Diagram" initialCode={`sequenceDiagram
     autonumber
     actor User
     participant API as Backend API
@@ -177,7 +178,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Versatile diagrams for mapping process flows, decision trees, and system logic. Supports Top-Down (TD) and Left-Right (LR) layouts.
                 </p>
-                <CodeBlock code={`graph TD
+                <LiveDiagramBlock title="Flowchart" initialCode={`graph TD
     A[Start] --> B{Is it working?}
     B -->|Yes| C[Great!]
     B -->|No| D[Debug]
@@ -190,7 +191,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Standard UML class diagrams for object-oriented modeling. Define properties, methods, and relationships.
                 </p>
-                <CodeBlock code={`classDiagram
+                <LiveDiagramBlock title="Class Diagram" initialCode={`classDiagram
     class Animal {
         +String name
         +int age
@@ -212,7 +213,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Describe the states of a system and the transitions between them. Useful for lifecycle management (e.g., Order Status, Auth Flow).
                 </p>
-                <CodeBlock code={`stateDiagram-v2
+                <LiveDiagramBlock title="State Diagram" initialCode={`stateDiagram-v2
     [*] --> Idle
     Idle --> Processing : Submit Event
     Processing --> Success : Valid
@@ -226,7 +227,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Entity-Relationship diagrams for database schema design. Define entities, attributes, and cardinality (one-to-one, one-to-many).
                 </p>
-                <CodeBlock code={`erDiagram
+                <LiveDiagramBlock title="ER Diagram" initialCode={`erDiagram
     CUSTOMER ||--o{ ORDER : places
     ORDER ||--|{ LINE-ITEM : contains
     CUSTOMER {
@@ -244,7 +245,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Project management timelines. Visualize schedules, dependencies, and milestones.
                 </p>
-                <CodeBlock code={`gantt
+                <LiveDiagramBlock title="Gantt Chart" initialCode={`gantt
     title Project Timeline
     dateFormat  YYYY-MM-DD
     section Design
@@ -260,7 +261,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Hierarchical layout for brainstorming and organizing ideas.
                 </p>
-                <CodeBlock code={`mindmap
+                <LiveDiagramBlock title="Mindmap" initialCode={`mindmap
   root((Archigram))
     Features
       AI Generation
@@ -277,7 +278,7 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
                 <p className="text-text-muted mb-6">
                     Visualize git branching strategies, commits, and merges.
                 </p>
-                <CodeBlock code={`gitGraph
+                <LiveDiagramBlock title="Git Graph" initialCode={`gitGraph
    commit
    commit
    branch develop
@@ -333,37 +334,5 @@ const ShortcutKey = ({ combo, desc }: any) => (
         </div>
     </div>
 );
-
-const CodeBlock = ({ code }: { code: string }) => {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className="rounded-lg overflow-hidden border border-border bg-[#0d0d10] group">
-            <div className="flex justify-between items-center px-4 py-2 bg-surface border-b border-border/50">
-                <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/50"></div>
-                </div>
-                <button 
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-white transition-colors"
-                >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Copied' : 'Copy'}
-                </button>
-            </div>
-            <pre className="p-4 overflow-x-auto font-mono text-sm leading-relaxed text-blue-100">
-                {code}
-            </pre>
-        </div>
-    );
-};
 
 export default Documentation;

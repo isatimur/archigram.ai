@@ -513,8 +513,15 @@ function App() {
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            ctx.fillStyle = theme === 'neutral' ? '#ffffff' : '#131316'; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Apply current style background to export
+            if (customStyle.backgroundColor) {
+                ctx.fillStyle = customStyle.backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = theme === 'neutral' ? '#ffffff' : '#131316'; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
             const link = document.createElement('a');
@@ -710,7 +717,8 @@ function App() {
                 code={code} 
                 onError={setError} 
                 theme={theme}
-                customStyle={customStyle} 
+                customStyle={customStyle}
+                onUpdateStyle={setCustomStyle}
                 onElementClick={(text) => {
                      setSelectionRequest({ text, ts: Date.now() });
                      if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);

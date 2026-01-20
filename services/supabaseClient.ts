@@ -107,3 +107,34 @@ export const updateDiagramLikes = async (id: string, count: number): Promise<boo
         return false;
     }
 };
+
+export const incrementDiagramViews = async (id: string): Promise<boolean> => {
+    try {
+        // Optimistic update: Read then Write
+        // (In a production env, use an RPC function 'increment_views' for atomicity)
+        const { data, error } = await supabase
+            .from('community_diagrams')
+            .select('views')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            logSupabaseError('Fetch views failed', error);
+            return false;
+        }
+
+        const { error: updateError } = await supabase
+            .from('community_diagrams')
+            .update({ views: (data.views || 0) + 1 })
+            .eq('id', id);
+
+        if (updateError) {
+             logSupabaseError('Update views failed', updateError);
+             return false;
+        }
+        return true;
+    } catch (e) {
+        logSupabaseError('Increment views exception', e);
+        return false;
+    }
+};

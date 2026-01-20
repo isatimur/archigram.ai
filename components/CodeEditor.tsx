@@ -5,13 +5,14 @@ import { DiagramTheme } from '../types.ts';
 interface CodeEditorProps {
   code: string;
   onChange: (code: string) => void;
-  onUndo: () => void;
-  onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   error?: string | null;
   selectionRequest?: { text: string; ts: number } | null;
   theme?: DiagramTheme;
+  hideToolbar?: boolean;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -19,16 +20,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   onChange, 
   onUndo, 
   onRedo, 
-  canUndo, 
-  canRedo,
+  canUndo = false, 
+  canRedo = false,
   error,
   selectionRequest,
-  theme = 'dark'
+  theme = 'dark',
+  hideToolbar = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(true);
+  // Default to closed unless there's an error
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
 
   // Parse error line number
@@ -93,10 +96,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
         if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
             e.preventDefault();
-            e.shiftKey ? onRedo() : onUndo();
+            if (e.shiftKey) {
+                onRedo?.();
+            } else {
+                onUndo?.();
+            }
         } else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
             e.preventDefault();
-            onRedo();
+            onRedo?.();
         }
     };
 
@@ -161,33 +168,42 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return html;
   };
 
+  // Memoize highlighted code to avoid re-tokenizing on every render
+  const highlightedHtml = useMemo(() => highlightCode(code), [code, theme]);
+
   const lineCount = code.split('\n').length;
 
   return (
     <div className="h-full w-full flex flex-col bg-background relative transition-colors duration-300">
       
       {/* Refined Toolbar */}
-      <div className="px-4 py-2 bg-surface/80 border-b border-border flex justify-between items-center shrink-0 h-10 box-border backdrop-blur-sm z-20 transition-colors duration-300">
-        <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 text-xs font-medium text-text-muted group cursor-pointer hover:text-text transition-colors">
-                <FileJson className="w-3.5 h-3.5 text-primary" />
-                <span>source.mmd</span>
+      {!hideToolbar && (
+        <div className="px-4 py-2 bg-surface/80 border-b border-border flex justify-between items-center shrink-0 h-10 box-border backdrop-blur-sm z-20 transition-colors duration-300">
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-xs font-medium text-text-muted group cursor-pointer hover:text-text transition-colors">
+                    <FileJson className="w-3.5 h-3.5 text-primary" />
+                    <span>source.mmd</span>
+                </div>
+                {(onUndo || onRedo) && (
+                    <>
+                    <div className="h-3 w-px bg-border"></div>
+                    <div className="flex items-center gap-1">
+                        <button onClick={onUndo} disabled={!canUndo} className="p-1 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Undo (Ctrl+Z)">
+                            <Undo className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={onRedo} disabled={!canRedo} className="p-1 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Redo (Ctrl+Y)">
+                            <Redo className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                    </>
+                )}
             </div>
-            <div className="h-3 w-px bg-border"></div>
-             <div className="flex items-center gap-1">
-                <button onClick={onUndo} disabled={!canUndo} className="p-1 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Undo (Ctrl+Z)">
-                    <Undo className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={onRedo} disabled={!canRedo} className="p-1 text-text-muted hover:text-text disabled:opacity-30 transition-colors rounded hover:bg-surface-hover" title="Redo (Ctrl+Y)">
-                    <Redo className="w-3.5 h-3.5" />
-                </button>
+            <div className="text-[10px] text-text-muted font-mono flex items-center gap-1.5 opacity-70">
+                <Terminal className="w-3 h-3" />
+                <span>Mermaid v11.4</span>
             </div>
         </div>
-        <div className="text-[10px] text-text-muted font-mono flex items-center gap-1.5 opacity-70">
-            <Terminal className="w-3 h-3" />
-            <span>Mermaid v11.4</span>
-        </div>
-      </div>
+      )}
 
       <div className="flex-1 flex relative overflow-hidden bg-background transition-colors duration-300">
          {/* Line Numbers Gutter */}
@@ -249,7 +265,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             ref={preRef}
             className="absolute inset-0 p-4 m-0 font-mono text-sm leading-6 pointer-events-none whitespace-pre overflow-hidden text-text transition-colors duration-300"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}
-            dangerouslySetInnerHTML={{ __html: highlightCode(code) + '<br/>' }} 
+            dangerouslySetInnerHTML={{ __html: highlightedHtml + '<br/>' }} 
             />
             
             {/* Input Layer */}
@@ -271,7 +287,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Diagnostics Panel */}
-      <div className={`border-t border-border bg-background transition-all duration-300 ease-in-out flex flex-col z-20 ${isDiagnosticsOpen ? 'h-32' : 'h-8'}`}>
+      <div className={`border-t border-border bg-background transition-all duration-300 ease-in-out flex flex-col z-20 ${isDiagnosticsOpen ? 'max-h-32' : 'h-8'}`}>
         <div 
             className="flex items-center justify-between px-4 h-8 bg-surface cursor-pointer hover:bg-surface-hover transition-colors select-none border-b border-border"
             onClick={() => setIsDiagnosticsOpen(!isDiagnosticsOpen)}
@@ -323,7 +339,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-text-muted gap-2 opacity-50">
+                    <div className="flex flex-col items-center justify-center h-full min-h-[50px] text-text-muted gap-2 opacity-50">
                         <CheckCircle2 className="w-6 h-6" />
                         <p>No problems detected.</p>
                     </div>
