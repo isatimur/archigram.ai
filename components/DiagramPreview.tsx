@@ -103,19 +103,21 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       return () => observer.disconnect();
   }, []);
 
-  // 1. Initialize Icons (Hybrid Approach: Installed Modules with Fallback)
+  // 1. Initialize Icons (Robust Loading with CDN Fallback)
   useEffect(() => {
     const registerIcons = async () => {
         if (iconsLoaded) return;
         
         try {
             // Helper to load pack either from module (via importmap) or CDN fallback
+            // This ensures if npm install failed for types, we can still load the JSON at runtime
             const loadPack = async (pkg: string, name: string, fallbackUrl?: string) => {
                 try {
                      // @ts-ignore
                     const mod = await import(pkg);
                     return { name, icons: mod.icons || mod.default?.icons };
                 } catch(e) {
+                    // console.warn(`Failed to import ${pkg}, trying fallback...`);
                     if (fallbackUrl) {
                         return { name, loader: () => fetch(fallbackUrl).then(res => res.json()) };
                     }
@@ -125,10 +127,10 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
             const loaders = [
                 // AWS
-                loadPack('@iconify-json/aws', 'aws', 'https://unpkg.com/@iconify-json/aws@1/icons.json'),
+                loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
                 // Azure
-                loadPack('@iconify-json/azure', 'azure', 'https://unpkg.com/@iconify-json/azure@1/icons.json'),
-                // Google Cloud (GCP) - Register with multiple aliases for convenience
+                loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
+                // Google Cloud (GCP)
                 (async () => {
                     try {
                         // @ts-ignore
@@ -140,16 +142,15 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                             { name: 'google', icons }
                         ];
                     } catch(e) {
-                         // Fallback loader if import fails
-                         return { name: 'gcp', loader: () => fetch('https://unpkg.com/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
+                         return { name: 'gcp', loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
                     }
                 })(),
-                // Logos (General)
-                loadPack('@iconify-json/logos', 'logos', 'https://unpkg.com/@iconify-json/logos@1/icons.json'),
+                // Logos (General Tech)
+                loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
-                loadPack('@iconify-json/fa6-regular', 'fa', 'https://unpkg.com/@iconify-json/fa6-regular@1/icons.json'),
-                loadPack('@iconify-json/fa6-solid', 'fas', 'https://unpkg.com/@iconify-json/fa6-solid@1/icons.json'),
-                loadPack('@iconify-json/material-symbols', 'material'),
+                loadPack('@iconify-json/fa6-regular', 'fa', 'https://esm.sh/@iconify-json/fa6-regular@1/icons.json'),
+                loadPack('@iconify-json/fa6-solid', 'fas', 'https://esm.sh/@iconify-json/fa6-solid@1/icons.json'),
+                loadPack('@iconify-json/material-symbols', 'material', 'https://esm.sh/@iconify-json/material-symbols@1/icons.json'),
             ];
 
             const results = await Promise.all(loaders);
@@ -252,6 +253,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         
         if (isMounted) {
             let processedSvg = svg;
+            // Add subtle drop shadow to lines for 'classic' cyberpunk look
             if (activeStyle.diagramLook === 'classic' && activeStyle.lineColor === '#00ff9d') {
                 processedSvg = svg.replace(/<style>/, `<style>.edgePath .path { filter: drop-shadow(0 0 2px ${activeStyle.lineColor}); } `);
             }
@@ -369,7 +371,11 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col select-none group/canvas bg-[#09090b]">
-      <div className="absolute inset-0 z-0 pointer-events-none transition-all duration-500 ease-in-out" style={getBackgroundStyle()}></div>
+      <div className="absolute inset-0 z-0 pointer-events-none transition-all duration-500 ease-in-out" style={getBackgroundStyle()}>
+          {/* Subtle Ambient Spotlight for 'wow' effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+      </div>
       <div 
         className={`flex-1 overflow-hidden relative z-10 ${isPanning ? 'cursor-grabbing' : isHoveringElement ? 'cursor-pointer' : 'cursor-grab'}`}
         onMouseDown={handleMouseDown}
