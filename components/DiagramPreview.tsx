@@ -91,10 +91,11 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
   useEffect(() => {
       const observer = new IntersectionObserver(([entry]) => {
           if (entry.isIntersecting) {
-              setShouldRender(true);
-              observer.disconnect(); // Render once and stay rendered
+              const timer = setTimeout(() => setShouldRender(true), 50);
+              observer.disconnect(); 
+              return () => clearTimeout(timer);
           }
-      }, { rootMargin: '300px' }); // Start rendering when 300px away from viewport
+      }, { rootMargin: '100px' }); 
 
       if (containerRef.current) {
           observer.observe(containerRef.current);
@@ -102,29 +103,83 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       return () => observer.disconnect();
   }, []);
 
-  // 1. Initialize Icons (Run Once)
+  // 1. Initialize Icons (Hybrid Approach: Installed Modules with Fallback)
   useEffect(() => {
     const registerIcons = async () => {
+        if (iconsLoaded) return;
+        
         try {
-            await mermaid.registerIconPacks([
-                { name: 'logos', loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()) },
-                { name: 'aws', loader: () => fetch('https://unpkg.com/@iconify-json/aws@1/icons.json').then(res => res.json()) },
-                { name: 'gcp', loader: () => fetch('https://unpkg.com/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) },
-                { name: 'azure', loader: () => fetch('https://unpkg.com/@iconify-json/azure@1/icons.json').then(res => res.json()) },
-                { name: 'fa', loader: () => fetch('https://unpkg.com/@iconify-json/fa6-regular@1/icons.json').then(res => res.json()) },
-                { name: 'fas', loader: () => fetch('https://unpkg.com/@iconify-json/fa6-solid@1/icons.json').then(res => res.json()) },
-            ]);
+            // Helper to load pack either from module (via importmap) or CDN fallback
+            const loadPack = async (pkg: string, name: string, fallbackUrl?: string) => {
+                try {
+                     // @ts-ignore
+                    const mod = await import(pkg);
+                    return { name, icons: mod.icons || mod.default?.icons };
+                } catch(e) {
+                    if (fallbackUrl) {
+                        return { name, loader: () => fetch(fallbackUrl).then(res => res.json()) };
+                    }
+                    return null;
+                }
+            };
+
+            const loaders = [
+                // AWS
+                loadPack('@iconify-json/aws', 'aws', 'https://unpkg.com/@iconify-json/aws@1/icons.json'),
+                // Azure
+                loadPack('@iconify-json/azure', 'azure', 'https://unpkg.com/@iconify-json/azure@1/icons.json'),
+                // Google Cloud (GCP) - Register with multiple aliases for convenience
+                (async () => {
+                    try {
+                        // @ts-ignore
+                        const mod = await import('@iconify-json/google-cloud-icons');
+                        const icons = mod.icons || mod.default?.icons;
+                        return [
+                            { name: 'gcp', icons },
+                            { name: 'google-cloud', icons },
+                            { name: 'google', icons }
+                        ];
+                    } catch(e) {
+                         // Fallback loader if import fails
+                         return { name: 'gcp', loader: () => fetch('https://unpkg.com/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
+                    }
+                })(),
+                // Logos (General)
+                loadPack('@iconify-json/logos', 'logos', 'https://unpkg.com/@iconify-json/logos@1/icons.json'),
+                // Font Awesome
+                loadPack('@iconify-json/fa6-regular', 'fa', 'https://unpkg.com/@iconify-json/fa6-regular@1/icons.json'),
+                loadPack('@iconify-json/fa6-solid', 'fas', 'https://unpkg.com/@iconify-json/fa6-solid@1/icons.json'),
+                loadPack('@iconify-json/material-symbols', 'material'),
+            ];
+
+            const results = await Promise.all(loaders);
+            const packs = results.flat().filter(p => p !== null);
+
+            await mermaid.registerIconPacks(packs);
             setIconsLoaded(true);
         } catch (e) {
             console.error("Failed to register icon packs", e);
-            setIconsLoaded(true);
+            setIconsLoaded(true); // Proceed anyway to avoid blocking render
         }
     };
     registerIcons();
-  }, []);
+  }, [iconsLoaded]);
 
   // 2. Initialize Mermaid Config
   useEffect(() => {
+    if (!code) return;
+    
+    // Robust Diagram Type Detection
+    const hasFrontMatter = /^-{3}[\s\S]*?-{3}/.test(code);
+    const codeBody = hasFrontMatter ? code.replace(/^-{3}[\s\S]*?-{3}/, '') : code;
+    
+    const isGitGraph = /^\s*gitGraph/m.test(codeBody) || codeBody.includes('gitGraph');
+    const isMindmap = /^\s*mindmap/m.test(codeBody) || codeBody.includes('mindmap');
+    const isArchitecture = /^\s*architecture-beta/m.test(codeBody) || codeBody.includes('architecture-beta');
+    
+    // Determine unstable condition: HandDrawn look + unsupported diagram type
+    const unsafeForHandDrawn = isGitGraph || isMindmap || isArchitecture;
+    
     const mermaidTheme = activeStyle.diagramLook === 'handDrawn' ? 'neutral' : (theme === 'midnight' ? 'dark' : theme);
     const isHandDrawn = activeStyle.diagramLook === 'handDrawn';
 
@@ -143,34 +198,58 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         signalTextColor: activeStyle.textColor,
         labelBoxBkgColor: activeStyle.nodeColor,
         labelBoxBorderColor: activeStyle.lineColor,
+        // GitGraph Specifics
+        git0: activeStyle.lineColor || '#6366f1',
+        git1: activeStyle.textColor || '#e4e4e7',
+        git2: activeStyle.nodeColor || '#1e1e24',
+        gitBranchLabel0: activeStyle.textColor,
+        gitBranchLabel1: activeStyle.textColor,
     };
 
-    mermaid.initialize({
+    const config: any = {
       startOnLoad: false,
       theme: mermaidTheme,
       securityLevel: 'loose',
       fontFamily: '"Inter", sans-serif',
       themeVariables: themeVariables,
-      // @ts-ignore
-      look: isHandDrawn ? 'handDrawn' : 'classic',
-      flowchart: { htmlLabels: true, curve: isHandDrawn ? 'linear' : 'basis' },
       sequence: { showSequenceNumbers: false, actorMargin: 50, useMaxWidth: true }
-    });
-    
-    // If style changes, we might want to re-render even if code didn't change
-    // But setting svgContent to '' triggers the render effect below
-    setSvgContent(''); 
-  }, [theme, activeStyle.nodeColor, activeStyle.lineColor, activeStyle.textColor, activeStyle.diagramLook]);
+    };
+
+    if (unsafeForHandDrawn) {
+        // STRICT: Explicitly force 'classic' look to prevent 'reading decision' crash
+        // This overrides the user's "Blueprint" or "HandDrawn" style preset for unsupported diagrams
+        config.look = 'classic';
+        config.flowchart = { htmlLabels: true, curve: 'basis' };
+    } else if (isHandDrawn) {
+        config.look = 'handDrawn';
+        config.flowchart = { htmlLabels: true, curve: 'linear' };
+    } else {
+        config.look = 'classic';
+        config.flowchart = { htmlLabels: true, curve: 'basis' };
+    }
+
+    try {
+        mermaid.initialize(config);
+        setSvgContent(''); 
+    } catch (e) {
+        console.warn("Mermaid init failed", e);
+    }
+  }, [theme, activeStyle.nodeColor, activeStyle.lineColor, activeStyle.textColor, activeStyle.diagramLook, code]);
 
   // 3. Render Diagram
   useEffect(() => {
     let isMounted = true;
     const renderDiagram = async () => {
-      // PERF: Only render if visible (shouldRender), icons loaded, and code exists
       if (!code || !iconsLoaded || !shouldRender) return;
+      
       try {
+        if (!await mermaid.parse(code)) {
+             throw new Error("Invalid Syntax");
+        }
+
         const id = `mermaid-${Date.now()}`;
         const { svg } = await mermaid.render(id, code);
+        
         if (isMounted) {
             let processedSvg = svg;
             if (activeStyle.diagramLook === 'classic' && activeStyle.lineColor === '#00ff9d') {
@@ -182,16 +261,26 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       } catch (err) {
         if (isMounted) {
             const msg = err instanceof Error ? err.message : "Syntax Error";
-            const textMatch = (err as any)?.str || msg;
-            onError(textMatch);
+            if (msg.includes("reading 'decision'") || msg.includes("undefined") || msg.includes("Cannot read properties")) {
+                 console.warn("Mermaid Render Error:", msg);
+                 onError("Rendering Engine Issue: Try simplifying the diagram or checking syntax.");
+            } else {
+                 const textMatch = (err as any)?.str || msg;
+                 onError(textMatch);
+            }
         }
       }
     };
-    renderDiagram();
-    return () => { isMounted = false; };
+    
+    const renderTimer = setTimeout(renderDiagram, 100);
+    return () => { 
+        isMounted = false; 
+        clearTimeout(renderTimer);
+    };
   }, [code, iconsLoaded, activeStyle.diagramLook, activeStyle.lineColor, shouldRender]);
 
-  // --- Interaction Handlers (Pan/Zoom/Hover) ---
+  // ... (Interaction Handlers preserved below)
+  
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -220,7 +309,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
     }
   };
 
-  // ZOOM: Wheel Support
   const handleWheel = (e: React.WheelEvent) => {
     if (showControls || e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -281,9 +369,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col select-none group/canvas bg-[#09090b]">
-      
       <div className="absolute inset-0 z-0 pointer-events-none transition-all duration-500 ease-in-out" style={getBackgroundStyle()}></div>
-
       <div 
         className={`flex-1 overflow-hidden relative z-10 ${isPanning ? 'cursor-grabbing' : isHoveringElement ? 'cursor-pointer' : 'cursor-grab'}`}
         onMouseDown={handleMouseDown}
@@ -309,7 +395,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             }}
             dangerouslySetInnerHTML={{ __html: svgContent }}
         />
-        
         {(!svgContent) && (
              <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500 animate-pulse">
                 <Box className="w-12 h-12 mb-4 opacity-20" />
@@ -322,8 +407,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
       {showControls && (
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3">
-         
-         {/* Style Studio (Pop-up) */}
          {showStyleMenu && onUpdateStyle && (
              <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20">
                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
@@ -332,8 +415,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                      </span>
                      <button onClick={() => setShowStyleMenu(false)} className="text-zinc-400 hover:text-white"><Eye className="w-3.5 h-3.5" /></button>
                  </div>
-
-                 {/* Presets */}
                  <div className="grid grid-cols-2 gap-2 mb-4">
                      {Object.keys(STYLE_PRESETS).map(preset => (
                          <button
@@ -349,7 +430,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                          </button>
                      ))}
                  </div>
-
                  <div className="mb-4">
                      <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Render Mode</label>
                      <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
@@ -367,7 +447,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                          </button>
                      </div>
                  </div>
-
                  <div className="mb-2">
                      <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Canvas Pattern</label>
                      <div className="flex gap-2">
@@ -392,10 +471,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                  </div>
              </div>
          )}
-
-         {/* Floating Control Bar */}
          <div className="flex items-center gap-1 bg-surface/90 backdrop-blur-xl border border-white/10 rounded-full px-3 py-2 shadow-2xl ring-1 ring-black/20 hover:scale-[1.01] transition-transform">
-             
              {onUpdateStyle && (
                  <>
                     <button 
@@ -408,7 +484,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                     <div className="w-px h-4 bg-white/10 mx-2"></div>
                  </>
              )}
-
              <button 
                 onClick={() => setScale(s => Math.max(s - 0.1, 0.2))}
                 className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
@@ -416,7 +491,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
              >
                 <Minus className="w-4 h-4" />
              </button>
-             
              <div 
                 className="px-2 w-12 text-center text-xs font-mono text-zinc-300 font-medium cursor-pointer hover:text-white select-none"
                 onClick={resetView}
@@ -424,7 +498,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
              >
                 {Math.round(scale * 100)}%
              </div>
-             
              <button 
                 onClick={() => setScale(s => Math.min(s + 0.1, 5))}
                 className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
@@ -432,9 +505,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
              >
                 <Plus className="w-4 h-4" />
              </button>
-
              <div className="w-px h-4 bg-white/10 mx-2"></div>
-             
              <button 
                 onClick={resetView}
                 className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"

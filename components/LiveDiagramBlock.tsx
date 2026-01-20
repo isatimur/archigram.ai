@@ -66,6 +66,7 @@ const LiveDiagramBlock: React.FC<LiveDiagramBlockProps> = ({
                         error={error}
                         theme="midnight"
                         hideToolbar={true}
+                        collapseStatus={true}
                     />
                     <div className="absolute top-0 right-0 p-2 pointer-events-none">
                         <span className="text-[10px] text-zinc-700 font-mono">EDITABLE</span>

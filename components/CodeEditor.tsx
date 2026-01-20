@@ -13,6 +13,7 @@ interface CodeEditorProps {
   selectionRequest?: { text: string; ts: number } | null;
   theme?: DiagramTheme;
   hideToolbar?: boolean;
+  collapseStatus?: boolean; // Prop to force collapse if no error
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -25,7 +26,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   error,
   selectionRequest,
   theme = 'dark',
-  hideToolbar = false
+  hideToolbar = false,
+  collapseStatus = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -172,6 +174,11 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const highlightedHtml = useMemo(() => highlightCode(code), [code, theme]);
 
   const lineCount = code.split('\n').length;
+  
+  // Logic to determine height: 0 if collapsed and no error, h-8 if has error or not collapsed mode
+  const diagnosticsHeight = (!error && collapseStatus && !isDiagnosticsOpen) 
+      ? 'h-0 border-t-0 overflow-hidden' 
+      : (isDiagnosticsOpen ? 'max-h-32 border-t border-border' : 'h-8 border-t border-border');
 
   return (
     <div className="h-full w-full flex flex-col bg-background relative transition-colors duration-300">
@@ -287,7 +294,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Diagnostics Panel */}
-      <div className={`border-t border-border bg-background transition-all duration-300 ease-in-out flex flex-col z-20 ${isDiagnosticsOpen ? 'max-h-32' : 'h-8'}`}>
+      <div className={`bg-background transition-all duration-300 ease-in-out flex flex-col z-20 ${diagnosticsHeight}`}>
         <div 
             className="flex items-center justify-between px-4 h-8 bg-surface cursor-pointer hover:bg-surface-hover transition-colors select-none border-b border-border"
             onClick={() => setIsDiagnosticsOpen(!isDiagnosticsOpen)}
