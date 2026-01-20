@@ -28,11 +28,56 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [isHoveringElement, setIsHoveringElement] = useState(false);
+  const [iconsLoaded, setIconsLoaded] = useState(false);
   
   // Track dragging to distinguish from clicking
   const hasDragged = useRef(false);
 
-  // Re-initialize mermaid when theme or custom style changes
+  // 1. Initialize Icons (Run Once)
+  useEffect(() => {
+    const registerIcons = async () => {
+        try {
+            await mermaid.registerIconPacks([
+                {
+                    name: 'logos',
+                    loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'aws',
+                    loader: () => fetch('https://unpkg.com/@iconify-json/aws@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'gcp',
+                    loader: () => fetch('https://unpkg.com/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'azure',
+                    loader: () => fetch('https://unpkg.com/@iconify-json/azure@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'fa', // Font Awesome Regular
+                    loader: () => fetch('https://unpkg.com/@iconify-json/fa6-regular@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'fas', // Font Awesome Solid
+                    loader: () => fetch('https://unpkg.com/@iconify-json/fa6-solid@1/icons.json').then(res => res.json())
+                },
+                {
+                    name: 'material', // Material Design
+                    loader: () => fetch('https://unpkg.com/@iconify-json/material-symbols@1/icons.json').then(res => res.json())
+                }
+            ]);
+            setIconsLoaded(true);
+        } catch (e) {
+            console.error("Failed to register icon packs", e);
+            // Continue anyway, icons might just be missing
+            setIconsLoaded(true);
+        }
+    };
+    registerIcons();
+  }, []);
+
+  // 2. Initialize Mermaid Config (Run on Theme Change)
   useEffect(() => {
     // Map custom themes to standard Mermaid themes
     const mermaidTheme = theme === 'midnight' ? 'dark' : theme;
@@ -95,19 +140,27 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
           mirrorActors: false,
           bottomMarginAdj: 1,
           useMaxWidth: true,
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis'
       }
     });
+
     // Force re-render by clearing content momentarily
     setSvgContent(''); 
   }, [theme, customStyle]);
 
   useEffect(() => {
     let isMounted = true;
+    
     const renderDiagram = async () => {
-      if (!code) return;
+      if (!code || !iconsLoaded) return;
       
       try {
         const id = `mermaid-${Date.now()}`;
+        // Using mermaid.render directly. 
+        // Note: mermaid.render returns an object { svg } in v10+
         const { svg } = await mermaid.render(id, code);
         
         if (isMounted) {
@@ -116,7 +169,9 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         }
       } catch (err) {
         if (isMounted) {
+            console.error("Mermaid Render Error:", err);
             const msg = err instanceof Error ? err.message : "Syntax Error";
+            // Mermaid sometimes returns an object with 'str' property for errors
             const textMatch = (err as any)?.str || msg;
             onError(textMatch);
         }
@@ -125,7 +180,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
     renderDiagram();
     return () => { isMounted = false; };
-  }, [code, theme, customStyle, onError]);
+  }, [code, theme, customStyle, onError, iconsLoaded]);
 
   // Pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -150,7 +205,9 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
     // 2. Tooltip Handling (Element Detection)
     const target = e.target as Element;
     
-    const group = target.closest('.node, .actor, .messageText, .classTitle, .task, .cluster, .statediagram-state');
+    // Updated selector to include new architecture diagram classes if known, 
+    // though generic svg classes usually work.
+    const group = target.closest('.node, .actor, .messageText, .classTitle, .task, .cluster, .statediagram-state, .icon');
 
     if (group) {
         setIsHoveringElement(true);
@@ -168,6 +225,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             type = 'Node';
             const div = group.querySelector('div');
             const textEl = group.querySelector('text');
+            // Sometimes text is nested
             content = div?.textContent || textEl?.textContent || '';
         } else if (group.classList.contains('messageText')) {
             type = 'Message';
@@ -180,6 +238,9 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             type = 'Subgraph';
             const textEl = group.querySelector('.cluster-label');
             content = textEl?.textContent || 'Cluster';
+        } else if (group.tagName === 'g' && group.getAttribute('title')) {
+            // Some arch diagrams might use title attrs
+             content = group.getAttribute('title') || '';
         }
 
         content = content.trim();
@@ -306,7 +367,14 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         />
         
         {/* Placeholder if empty */}
-        {!svgContent && (
+        {(!svgContent && !iconsLoaded) && (
+             <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600 animate-pulse">
+                <Box className="w-12 h-12 mb-4 opacity-20" />
+                <p className="font-mono text-sm tracking-widest uppercase opacity-50">Initializing Icons...</p>
+           </div>
+        )}
+
+        {(!svgContent && iconsLoaded) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600 animate-pulse">
                  <Box className="w-12 h-12 mb-4 opacity-20" />
                  <p className="font-mono text-sm tracking-widest uppercase opacity-50">Rendering Diagram...</p>

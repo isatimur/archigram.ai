@@ -1,65 +1,68 @@
+
 export const INITIAL_CODE = `sequenceDiagram
     autonumber
-    participant Sales as Sales Team
-    participant Brand as Brand User
-    participant Portal as app.swiirl.ai Portal
-    participant Tech as Tech System
-    participant Kay as Manual (Kay)
-    participant Spreadsheet as Matching Spreadsheet
-    participant Host as Meeting Host
-    participant Meeting as Meeting Platform<br/>(Zoom/Google Meet)
-    participant Agent as Swiirl Brand Agent
-    participant Storage as Audio/Text Storage
-    participant Redactor as PII Redaction System
-    participant Analyzer as Analysis System
-    participant Dashboard as Brand Dashboard
-    participant Copilot as Swiirl AI Copilot
+    box "User Interaction" #11111b
+        participant User
+        participant UI as Chat Interface
+    end
+    box "Edge Services" #181825
+        participant Edge as Global Edge
+        participant WAF as WAF/Shield
+    end
+    box "AI Platform" #11111b
+        participant API as API Gateway
+        participant Orch as Orchestrator
+        participant Cache as Semantic Cache
+    end
+    box "Inference Grid" #181825
+        participant RAG as Vector Store
+        participant Model as LLM Engine
+        participant Safety as Safety Layer
+    end
 
-    Note over Sales,Brand: Phase 1: Initial Setup
-    Sales->>Brand: Sign pilot agreement<br/>(5-10 conversations, 1 month)
-    Brand->>Portal: Sign up on app.swiirl.ai
-    Brand->>Tech: Create brand agent
-    Brand->>Tech: Set up project<br/>(brief, goals, budget, demo)
+    Note over User, Safety: ⚡ GenAI Request Lifecycle (High-Performance Pipeline)
+
+    User->>UI: "Design a microservices architecture"
+    UI->>Edge: POST /chat/completions (Stream)
+    Edge->>WAF: Inspect Traffic (Rate Limit/Bot)
+    WAF-->>API: Forward Request
     
-    Note over Tech,Spreadsheet: Phase 2: Matching & Invitation
-    Tech->>Spreadsheet: Match groups to project<br/>(through spreadsheet)
-    Note right of Tech: Question: How do we see<br/>the matched groups?
-    Tech->>Kay: Provide list of matched groups
-    Note right of Kay: Question: Where can Kay<br/>get the list of groups?
-    Kay->>Host: Email sent to initial matched groups<br/>(email directs them to portal)
-    Tech->>Tech: Create meeting event<br/>(add host email address)
-    Tech->>Host: Send meeting invite<br/>(invite sent to meeting host)
-    Kay->>Host: Nudge meeting host to accept
+    API->>Orch: Init Session & Trace
     
-    Note over Host,Meeting: Phase 3: Host Onboarding
-    Host->>Portal: Host onboards<br/>(confirms or declines participation)
-    alt Host Confirms
-        Host->>Portal: Move invite to different days<br/>(within project time frame)
-        Note right of Host: Host can add people to meetings<br/>(min 7 people, ideal 15, 45 min min)
-    else Host Declines
-        Host->>Portal: Decline participation
-        Note over Tech: Process ends for this host
+    rect rgb(30, 30, 46)
+        note right of Orch: Optimization & Safety Phase
+        Orch->>Cache: Compute Embedding & Search
+        
+        alt Semantic Cache Hit
+            Cache-->>Orch: Return Cached Response
+            Orch-->>UI: Stream Cached Tokens
+        else Cache Miss
+            Orch->>Safety: Pre-Generation Check (PII/Jailbreak)
+            Safety-->>Orch: Safe to Process
+            
+            par Context Augmentation
+                Orch->>RAG: Hybrid Search (Top-K)
+                RAG-->>Orch: Retrieved Chunks
+            and Session State
+                Orch->>Orch: Load History & User Prefs
+            end
+            
+            Orch->>Model: Invoke Model (Context + Prompt)
+            activate Model
+            Model->>Model: Load LoRA Adapters
+            Model->>Model: Speculative Decoding
+            
+            loop Token Streaming
+                Model-->>API: Yield Token
+                API-->>UI: SSE Chunk
+            end
+            deactivate Model
+            
+            Orch->>Cache: Async Cache Write
+        end
     end
     
-    Note over Tech,Agent: Phase 4: Meeting Execution
-    Tech->>Tech: Monitor meeting start time
-    Tech->>Meeting: Swiirl agent joins meeting
-    Host->>Meeting: Host admits Swiirl agent
-    Agent->>Meeting: Swiirl brand agent does quick chat intro<br/>(who they are, purpose, what they want to learn,<br/>gratitude to the group)
-    Agent->>Meeting: Swiirl agent participates lightly<br/>(answers questions, asks clarifying questions,<br/>educates, only as aligns with brand goals,<br/>3 questions max)
-    
-    Note over Meeting,Analyzer: Phase 5: Post-Meeting Processing
-    Meeting->>Storage: Following meeting - audio/text captured<br/>and stored
-    Storage->>Redactor: PII redacted
-    Redactor->>Analyzer: System analyzes information<br/>through methodology
-    Analyzer->>Dashboard: Initial report shows up in dashboard
-    Note right of Dashboard: UX needed: Inform about what<br/>the report is based on before<br/>they can view it (maybe pop-up)
-    
-    Note over Tech,Dashboard: Phase 6: Report Generation
-    Tech->>Analyzer: Additional conversations added<br/>into dataset for report
-    Analyzer->>Dashboard: Final report ready alert
-    Brand->>Dashboard: View final report
-    Brand->>Copilot: Brands dig deeper into research<br/>(mining, report generation)`;
+    UI->>User: Render Markdown Response`;
 
 // Phase 1: Domain-Specific Copilot Contexts
 export const DOMAIN_INSTRUCTIONS: Record<string, string> = {
@@ -145,17 +148,17 @@ export const ML_TEMPLATES: Record<string, string> = {
 
 export const TEMPLATES: Record<string, string> = {
   "Cloud Architecture": `graph TB
-    Users((Users))
-    LB[Load Balancer]
+    Users((<icon:fa/users> Users))
+    LB[<icon:aws/elastic-load-balancing> Load Balancer]
     
-    subgraph Cluster
-        App1[App Server 1]
-        App2[App Server 2]
+    subgraph Cluster [App Cluster]
+        App1[<icon:logos/docker-icon> App Server 1]
+        App2[<icon:logos/docker-icon> App Server 2]
     end
     
-    subgraph Data
-        DB[(Primary DB)]
-        Cache[(Redis Cache)]
+    subgraph Data [Persistence Layer]
+        DB[(<icon:logos/postgresql> Primary DB)]
+        Cache[(<icon:logos/redis> Redis Cache)]
     end
     
     Users -->|HTTPS| LB
@@ -163,6 +166,16 @@ export const TEMPLATES: Record<string, string> = {
     LB --> App2
     App1 & App2 -->|Read/Write| DB
     App1 & App2 -->|Read| Cache`,
+
+  "Architecture (Beta)": `architecture-beta
+    group api(cloud)[API]
+
+    service db(database)[Database] in api
+    service disk(disk)[Storage] in api
+    service server(server)[Server] in api
+
+    db:L -- R:server
+    disk:T -- B:server`,
 
   "User Journey": `journey
     title My working day

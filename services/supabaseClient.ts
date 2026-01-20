@@ -89,3 +89,21 @@ export const publishDiagram = async (diagram: {
         return false;
     }
 };
+
+export const updateDiagramLikes = async (id: string, count: number): Promise<boolean> => {
+    try {
+        const { error } = await supabase
+            .from('community_diagrams')
+            .update({ likes: count })
+            .eq('id', id);
+
+        if (error) {
+            logSupabaseError('Like update failed', error);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        logSupabaseError('Like exception', e);
+        return false;
+    }
+};

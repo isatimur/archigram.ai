@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield } from 'lucide-react';
+import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig } from '../types.ts';
 
 interface HeaderProps {
@@ -84,6 +84,8 @@ const Header: React.FC<HeaderProps> = ({
       }, 1500);
   };
 
+  const isDarkMode = currentTheme !== 'neutral';
+
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
       
@@ -152,48 +154,59 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="hidden md:block h-6 w-px bg-border/50"></div>
 
-         {/* Theme Dropdown */}
-         <div className="relative">
-            <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
-                <button 
-                    onClick={() => setShowThemes(!showThemes)}
-                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
-                    title="Change Theme"
-                >
-                    <Palette className="w-3.5 h-3.5" />
-                    <span className="capitalize hidden lg:inline">{currentTheme}</span>
-                    <ChevronDown className="w-3 h-3 opacity-50" />
-                </button>
-            </div>
-            
-            {showThemes && (
-                <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
-                <div className="absolute top-full left-0 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
-                     <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">Theme Preset</div>
-                    {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => {
-                                setTheme(t);
-                                setShowThemes(false);
-                            }}
-                            className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div 
-                                    className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: themeColors[t] }}
-                                ></div>
-                                <span className="capitalize">{t}</span>
-                            </div>
-                            {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
-                        </button>
-                    ))}
+         <div className="flex items-center gap-2">
+             {/* Dark Mode Toggle */}
+             <button
+                onClick={() => setTheme(isDarkMode ? 'neutral' : 'dark')}
+                className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+             >
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+             </button>
+
+             {/* Theme Dropdown */}
+             <div className="relative">
+                <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
+                    <button 
+                        onClick={() => setShowThemes(!showThemes)}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
+                        title="Change Theme"
+                    >
+                        <Palette className="w-3.5 h-3.5" />
+                        <span className="capitalize hidden lg:inline">{currentTheme}</span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                    </button>
                 </div>
-                </>
-            )}
-        </div>
+                
+                {showThemes && (
+                    <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
+                    <div className="absolute top-full left-0 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">Theme Preset</div>
+                        {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
+                            <button
+                                key={t}
+                                onClick={() => {
+                                    setTheme(t);
+                                    setShowThemes(false);
+                                }}
+                                className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div 
+                                        className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
+                                        style={{ backgroundColor: themeColors[t] }}
+                                    ></div>
+                                    <span className="capitalize">{t}</span>
+                                </div>
+                                {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </button>
+                        ))}
+                    </div>
+                    </>
+                )}
+            </div>
+         </div>
 
       </div>
 

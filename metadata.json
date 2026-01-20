@@ -1,5 +1,5 @@
 {
   "name": "ArchiGram.ai",
-  "description": "A high-fidelity, AI-powered diagramming tool for architects and engineers. Features real-time Mermaid.js rendering, Gemini 3 Flash powered generation, and a professional-grade dark mode interface.",
+  "description": "The intelligent canvas for modern engineering. Generate Mermaid.js diagrams with Gemini 3 Flash. Visualize microservices, ML pipelines, and cloud infrastructure instantly.",
   "requestFramePermissions": []
 }

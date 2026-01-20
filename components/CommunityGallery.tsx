@@ -4,7 +4,7 @@ import { AppView, CommunityDiagram } from '../types.ts';
 import { COMMUNITY_DATA } from '../constants.ts';
 import DiagramPreview from './DiagramPreview.tsx';
 import { decodeCodeFromUrl } from '../utils/url.ts';
-import { fetchCommunityDiagrams } from '../services/supabaseClient.ts';
+import { fetchCommunityDiagrams, updateDiagramLikes } from '../services/supabaseClient.ts';
 
 interface CommunityGalleryProps {
   onNavigate: (view: AppView) => void;
@@ -22,6 +22,17 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
   // Data State
   const [diagrams, setDiagrams] = useState<CommunityDiagram[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+
+  // Load Likes from Local Storage
+  useEffect(() => {
+    const saved = localStorage.getItem('archigram_liked_ids');
+    if (saved) {
+        try {
+            setLikedIds(new Set(JSON.parse(saved)));
+        } catch(e) {}
+    }
+  }, []);
 
   // Fetch Data on Mount
   useEffect(() => {
@@ -45,6 +56,37 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
     d.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
     d.author.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleLike = async (e: React.MouseEvent, id: string, currentLikes: number) => {
+      e.stopPropagation();
+      
+      const isLiked = likedIds.has(id);
+      const newLikes = isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+      
+      // Optimistic UI Update
+      const newLikedIds = new Set(likedIds);
+      if (isLiked) newLikedIds.delete(id);
+      else newLikedIds.add(id);
+      
+      setLikedIds(newLikedIds);
+      localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(newLikedIds)));
+      
+      setDiagrams(prev => prev.map(d => d.id === id ? { ...d, likes: newLikes } : d));
+
+      // API Call
+      const success = await updateDiagramLikes(id, newLikes);
+      
+      if (!success) {
+          // Revert if API fails
+          setDiagrams(prev => prev.map(d => d.id === id ? { ...d, likes: currentLikes } : d));
+          setLikedIds(prev => {
+              const reverted = new Set(prev);
+              if (isLiked) reverted.add(id); else reverted.delete(id);
+              localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(reverted)));
+              return reverted;
+          });
+      }
+  };
 
   const handleImport = () => {
       setImportError('');
@@ -227,10 +269,21 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                                         <span className="text-xs text-text-muted font-medium hover:text-text cursor-pointer">@{diagram.author}</span>
                                     </div>
                                     <div className="flex items-center gap-4 text-xs text-text-muted">
-                                        <div className="flex items-center gap-1">
-                                            <Heart className="w-3.5 h-3.5" />
-                                            {formatNumber(diagram.likes)}
-                                        </div>
+                                        <button 
+                                            onClick={(e) => handleLike(e, diagram.id, diagram.likes)}
+                                            className={`flex items-center gap-1.5 transition-all group/like ${
+                                                likedIds.has(diagram.id) 
+                                                ? 'text-red-500' 
+                                                : 'text-text-muted hover:text-red-400'
+                                            }`}
+                                        >
+                                            <Heart className={`w-3.5 h-3.5 transition-transform ${
+                                                likedIds.has(diagram.id) 
+                                                ? 'fill-current scale-110' 
+                                                : 'group-hover/like:scale-110'
+                                            }`} />
+                                            <span className="font-medium">{formatNumber(diagram.likes)}</span>
+                                        </button>
                                         <div className="flex items-center gap-1">
                                             <Eye className="w-3.5 h-3.5" />
                                             {formatNumber(diagram.views)}
