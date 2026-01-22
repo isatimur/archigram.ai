@@ -59,4 +59,4 @@ export interface CommunityDiagram {
   createdAt: string;
 }
 
-export type AppView = 'landing' | 'app' | 'docs' | 'gallery';
+export type AppView = 'landing' | 'app' | 'docs' | 'gallery' | 'faq' | 'privacy' | 'terms' | 'license';

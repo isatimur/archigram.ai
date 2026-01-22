@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
@@ -147,7 +148,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     return (
         <button 
             onClick={() => setIsExpanded(true)}
-            className="absolute bottom-6 left-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
+            className="absolute bottom-6 right-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
             title="Open ArchiGram Copilot"
         >
             <Sparkles className="w-6 h-6 animate-pulse-slow" />
@@ -160,7 +161,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
   }
   
   return (
-    <div className="absolute bottom-6 left-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
+    <div className="absolute bottom-6 right-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
       <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         
         {/* Header with Domain Selector (Phase 1 Wedge) */}

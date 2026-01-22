@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header.tsx';
 import CodeEditor from './components/CodeEditor.tsx';
@@ -7,6 +8,8 @@ import LandingPage from './components/LandingPage.tsx';
 import Sidebar from './components/Sidebar.tsx';
 import Documentation from './components/Documentation.tsx';
 import CommunityGallery from './components/CommunityGallery.tsx'; 
+import FAQPage from './components/FAQPage.tsx';
+import LegalPage from './components/LegalPage.tsx';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
 import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
@@ -625,6 +628,14 @@ function App() {
       return <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />;
   }
 
+  if (currentView === 'faq') {
+      return <FAQPage onNavigate={setCurrentView} />;
+  }
+
+  if (currentView === 'privacy' || currentView === 'terms' || currentView === 'license') {
+      return <LegalPage type={currentView} onNavigate={setCurrentView} />;
+  }
+
   return (
     <div 
         className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
@@ -644,6 +655,7 @@ function App() {
         customStyle={customStyle}
         onUpdateStyle={setCustomStyle}
         onPublish={openPublishModal}
+        onNavigate={setCurrentView}
       />
 
       <main className="flex-1 flex overflow-hidden relative">

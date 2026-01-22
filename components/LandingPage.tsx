@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { LayoutTemplate, ArrowRight, Zap, CheckCircle2, Cpu, Share2, Shield, Code2, Globe, FileJson, Layers, Command, Rocket, Bot, Database, Server, GitBranch, HelpCircle, Workflow } from 'lucide-react';
 import { AppView } from '../types.ts';
+import { FAQ_DATA } from '../constants.ts';
 import LiveDiagramBlock from './LiveDiagramBlock.tsx';
 
 interface LandingPageProps {
@@ -42,9 +44,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
     DB-->>Svc: Order ID
     Svc-->>Client: 201 Created`;
 
+  // JSON-LD Schema for FAQPage
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": FAQ_DATA.map(item => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": item.answer
+      }
+    }))
+  };
+
   return (
     <div className="h-screen w-screen bg-[#09090b] text-white overflow-y-auto overflow-x-hidden landing-grid relative font-sans scroll-smooth">
       
+      {/* Inject JSON-LD */}
+      <script type="application/ld+json">
+        {JSON.stringify(faqSchema)}
+      </script>
+
       {/* Semantic Header / Navbar */}
       <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl px-6 h-20 flex items-center justify-between" role="banner">
          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
@@ -245,22 +266,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                 <p className="text-zinc-400">Everything you need to know about AI-powered architecture.</p>
             </div>
             <div className="grid gap-6" itemScope itemType="https://schema.org/FAQPage">
-                <FaqItem 
-                    question="What is ArchiGram.ai?" 
-                    answer="ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly." 
-                />
-                <FaqItem 
-                    question="How does the System Design Copilot work?" 
-                    answer="The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you." 
-                />
-                <FaqItem 
-                    question="Is ArchiGram free to use?" 
-                    answer="Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment." 
-                />
-                <FaqItem 
-                    question="Can I export diagrams to other formats?" 
-                    answer="Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion." 
-                />
+                {FAQ_DATA.map((item, index) => (
+                    <FaqItem 
+                        key={index}
+                        question={item.question} 
+                        answer={item.answer} 
+                    />
+                ))}
+            </div>
+            <div className="mt-12 text-center">
+                <button 
+                    onClick={() => onNavigate('faq')}
+                    className="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-2 mx-auto transition-colors"
+                >
+                    View All FAQs
+                    <ArrowRight className="w-4 h-4" />
+                </button>
             </div>
         </section>
 
@@ -301,14 +322,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
              <div>
                 <h4 className="text-white font-bold mb-4">Legal</h4>
                 <ul className="space-y-2 text-sm text-zinc-500">
-                    <li><button className="hover:text-indigo-400">Privacy Policy</button></li>
-                    <li><button className="hover:text-indigo-400">Terms of Service</button></li>
-                    <li><button className="hover:text-indigo-400">Open Source License</button></li>
+                    <li><button onClick={() => onNavigate('privacy')} className="hover:text-indigo-400">Privacy Policy</button></li>
+                    <li><button onClick={() => onNavigate('terms')} className="hover:text-indigo-400">Terms of Service</button></li>
+                    <li><button onClick={() => onNavigate('license')} className="hover:text-indigo-400">Open Source License</button></li>
                 </ul>
             </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-white/5 text-center text-zinc-600 text-sm flex flex-col md:flex-row justify-between items-center gap-4">
-            <p>&copy; {new Date().getFullYear()} ArchiGram.ai OSS.</p>
+            <div className="flex flex-col md:flex-row items-center gap-2">
+                <p>&copy; {new Date().getFullYear()} ArchiGram.ai OSS.</p>
+                <span className="hidden md:block text-zinc-700">•</span>
+                <a href="https://beyond9to6.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors flex items-center gap-1 group">
+                    Part of <span className="font-bold text-zinc-400 group-hover:text-white transition-colors underline decoration-dotted underline-offset-4 decoration-zinc-600">Beyond 9to6</span>
+                </a>
+            </div>
             <div className="flex gap-4">
                 <a href="#" className="hover:text-white transition-colors" aria-label="GitHub">GitHub</a>
                 <a href="#" className="hover:text-white transition-colors" aria-label="Twitter">Twitter</a>

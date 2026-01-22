@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon } from 'lucide-react';
-import { ViewMode, DiagramTheme, Project, DiagramStyleConfig } from '../types.ts';
+import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
   viewMode: ViewMode;
@@ -16,6 +17,7 @@ interface HeaderProps {
   customStyle?: DiagramStyleConfig;
   onUpdateStyle: (style: DiagramStyleConfig) => void;
   onPublish: () => void;
+  onNavigate: (view: AppView) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -31,7 +33,8 @@ const Header: React.FC<HeaderProps> = ({
   onRenameProject,
   customStyle = {},
   onUpdateStyle,
-  onPublish
+  onPublish,
+  onNavigate
 }) => {
   const [showThemes, setShowThemes] = useState(false);
   const [showStyleEditor, setShowStyleEditor] = useState(false);
@@ -92,7 +95,10 @@ const Header: React.FC<HeaderProps> = ({
       {/* 1. Brand Identity & Project Title */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none shrink-0">
-            <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer">
+            <h1 
+                onClick={() => onNavigate('landing')}
+                className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                   <Rocket className="w-3 h-3 text-white" />
               </div>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { 
@@ -126,11 +127,31 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             };
 
             const loaders = [
+                // AWS
+                loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
+                // Azure
+                loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
+                // Google Cloud (GCP)
+                (async () => {
+                    try {
+                        // @ts-ignore
+                        const mod = await import('@iconify-json/google-cloud-icons');
+                        const icons = mod.icons || mod.default?.icons;
+                        return [
+                            { name: 'gcp', icons },
+                            { name: 'google-cloud', icons },
+                            { name: 'google', icons }
+                        ];
+                    } catch(e) {
+                         return { name: 'gcp', loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
+                    }
+                })(),
                 // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
                 loadPack('@iconify-json/fa6-regular', 'fa', 'https://esm.sh/@iconify-json/fa6-regular@1/icons.json'),
                 loadPack('@iconify-json/fa6-solid', 'fas', 'https://esm.sh/@iconify-json/fa6-solid@1/icons.json'),
+                loadPack('@iconify-json/material-symbols', 'material', 'https://esm.sh/@iconify-json/material-symbols@1/icons.json'),
             ];
 
             const results = await Promise.all(loaders);
@@ -211,7 +232,8 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
     try {
         mermaid.initialize(config);
-        setSvgContent(''); 
+        // Important: Clearing content forces the render logic to re-run freshly on the next tick
+        // setSvgContent(''); 
     } catch (e) {
         console.warn("Mermaid init failed", e);
     }
@@ -254,12 +276,22 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       }
     };
     
-    const renderTimer = setTimeout(renderDiagram, 100);
+    // Small timeout ensures configuration (initialize) has settled before render is called
+    const renderTimer = setTimeout(renderDiagram, 50);
     return () => { 
         isMounted = false; 
         clearTimeout(renderTimer);
     };
-  }, [code, iconsLoaded, activeStyle.diagramLook, activeStyle.lineColor, shouldRender]);
+  }, [
+      code, 
+      iconsLoaded, 
+      activeStyle.diagramLook, 
+      activeStyle.lineColor, 
+      activeStyle.nodeColor, 
+      activeStyle.textColor,
+      theme,
+      shouldRender
+  ]);
 
   // ... (Interaction Handlers preserved below)
   
