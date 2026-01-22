@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { Undo, Redo, AlertCircle, AlertTriangle, CheckCircle2, XCircle, Terminal, FileJson } from 'lucide-react';
+import { Undo, Redo, AlertCircle, AlertTriangle, CheckCircle2, XCircle, Terminal, FileJson, Wrench, Sparkles, Loader2 } from 'lucide-react';
 import { DiagramTheme } from '../types.ts';
 
 interface CodeEditorProps {
@@ -14,6 +14,8 @@ interface CodeEditorProps {
   theme?: DiagramTheme;
   hideToolbar?: boolean;
   collapseStatus?: boolean; // Prop to force collapse if no error
+  onFixError?: () => void;
+  isFixing?: boolean;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -27,7 +29,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   selectionRequest,
   theme = 'dark',
   hideToolbar = false,
-  collapseStatus = false
+  collapseStatus = false,
+  onFixError,
+  isFixing = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -327,16 +331,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             <div className="flex-1 overflow-y-auto p-0 font-mono text-xs">
                 {error ? (
                     <div 
-                        className="flex items-start gap-3 p-3 hover:bg-red-500/5 transition-colors cursor-pointer group border-l-2 border-red-500"
-                        onClick={() => {
-                             if(textareaRef.current && errorLine) {
-                                const lineHeight = 24; 
-                                textareaRef.current.scrollTop = (errorLine - 5) * lineHeight;
-                            }
-                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-red-500/5 transition-colors group border-l-2 border-red-500"
                     >
-                        <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                        <div className="flex-1">
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0 self-start mt-0.5" />
+                        <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                                if(textareaRef.current && errorLine) {
+                                    const lineHeight = 24; 
+                                    textareaRef.current.scrollTop = (errorLine - 5) * lineHeight;
+                                }
+                            }}
+                        >
                             <p className="text-text group-hover:text-text transition-colors">
                                 {error}
                             </p>
@@ -344,6 +350,23 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                                 {errorLine ? `Source: mermaid-parser (Line ${errorLine})` : 'Source: mermaid-parser'}
                             </p>
                         </div>
+                        {onFixError && (
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onFixError();
+                                }}
+                                disabled={isFixing}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface border border-border text-text hover:bg-primary hover:text-white hover:border-primary/50 transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                            >
+                                {isFixing ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                )}
+                                <span className="font-bold text-[10px] tracking-wide">{isFixing ? 'Fixing...' : 'Fix with AI'}</span>
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full min-h-[50px] text-text-muted gap-2 opacity-50">

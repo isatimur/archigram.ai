@@ -12,6 +12,7 @@ import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, Community
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle, UploadCloud, X, Loader2 } from 'lucide-react';
 import { publishDiagram } from './services/supabaseClient.ts';
+import { fixDiagramSyntax } from './services/geminiService.ts';
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -91,6 +92,7 @@ function App() {
   const [theme, setTheme] = useState<DiagramTheme>('dark');
   const [showToast, setShowToast] = useState<{message: string, visible: boolean}>({ message: '', visible: false });
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
+  const [isFixing, setIsFixing] = useState(false);
 
   // --- 3. Style State ---
   const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
@@ -579,6 +581,29 @@ function App() {
       }
   };
 
+  // Syntax Fix Handler
+  const handleFixError = async () => {
+      if (!code || !error) return;
+      
+      setIsFixing(true);
+      try {
+          const fixedCode = await fixDiagramSyntax(code, error);
+          if (fixedCode) {
+              setCode(fixedCode);
+              handleAIUpdate(fixedCode); // Save to history
+              setError(null); // Clear error immediately (re-render will verify)
+              setShowToast({ message: 'Syntax error auto-corrected', visible: true });
+              setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+          }
+      } catch (e) {
+          console.error("Auto-fix failed:", e);
+          setShowToast({ message: 'Failed to fix code automatically.', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+      } finally {
+          setIsFixing(false);
+      }
+  };
+
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -707,6 +732,8 @@ function App() {
                 error={error}
                 selectionRequest={selectionRequest}
                 theme={theme}
+                onFixError={handleFixError}
+                isFixing={isFixing}
             />
           </div>
         )}
