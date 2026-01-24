@@ -450,24 +450,53 @@ function App() {
     });
   };
 
-  const getSvgElement = () => {
+  const getSvgData = () => {
     const container = document.getElementById('diagram-output-container');
     const svg = container?.querySelector('svg');
-    if (!svg) {
-      console.error("Export failed: No SVG element found.");
-      return null;
+    if (!svg) return null;
+
+    // Clone to safely modify
+    const clone = svg.cloneNode(true) as SVGElement;
+    
+    // Get natural dimensions
+    let width = 0, height = 0;
+    const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
+    
+    if (viewBox && viewBox.length === 4) {
+        width = viewBox[2];
+        height = viewBox[3];
+    } else {
+        const rect = svg.getBoundingClientRect();
+        const transform = container?.style.transform;
+        const scaleMatch = transform?.match(/scale\(([\d.]+)\)/);
+        const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+        width = rect.width / currentScale;
+        height = rect.height / currentScale;
     }
-    return { svg, container };
+
+    // Explicitly set width/height on clone for export consistency
+    clone.setAttribute('width', width.toString());
+    clone.setAttribute('height', height.toString());
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    // Apply Background Color
+    const bgColor = customStyle.backgroundColor || (theme === 'neutral' ? '#ffffff' : '#131316');
+    clone.style.backgroundColor = bgColor;
+
+    return { clone, width, height, bgColor };
   };
 
   const handleExportSvg = () => {
-    const result = getSvgElement();
-    if (!result) return;
-    const { svg } = result;
+    const data = getSvgData();
+    if (!data) {
+        setShowToast({ message: 'Export failed: No diagram found', visible: true });
+        return;
+    }
+    const { clone } = data;
 
     try {
         const serializer = new XMLSerializer();
-        const svgData = serializer.serializeToString(svg);
+        const svgData = serializer.serializeToString(clone);
         const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         
@@ -479,54 +508,36 @@ function App() {
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error("SVG Export failed:", e);
+        setShowToast({ message: 'SVG Export failed', visible: true });
     }
   };
 
   const handleExportPng = () => {
-    const result = getSvgElement();
-    if (!result) return;
-    const { svg, container } = result;
+    const data = getSvgData();
+    if (!data) return;
+    const { clone, width, height, bgColor } = data;
 
     try {
       const serializer = new XMLSerializer();
-      const svgData = serializer.serializeToString(svg);
+      const svgData = serializer.serializeToString(clone);
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
-        let width = 0;
-        let height = 0;
-
-        if (viewBox && viewBox.length === 4) {
-             width = viewBox[2];
-             height = viewBox[3];
-        } else {
-             const rect = svg.getBoundingClientRect();
-             const transform = container?.style.transform;
-             const scaleMatch = transform?.match(/scale\(([\d.]+)\)/);
-             const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-             width = rect.width / currentScale;
-             height = rect.height / currentScale;
-        }
-
+        // High resolution export
         const scale = 3; 
         canvas.width = width * scale;
         canvas.height = height * scale;
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            // Apply current style background to export
-            if (customStyle.backgroundColor) {
-                ctx.fillStyle = customStyle.backgroundColor;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            } else {
-                ctx.fillStyle = theme === 'neutral' ? '#ffffff' : '#131316'; 
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+            // Draw background explicitly on canvas (safer than SVG background for PNG)
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Draw image
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
             const link = document.createElement('a');
@@ -536,9 +547,15 @@ function App() {
         }
         URL.revokeObjectURL(url);
       };
+      img.onerror = (e) => {
+          console.error("Image load error for PNG export", e);
+          setShowToast({ message: 'PNG Generation failed', visible: true });
+          URL.revokeObjectURL(url);
+      }
       img.src = url;
     } catch (e) {
       console.error("PNG Export failed:", e);
+      setShowToast({ message: 'PNG Export failed', visible: true });
     }
   };
   
