@@ -17,12 +17,6 @@
     "lz-string": "1.5.0",
     "@supabase/supabase-js": "2.39.3",
     "@iconify-json/logos": "1",
-    "@iconify-json/aws": "1",
-    "@iconify-json/azure": "1",
-    "@iconify-json/google-cloud-icons": "1",
-    "@iconify-json/fa6-regular": "1",
-    "@iconify-json/fa6-solid": "1",
-    "@iconify-json/material-symbols": "1",
     "pako": "2.1.0",
     "bpmn-js": "^18.10.1"
   },
