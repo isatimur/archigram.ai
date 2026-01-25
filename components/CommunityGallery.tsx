@@ -217,25 +217,27 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                     <p className="text-text-muted">Loading community diagrams...</p>
                 </div>
             ) : (
-                /* Grid */
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                /* Masonry Grid */
+                <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
                     {filteredData.map((diagram) => (
                         <div 
                             key={diagram.id}
-                            className="group bg-surface border border-border hover:border-primary/50 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
+                            className="group bg-surface border border-border hover:border-primary/50 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 break-inside-avoid"
                             onMouseEnter={() => setHoveredId(diagram.id)}
                             onMouseLeave={() => setHoveredId(null)}
                         >
-                            {/* Preview Area */}
-                            <div className="relative h-48 bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer" onClick={() => handleForkWithStats(diagram)}>
-                                <div className="absolute inset-0 pointer-events-none transform scale-[0.6] origin-top-left w-[166%] h-[166%]">
-                                    <DiagramPreview 
-                                        code={diagram.code} 
-                                        onError={() => {}} 
-                                        theme="midnight" 
-                                    />
+                            {/* Preview Area - Aspect Ratio Variable */}
+                            <div className="relative bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer" onClick={() => handleForkWithStats(diagram)}>
+                                <div className="p-2 min-h-[150px] max-h-[300px] flex items-center justify-center overflow-hidden">
+                                    <div className="pointer-events-none transform scale-[0.8] origin-center w-full h-full flex items-center justify-center">
+                                        <DiagramPreview 
+                                            code={diagram.code} 
+                                            onError={() => {}} 
+                                            theme="midnight" 
+                                            showControls={false}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-50"></div>
                                 
                                 {/* Overlay Fork Button */}
                                 <div className={`absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${hoveredId === diagram.id ? 'opacity-100' : 'opacity-0'}`}>
@@ -261,7 +263,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                                     </span>
                                 </div>
                                 
-                                <p className="text-sm text-text-muted line-clamp-2 mb-4 h-10">{diagram.description}</p>
+                                <p className="text-sm text-text-muted line-clamp-3 mb-4">{diagram.description}</p>
                                 
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {diagram.tags.map(tag => (

@@ -1,23 +1,36 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import Header from './components/Header.tsx';
-import CodeEditor from './components/CodeEditor.tsx';
-import DiagramPreview from './components/DiagramPreview.tsx';
-import AIChat from './components/AIChat.tsx';
-import LandingPage from './components/LandingPage.tsx';
-import Sidebar from './components/Sidebar.tsx';
-import Documentation from './components/Documentation.tsx';
-import CommunityGallery from './components/CommunityGallery.tsx'; 
-import FAQPage from './components/FAQPage.tsx';
-import LegalPage from './components/LegalPage.tsx';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram, ProjectVersion } from './types.ts';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
-import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle, UploadCloud, X, Loader2 } from 'lucide-react';
 import { publishDiagram } from './services/supabaseClient.ts';
-import { fixDiagramSyntax } from './services/geminiService.ts';
+
+// Dynamic Component Imports
+const Header = lazy(() => import('./components/Header.tsx'));
+const CodeEditor = lazy(() => import('./components/CodeEditor.tsx'));
+const DiagramPreview = lazy(() => import('./components/DiagramPreview.tsx'));
+const AIChat = lazy(() => import('./components/AIChat.tsx'));
+const LandingPage = lazy(() => import('./components/LandingPage.tsx'));
+const Sidebar = lazy(() => import('./components/Sidebar.tsx'));
+const Documentation = lazy(() => import('./components/Documentation.tsx'));
+const CommunityGallery = lazy(() => import('./components/CommunityGallery.tsx')); 
+const FAQPage = lazy(() => import('./components/FAQPage.tsx'));
+const LegalPage = lazy(() => import('./components/LegalPage.tsx'));
+// New Studios
+const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
+
+// Loading Fallback
+const LoadingScreen = () => (
+  <div className="h-screen w-screen flex items-center justify-center bg-[#09090b] text-white">
+      <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-zinc-500 font-mono animate-pulse">Loading ArchiGram...</p>
+      </div>
+  </div>
+);
 
 // Theme Configuration for CSS Variables (RGB Tuples)
 const THEMES: Record<DiagramTheme, React.CSSProperties> = {
@@ -133,7 +146,8 @@ function App() {
                     id: 'legacy-' + Date.now(),
                     name: 'My First Diagram',
                     code: legacyCode,
-                    updatedAt: Date.now()
+                    updatedAt: Date.now(),
+                    versions: []
                 };
                 loadedProjects.push(legacyProject);
                 localStorage.removeItem(STORAGE_KEY);
@@ -144,7 +158,8 @@ function App() {
                     id: 'init-' + Date.now(),
                     name: 'Uber System Flow',
                     code: INITIAL_CODE,
-                    updatedAt: Date.now()
+                    updatedAt: Date.now(),
+                    versions: []
                 });
             }
 
@@ -162,7 +177,7 @@ function App() {
             }
         } catch (e) {
             console.error("Failed to load projects", e);
-            setProjects([{ id: 'err', name: 'New Diagram', code: INITIAL_CODE, updatedAt: Date.now() }]);
+            setProjects([{ id: 'err', name: 'New Diagram', code: INITIAL_CODE, updatedAt: Date.now(), versions: [] }]);
             setActiveProjectId('err');
             setCode(INITIAL_CODE);
         }
@@ -178,7 +193,8 @@ function App() {
                 id: 'shared-' + Date.now(),
                 name: 'Shared Diagram',
                 code: decoded,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
+                versions: []
             };
             setProjects(prev => [sharedProject, ...prev]);
             setActiveProjectId(sharedProject.id);
@@ -285,13 +301,58 @@ function App() {
       }
   };
 
+  const addVersionToProject = (projectId: string, newCode: string, label: string, source: 'ai' | 'manual') => {
+      setProjects(prev => prev.map(p => {
+          if (p.id === projectId) {
+              const newVersion: ProjectVersion = {
+                  id: Date.now().toString(),
+                  timestamp: Date.now(),
+                  code: newCode,
+                  label,
+                  source
+              };
+              // Keep only last 50 versions to prevent localStorage bloat
+              const updatedVersions = [newVersion, ...(p.versions || [])].slice(0, 50);
+              return { ...p, versions: updatedVersions };
+          }
+          return p;
+      }));
+  };
+
   const handleAIUpdate = (newCode: string) => {
+      // 1. Undo/Redo History
       setHistory(prev => {
           const upToCurrent = prev.slice(0, historyIndex + 1);
           return [...upToCurrent, newCode];
       });
       setHistoryIndex(prev => prev + 1);
       setCode(newCode);
+
+      // 2. Version History (Auto Snapshot)
+      if (activeProjectId) {
+          addVersionToProject(activeProjectId, newCode, 'AI Update', 'ai');
+      }
+  };
+
+  const handleManualSnapshot = (label: string = 'Manual Save') => {
+      if (activeProjectId) {
+          addVersionToProject(activeProjectId, code, label, 'manual');
+          setShowToast({ message: 'Version saved successfully', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
+      }
+  };
+
+  const handleRestoreVersion = (version: ProjectVersion) => {
+      setCode(version.code);
+      // Also add to undo stack so user can undo the restore
+      setHistory(prev => {
+          const upToCurrent = prev.slice(0, historyIndex + 1);
+          return [...upToCurrent, version.code];
+      });
+      setHistoryIndex(prev => prev + 1);
+      
+      setShowToast({ message: `Restored version: ${version.label}`, visible: true });
+      setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
   };
 
   // --- 8. Project Actions ---
@@ -302,7 +363,8 @@ function App() {
           name: `Diagram ${projects.length + 1}`,
           code: `graph TD\n    A[Start] --> B[Process]\n    B --> C[End]`,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
       
       const updatedProjects = [newProject, ...projects];
@@ -329,7 +391,8 @@ function App() {
           name: templateName,
           code: templateCode,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
 
       const updatedProjects = [newProject, ...projects];
@@ -357,7 +420,8 @@ function App() {
           name: `Fork: ${diagram.title}`,
           code: diagram.code,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
 
       const updatedProjects = [newProject, ...projects];
@@ -607,6 +671,7 @@ function App() {
       
       setIsFixing(true);
       try {
+          const { fixDiagramSyntax } = await import('./services/geminiService.ts');
           const fixedCode = await fixDiagramSyntax(code, error);
           if (fixedCode) {
               setCode(fixedCode);
@@ -634,23 +699,51 @@ function App() {
   const appStyle = THEMES[theme] || THEMES.dark;
 
   if (currentView === 'landing') {
-      return <LandingPage onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <LandingPage onNavigate={setCurrentView} />
+        </Suspense>
+      );
   }
   
   if (currentView === 'docs') {
-      return <Documentation onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <Documentation onNavigate={setCurrentView} />
+        </Suspense>
+      );
   }
 
   if (currentView === 'gallery') {
-      return <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />
+        </Suspense>
+      );
   }
 
   if (currentView === 'faq') {
-      return <FAQPage onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <FAQPage onNavigate={setCurrentView} />
+        </Suspense>
+      );
   }
 
   if (currentView === 'privacy' || currentView === 'terms' || currentView === 'license') {
-      return <LegalPage type={currentView} onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <LegalPage type={currentView} onNavigate={setCurrentView} />
+        </Suspense>
+      );
+  }
+
+  if (currentView === 'plantuml') {
+      return (
+          <Suspense fallback={<LoadingScreen />}>
+              <PlantUMLStudio onNavigate={setCurrentView} />
+          </Suspense>
+      );
   }
 
   return (
@@ -658,22 +751,25 @@ function App() {
         className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
         style={appStyle}
     >
-      <Header 
-        viewMode={viewMode} 
-        setViewMode={setViewMode} 
-        onExportPng={handleExportPng}
-        onExportSvg={handleExportSvg}
-        currentTheme={theme}
-        setTheme={setTheme}
-        onShare={handleShare}
-        onNewProject={handleCreateProject}
-        activeProject={activeProject}
-        onRenameProject={handleRenameProject}
-        customStyle={customStyle}
-        onUpdateStyle={setCustomStyle}
-        onPublish={openPublishModal}
-        onNavigate={setCurrentView}
-      />
+      <Suspense fallback={<div className="h-16 border-b border-border bg-background/80"></div>}>
+        <Header 
+            viewMode={viewMode} 
+            setViewMode={setViewMode} 
+            onExportPng={handleExportPng}
+            onExportSvg={handleExportSvg}
+            currentTheme={theme}
+            setTheme={setTheme}
+            onShare={handleShare}
+            onNewProject={handleCreateProject}
+            activeProject={activeProject}
+            onRenameProject={handleRenameProject}
+            customStyle={customStyle}
+            onUpdateStyle={setCustomStyle}
+            onPublish={openPublishModal}
+            onNavigate={setCurrentView}
+            onSaveVersion={handleManualSnapshot}
+        />
+      </Suspense>
 
       <main className="flex-1 flex overflow-hidden relative">
         
@@ -682,21 +778,23 @@ function App() {
                 hidden md:block h-full relative z-10 transition-[width] duration-300 ease-in-out
                 ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
             `}>
-                <Sidebar 
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    onSelectProject={handleSelectProject}
-                    onCreateProject={handleCreateProject}
-                    onCreateFromTemplate={handleCreateFromTemplate}
-                    onDeleteProject={handleDeleteProject}
-                    onClose={() => setIsSidebarOpen(false)}
-                    lastSaved={lastSaved}
-                    saveStatus={saveStatus}
-                    onRenameProject={handleRenameProject}
-                    isCollapsed={isSidebarCollapsed}
-                    toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    onOpenGallery={() => setCurrentView('gallery')}
-                />
+                <Suspense fallback={<div className="w-full h-full bg-surface/80 border-r border-border"></div>}>
+                    <Sidebar 
+                        projects={projects}
+                        activeProjectId={activeProjectId}
+                        onSelectProject={handleSelectProject}
+                        onCreateProject={handleCreateProject}
+                        onCreateFromTemplate={handleCreateFromTemplate}
+                        onDeleteProject={handleDeleteProject}
+                        onClose={() => setIsSidebarOpen(false)}
+                        lastSaved={lastSaved}
+                        saveStatus={saveStatus}
+                        onRenameProject={handleRenameProject}
+                        isCollapsed={isSidebarCollapsed}
+                        toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        onOpenGallery={() => setCurrentView('gallery')}
+                    />
+                </Suspense>
             </div>
         )}
 
@@ -704,33 +802,35 @@ function App() {
         {isSidebarOpen && (
            <div className="md:hidden absolute inset-0 z-40 flex">
              <div className="w-72 h-full shadow-2xl relative z-50">
-               <Sidebar 
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    onSelectProject={(id) => {
-                        handleSelectProject(id);
-                        setIsSidebarOpen(false);
-                    }}
-                    onCreateProject={() => {
-                        handleCreateProject();
-                        setIsSidebarOpen(false);
-                    }}
-                    onCreateFromTemplate={(name, code) => {
-                        handleCreateFromTemplate(name, code);
-                        setIsSidebarOpen(false);
-                    }}
-                    onDeleteProject={handleDeleteProject}
-                    onClose={() => setIsSidebarOpen(false)}
-                    lastSaved={lastSaved}
-                    saveStatus={saveStatus}
-                    onRenameProject={handleRenameProject}
-                    isCollapsed={false}
-                    toggleCollapse={() => {}} // No collapse on mobile
-                    onOpenGallery={() => {
-                        setCurrentView('gallery');
-                        setIsSidebarOpen(false);
-                    }}
-                />
+               <Suspense fallback={<div className="w-full h-full bg-surface"></div>}>
+                    <Sidebar 
+                        projects={projects}
+                        activeProjectId={activeProjectId}
+                        onSelectProject={(id) => {
+                            handleSelectProject(id);
+                            setIsSidebarOpen(false);
+                        }}
+                        onCreateProject={() => {
+                            handleCreateProject();
+                            setIsSidebarOpen(false);
+                        }}
+                        onCreateFromTemplate={(name, code) => {
+                            handleCreateFromTemplate(name, code);
+                            setIsSidebarOpen(false);
+                        }}
+                        onDeleteProject={handleDeleteProject}
+                        onClose={() => setIsSidebarOpen(false)}
+                        lastSaved={lastSaved}
+                        saveStatus={saveStatus}
+                        onRenameProject={handleRenameProject}
+                        isCollapsed={false}
+                        toggleCollapse={() => {}} // No collapse on mobile
+                        onOpenGallery={() => {
+                            setCurrentView('gallery');
+                            setIsSidebarOpen(false);
+                        }}
+                    />
+               </Suspense>
              </div>
              <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
            </div>
@@ -751,41 +851,55 @@ function App() {
             flex flex-col transition-all duration-300 ease-in-out border-r border-border
             ${viewMode === ViewMode.Split ? 'w-1/3' : 'w-full'}
           `}>
-            <CodeEditor 
-                code={code} 
-                onChange={setCode}
-                onUndo={undo}
-                onRedo={redo}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                error={error}
-                selectionRequest={selectionRequest}
-                theme={theme}
-                onFixError={handleFixError}
-                isFixing={isFixing}
-            />
+            <Suspense fallback={<div className="w-full h-full bg-background animate-pulse"></div>}>
+                <CodeEditor 
+                    code={code} 
+                    onChange={setCode}
+                    onUndo={undo}
+                    onRedo={redo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    error={error}
+                    selectionRequest={selectionRequest}
+                    theme={theme}
+                    onFixError={handleFixError}
+                    isFixing={isFixing}
+                />
+            </Suspense>
           </div>
         )}
 
         {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
           <div className={`${viewMode === ViewMode.Split ? 'w-2/3' : 'w-full'} bg-surface/50 relative`}>
-            <DiagramPreview 
-                code={code} 
-                onError={setError} 
-                theme={theme}
-                customStyle={customStyle}
-                onUpdateStyle={setCustomStyle}
-                onElementClick={(text) => {
-                     setSelectionRequest({ text, ts: Date.now() });
-                     if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
-                }}
-            />
+            <Suspense fallback={
+                <div className="w-full h-full flex items-center justify-center text-text-muted">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+            }>
+                <DiagramPreview 
+                    code={code} 
+                    onError={setError} 
+                    theme={theme}
+                    customStyle={customStyle}
+                    onUpdateStyle={setCustomStyle}
+                    onElementClick={(text) => {
+                        setSelectionRequest({ text, ts: Date.now() });
+                        if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
+                    }}
+                />
+            </Suspense>
             
-            <AIChat 
-                currentCode={code} 
-                onCodeUpdate={handleAIUpdate} 
-                theme={theme}
-            />
+            <Suspense fallback={null}>
+                <AIChat 
+                    projectId={activeProjectId}
+                    currentCode={code} 
+                    onCodeUpdate={handleAIUpdate} 
+                    theme={theme}
+                    versions={activeProject?.versions || []}
+                    onRestoreVersion={handleRestoreVersion}
+                    onSaveVersion={handleManualSnapshot}
+                />
+            </Suspense>
           </div>
         )}
       </main>

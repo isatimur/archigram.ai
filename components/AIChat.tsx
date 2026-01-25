@@ -1,18 +1,20 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send } from 'lucide-react';
+import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send, Archive } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
-import { ChatMessage, DiagramTheme, CopilotDomain } from '../types.ts';
+import { ChatMessage, DiagramTheme, CopilotDomain, ProjectVersion } from '../types.ts';
 
 interface AIChatProps {
+  projectId: string;
   currentCode: string;
   onCodeUpdate: (code: string) => void;
   theme?: DiagramTheme;
+  versions: ProjectVersion[];
+  onRestoreVersion: (version: ProjectVersion) => void;
+  onSaveVersion: (label: string) => void;
 }
 
-const CHAT_STORAGE_KEY = 'aistudio_chat_history';
-
-type Tab = 'chat' | 'history';
+const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
 
 const SUGGESTED_PROMPTS = [
     "Add a validation step",
@@ -21,31 +23,48 @@ const SUGGESTED_PROMPTS = [
     "Connect to Data Lake"
 ];
 
-const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
-
-const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dark' }) => {
+const AIChat: React.FC<AIChatProps> = ({ 
+    projectId,
+    currentCode, 
+    onCodeUpdate, 
+    theme = 'dark',
+    versions,
+    onRestoreVersion,
+    onSaveVersion
+}) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const [justCopied, setJustCopied] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<CopilotDomain>('General');
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to load chat history", e);
-      return [];
-    }
-  });
+  // Project-Specific Message Handling
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load chat for specific project
   useEffect(() => {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-  }, [messages]);
+      const key = `archigram_chat_${projectId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+          try {
+              setMessages(JSON.parse(saved));
+          } catch(e) {
+              setMessages([]);
+          }
+      } else {
+          setMessages([]);
+      }
+  }, [projectId]);
+
+  // Save chat for specific project
+  useEffect(() => {
+      if (projectId) {
+          localStorage.setItem(`archigram_chat_${projectId}`, JSON.stringify(messages));
+      }
+  }, [messages, projectId]);
 
   useEffect(() => {
     if (activeTab === 'chat' && scrollRef.current) {
@@ -134,13 +153,12 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
   };
 
   const handleClearHistory = () => {
-    if(confirm('Clear all chat history and saved versions?')) {
+    if(confirm('Clear all chat history for this project?')) {
         setMessages([]);
-        localStorage.removeItem(CHAT_STORAGE_KEY);
+        localStorage.removeItem(`archigram_chat_${projectId}`);
     }
   }
 
-  const historyItems = messages.filter(m => m.role === 'model' && m.codeSnapshot);
   const lastMessage = messages[messages.length - 1];
   const canRegenerate = !isLoading && lastMessage?.role === 'model';
 
@@ -164,7 +182,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     <div className="absolute bottom-6 right-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
       <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         
-        {/* Header with Domain Selector (Phase 1 Wedge) */}
+        {/* Header with Domain Selector */}
         <div className="border-b border-border/50 bg-gradient-to-r from-surface-hover/50 to-transparent flex flex-col shrink-0">
             <div className="flex justify-between items-center p-4 pb-2">
                  <div className="flex items-center gap-3">
@@ -239,8 +257,8 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                     }`}
                 >
                     <HistoryIcon className="w-3.5 h-3.5" />
-                    Runs
-                    <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{historyItems.length}</span>
+                    History
+                    <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{versions.length}</span>
                 </button>
             </div>
         </div>
@@ -367,93 +385,122 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
 
             {/* --- TAB: HISTORY --- */}
             {activeTab === 'history' && (
-                <div className="p-4 space-y-4 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border">
-                     {historyItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
-                            <Clock className="w-8 h-8 opacity-20" />
-                            <p>No pipeline history yet.</p>
-                        </div>
-                    ) : (
-                        <div className="relative border-l border-border ml-3 space-y-6">
-                            {historyItems.map((item, index) => {
-                                const itemIndex = messages.findIndex(m => m.id === item.id);
-                                const promptMsg = itemIndex > 0 ? messages[itemIndex - 1] : null;
-                                const promptText = promptMsg?.role === 'user' ? promptMsg.text : 'Manual Generation';
+                <div className="flex flex-col h-full">
+                    {/* Manual Save Button */}
+                    <div className="p-3 border-b border-border bg-surface/50">
+                        <button 
+                            onClick={() => onSaveVersion('Manual Snapshot')}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all"
+                        >
+                            <Archive className="w-3.5 h-3.5 text-primary" />
+                            Create Snapshot
+                        </button>
+                    </div>
 
-                                return (
-                                    <div key={item.id} className="relative pl-6 group">
-                                        <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-surface border border-border group-hover:border-primary group-hover:bg-primary transition-colors"></div>
-                                        
-                                        <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all shadow-sm">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="text-[10px] font-mono text-text-muted">
-                                                    {new Date(item.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                                </span>
-                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">v{historyItems.length - index}</span>
-                                            </div>
-                                            <p className="text-xs text-text mb-3 line-clamp-2">{promptText}</p>
+                    <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-4 space-y-4">
+                        {versions.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
+                                <Clock className="w-8 h-8 opacity-20" />
+                                <p>No saved versions yet.</p>
+                            </div>
+                        ) : (
+                            <div className="relative border-l border-border ml-3 space-y-6">
+                                {versions.slice().reverse().map((version, index) => {
+                                    return (
+                                        <div key={version.id} className="relative pl-6 group">
+                                            <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border transition-colors ${
+                                                version.source === 'manual' ? 'bg-emerald-500 border-emerald-600' : 'bg-surface border-border group-hover:bg-primary group-hover:border-primary'
+                                            }`}></div>
                                             
-                                            <div className="flex items-center gap-2">
-                                                <button 
-                                                    onClick={() => onCodeUpdate(item.codeSnapshot!)}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors"
-                                                >
-                                                    <RotateCcw className="w-3 h-3" />
-                                                    Restore
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleCopyCode(item.codeSnapshot!, item.id)}
-                                                    className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
-                                                >
-                                                    {justCopied === item.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                </button>
+                                            <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all shadow-sm">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-text flex items-center gap-2">
+                                                            {version.label}
+                                                            {version.source === 'manual' && (
+                                                                <span className="text-[8px] uppercase tracking-wider bg-emerald-500/10 text-emerald-500 px-1 py-0.5 rounded">Saved</span>
+                                                            )}
+                                                        </span>
+                                                        <span className="text-[10px] font-mono text-text-muted mt-0.5">
+                                                            {new Date(version.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                                                        v{versions.length - index}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="p-2 bg-background/50 rounded border border-border/50 mb-3 overflow-hidden">
+                                                    <pre className="text-[9px] font-mono text-text-muted line-clamp-3 opacity-70">
+                                                        {version.code}
+                                                    </pre>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => onRestoreVersion(version)}
+                                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors group/restore"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3 group-hover/restore:rotate-[-45deg] transition-transform" />
+                                                        Restore
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleCopyCode(version.code, version.id)}
+                                                        className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
+                                                        title="Copy Code"
+                                                    >
+                                                        {justCopied === version.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
 
-        {/* Input Area */}
-        <div className="p-3 bg-surface border-t border-border">
-            <form 
-                onSubmit={handleSubmit}
-                className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
-            >
-                <textarea 
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmit(e);
-                        }
-                    }}
-                    placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
-                    className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
-                    disabled={isLoading}
-                />
-                <button 
-                    type="submit"
-                    disabled={isLoading || !prompt.trim()}
-                    className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+        {/* Input Area (Only visible in Chat Tab) */}
+        {activeTab === 'chat' && (
+            <div className="p-3 bg-surface border-t border-border">
+                <form 
+                    onSubmit={handleSubmit}
+                    className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
                 >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-            </form>
-            <div className="flex justify-between items-center px-1 mt-2">
-                <span className="text-[9px] text-text-muted">Gemini 3 Flash • {selectedDomain} Context</span>
-                {messages.length > 0 && (
-                    <button onClick={handleClearHistory} className="text-[9px] text-text-muted hover:text-red-500 transition-colors">
-                        Clear History
+                    <textarea 
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                            }
+                        }}
+                        placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
+                        className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
+                        disabled={isLoading}
+                    />
+                    <button 
+                        type="submit"
+                        disabled={isLoading || !prompt.trim()}
+                        className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
-                )}
+                </form>
+                <div className="flex justify-between items-center px-1 mt-2">
+                    <span className="text-[9px] text-text-muted">Gemini 3 Flash • {selectedDomain} Context</span>
+                    {messages.length > 0 && (
+                        <button onClick={handleClearHistory} className="text-[9px] text-text-muted hover:text-red-500 transition-colors">
+                            Clear Chat
+                        </button>
+                    )}
+                </div>
             </div>
-        </div>
+        )}
       </div>
     </div>
   );

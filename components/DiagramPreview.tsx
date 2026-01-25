@@ -4,7 +4,7 @@ import mermaid from 'mermaid';
 import { 
     ZoomIn, ZoomOut, Maximize, AlertCircle, Move, RotateCcw, 
     Box, MousePointer2, Minus, Plus, Settings2, Palette, 
-    Grid, Layout, Eye, Download, Image as ImageIcon 
+    Grid, Layout, Eye, Download, Image as ImageIcon, Sliders 
 } from 'lucide-react';
 import { DiagramTheme, DiagramStyleConfig, BackgroundPattern, DiagramLook } from '../types.ts';
 
@@ -127,12 +127,31 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             };
 
             const loaders = [
+                // AWS
+                loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
+                // Azure
+                loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
+                // Google Cloud (GCP)
+                (async () => {
+                    try {
+                        // @ts-ignore
+                        const mod = await import('@iconify-json/google-cloud-icons');
+                        const icons = mod.icons || mod.default?.icons;
+                        return [
+                            { name: 'gcp', icons },
+                            { name: 'google-cloud', icons },
+                            { name: 'google', icons }
+                        ];
+                    } catch(e) {
+                         return { name: 'gcp', loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
+                    }
+                })(),
                 // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
                 loadPack('@iconify-json/fa6-regular', 'fa', 'https://esm.sh/@iconify-json/fa6-regular@1/icons.json'),
                 loadPack('@iconify-json/fa6-solid', 'fas', 'https://esm.sh/@iconify-json/fa6-solid@1/icons.json'),
-
+                loadPack('@iconify-json/material-symbols', 'material', 'https://esm.sh/@iconify-json/material-symbols@1/icons.json'),
             ];
 
             const results = await Promise.all(loaders);
@@ -213,8 +232,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
 
     try {
         mermaid.initialize(config);
-        // Important: Clearing content forces the render logic to re-run freshly on the next tick
-        // setSvgContent(''); 
+        setSvgContent(''); 
     } catch (e) {
         console.warn("Mermaid init failed", e);
     }
@@ -257,8 +275,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       }
     };
     
-    // Small timeout ensures configuration (initialize) has settled before render is called
-    const renderTimer = setTimeout(renderDiagram, 50);
+    const renderTimer = setTimeout(renderDiagram, 100);
     return () => { 
         isMounted = false; 
         clearTimeout(renderTimer);
@@ -269,13 +286,11 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       activeStyle.diagramLook, 
       activeStyle.lineColor, 
       activeStyle.nodeColor, 
-      activeStyle.textColor,
-      theme,
+      activeStyle.textColor, 
+      theme, 
       shouldRender
   ]);
 
-  // ... (Interaction Handlers preserved below)
-  
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -362,6 +377,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       return baseStyle;
   };
 
+  const updateStyle = (key: keyof DiagramStyleConfig, value: any) => {
+      if (onUpdateStyle) {
+          onUpdateStyle({ ...activeStyle, [key]: value });
+      }
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col select-none group/canvas bg-[#09090b]">
       <div className="absolute inset-0 z-0 pointer-events-none transition-all duration-500 ease-in-out" style={getBackgroundStyle()}>
@@ -407,65 +428,132 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       {showControls && (
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3">
          {showStyleMenu && onUpdateStyle && (
-             <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20">
+             <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20 overflow-hidden">
                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
                      <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                          <Palette className="w-3.5 h-3.5" /> Style Studio
                      </span>
                      <button onClick={() => setShowStyleMenu(false)} className="text-zinc-400 hover:text-white"><Eye className="w-3.5 h-3.5" /></button>
                  </div>
-                 <div className="grid grid-cols-2 gap-2 mb-4">
-                     {Object.keys(STYLE_PRESETS).map(preset => (
-                         <button
-                            key={preset}
-                            onClick={() => onUpdateStyle(STYLE_PRESETS[preset])}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
-                                JSON.stringify(activeStyle) === JSON.stringify(STYLE_PRESETS[preset])
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                            }`}
-                         >
-                            {preset}
-                         </button>
-                     ))}
-                 </div>
-                 <div className="mb-4">
-                     <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Render Mode</label>
-                     <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
-                         <button 
-                            onClick={() => onUpdateStyle({...activeStyle, diagramLook: 'classic'})}
-                            className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'classic' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                         >
-                            Classic
-                         </button>
-                         <button 
-                            onClick={() => onUpdateStyle({...activeStyle, diagramLook: 'handDrawn'})}
-                            className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'handDrawn' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                         >
-                            Sketch
-                         </button>
+                 
+                 <div className="space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2">
+                     {/* Presets */}
+                     <div>
+                         <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Presets</label>
+                         <div className="grid grid-cols-2 gap-2">
+                             {Object.keys(STYLE_PRESETS).map(preset => (
+                                 <button
+                                    key={preset}
+                                    onClick={() => onUpdateStyle(STYLE_PRESETS[preset])}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
+                                        JSON.stringify(activeStyle) === JSON.stringify(STYLE_PRESETS[preset])
+                                        ? 'bg-primary/20 border-primary text-primary'
+                                        : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                                    }`}
+                                 >
+                                    {preset}
+                                 </button>
+                             ))}
+                         </div>
                      </div>
-                 </div>
-                 <div className="mb-2">
-                     <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Canvas Pattern</label>
-                     <div className="flex gap-2">
-                         {(['solid', 'dots', 'grid', 'crossline'] as BackgroundPattern[]).map(pat => (
-                             <button
-                                key={pat}
-                                onClick={() => onUpdateStyle({...activeStyle, backgroundPattern: pat})}
-                                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                                    activeStyle.backgroundPattern === pat 
-                                    ? 'border-primary bg-primary/10 text-primary' 
-                                    : 'border-white/10 bg-zinc-800 text-zinc-500 hover:border-white/30'
-                                }`}
-                                title={pat}
+
+                     {/* Colors */}
+                     <div>
+                        <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Custom Colors</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Node</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.nodeColor || '#000000'} 
+                                    onChange={(e) => updateStyle('nodeColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Line</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.lineColor || '#000000'} 
+                                    onChange={(e) => updateStyle('lineColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Text</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.textColor || '#ffffff'} 
+                                    onChange={(e) => updateStyle('textColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Bg</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.backgroundColor || '#000000'} 
+                                    onChange={(e) => updateStyle('backgroundColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                        </div>
+                     </div>
+
+                     {/* Render Mode */}
+                     <div>
+                         <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Render Mode</label>
+                         <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
+                             <button 
+                                onClick={() => updateStyle('diagramLook', 'classic')}
+                                className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'classic' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                              >
-                                {pat === 'solid' && <Box className="w-3.5 h-3.5" />}
-                                {pat === 'dots' && <Grid className="w-3.5 h-3.5" />}
-                                {pat === 'grid' && <Layout className="w-3.5 h-3.5" />}
-                                {pat === 'crossline' && <Settings2 className="w-3.5 h-3.5" />}
+                                Classic
                              </button>
-                         ))}
+                             <button 
+                                onClick={() => updateStyle('diagramLook', 'handDrawn')}
+                                className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'handDrawn' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                             >
+                                Sketch
+                             </button>
+                         </div>
+                     </div>
+
+                     {/* Canvas Pattern & Opacity */}
+                     <div>
+                         <div className="flex justify-between items-center mb-2">
+                             <label className="text-[10px] text-zinc-500 font-bold uppercase block">Pattern</label>
+                             <span className="text-[9px] text-zinc-500">{(activeStyle.backgroundOpacity || 1) * 100}%</span>
+                         </div>
+                         <div className="flex gap-2 mb-3">
+                             {(['solid', 'dots', 'grid', 'crossline'] as BackgroundPattern[]).map(pat => (
+                                 <button
+                                    key={pat}
+                                    onClick={() => updateStyle('backgroundPattern', pat)}
+                                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+                                        activeStyle.backgroundPattern === pat 
+                                        ? 'border-primary bg-primary/10 text-primary' 
+                                        : 'border-white/10 bg-zinc-800 text-zinc-500 hover:border-white/30'
+                                    }`}
+                                    title={pat}
+                                 >
+                                    {pat === 'solid' && <Box className="w-3.5 h-3.5" />}
+                                    {pat === 'dots' && <Grid className="w-3.5 h-3.5" />}
+                                    {pat === 'grid' && <Layout className="w-3.5 h-3.5" />}
+                                    {pat === 'crossline' && <Settings2 className="w-3.5 h-3.5" />}
+                                 </button>
+                             ))}
+                         </div>
+                         <div className="flex items-center gap-2">
+                             <Sliders className="w-3 h-3 text-zinc-600" />
+                             <input 
+                                type="range" 
+                                min="0" max="1" step="0.05"
+                                value={activeStyle.backgroundOpacity ?? 1}
+                                onChange={(e) => updateStyle('backgroundOpacity', parseFloat(e.target.value))}
+                                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                             />
+                         </div>
                      </div>
                  </div>
              </div>

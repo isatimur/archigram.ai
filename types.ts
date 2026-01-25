@@ -38,6 +38,14 @@ export interface DiagramState {
   error: string | null;
 }
 
+export interface ProjectVersion {
+  id: string;
+  timestamp: number;
+  code: string;
+  label: string;
+  source: 'ai' | 'manual' | 'auto';
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -45,6 +53,8 @@ export interface Project {
   updatedAt: number;
   thumbnail?: string; 
   styleConfig?: DiagramStyleConfig;
+  versions?: ProjectVersion[];
+  type?: 'mermaid' | 'plantuml'; 
 }
 
 export interface CommunityDiagram {
@@ -59,4 +69,4 @@ export interface CommunityDiagram {
   createdAt: string;
 }
 
-export type AppView = 'landing' | 'app' | 'docs' | 'gallery' | 'faq' | 'privacy' | 'terms' | 'license';
+export type AppView = 'landing' | 'app' | 'plantuml' | 'docs' | 'gallery' | 'faq' | 'privacy' | 'terms' | 'license';

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon } from 'lucide-react';
+import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon, Save, Grid, Workflow } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
@@ -18,6 +18,7 @@ interface HeaderProps {
   onUpdateStyle: (style: DiagramStyleConfig) => void;
   onPublish: () => void;
   onNavigate: (view: AppView) => void;
+  onSaveVersion: (label: string) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -34,13 +35,13 @@ const Header: React.FC<HeaderProps> = ({
   customStyle = {},
   onUpdateStyle,
   onPublish,
-  onNavigate
+  onNavigate,
+  onSaveVersion
 }) => {
   const [showThemes, setShowThemes] = useState(false);
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
-  const [isDeploying, setIsDeploying] = useState(false);
 
   // Sync title when active project changes
   useEffect(() => {
@@ -73,18 +74,6 @@ const Header: React.FC<HeaderProps> = ({
       midnight: '#38bdf8', // Sky
       forest: '#4ade80',  // Green
       neutral: '#f43f5e',  // Rose
-  };
-
-  const handleStyleChange = (key: keyof DiagramStyleConfig, value: string) => {
-      onUpdateStyle({ ...customStyle, [key]: value });
-  };
-
-  const handleDeploy = () => {
-      setIsDeploying(true);
-      setTimeout(() => {
-          setIsDeploying(false);
-          alert("Enterprise Deployment Gateway:\n\nTo deploy this pipeline to production, please upgrade to the Enterprise Edition for SLA guarantees and RBAC controls.");
-      }, 1500);
   };
 
   const isDarkMode = currentTheme !== 'neutral';
@@ -136,6 +125,35 @@ const Header: React.FC<HeaderProps> = ({
       {/* 2. Middle: View & Tools */}
       <div className="flex items-center gap-4">
         
+        {/* Tools Dropdown */}
+        <div className="relative">
+            <button 
+                onClick={() => setShowTools(!showTools)}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
+            >
+                <Grid className="w-3.5 h-3.5" />
+                Tools
+                <ChevronDown className="w-3 h-3 opacity-50" />
+            </button>
+            
+            {showTools && (
+                <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
+                <div className="absolute top-full left-0 mt-2 w-48 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <button onClick={() => onNavigate('app')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
+                    </button>
+                    <button onClick={() => onNavigate('plantuml')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-sm bg-green-600 text-[8px] text-white flex items-center justify-center font-bold">P</div>
+                        PlantUML Studio
+                    </button>
+                </div>
+                </>
+            )}
+        </div>
+
+        <div className="hidden md:block h-6 w-px bg-border/50"></div>
+
         {/* View Switcher */}
         <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
           {[
@@ -219,14 +237,14 @@ const Header: React.FC<HeaderProps> = ({
       {/* 3. Actions */}
       <div className="flex items-center gap-3">
          
-         {/* Deploy Button (Phase 2 Feature) */}
+         {/* Save Version Button */}
          <button 
-            onClick={handleDeploy}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
-            title="Deploy to Staging (One-Click)"
+            onClick={() => onSaveVersion("Manual Save")}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
+            title="Create a Checkpoint"
          >
-            {isDeploying ? <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div> : <Rocket className="w-3.5 h-3.5" />}
-            {isDeploying ? 'Deploying...' : 'Deploy Pipeline'}
+            <Save className="w-3.5 h-3.5" />
+            Save Version
          </button>
 
          {/* Publish Button */}

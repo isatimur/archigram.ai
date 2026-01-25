@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight, LayoutTemplate, FileCode, Zap, Globe, Check } from 'lucide-react';
 import { Project } from '../types.ts';
@@ -109,6 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ${isCollapsed ? 'w-10 h-10 rounded-xl mx-auto' : 'w-full py-2.5 px-4'}
             `}
             title="Create New Diagram"
+            aria-label="Create New Diagram"
         >
             <Plus className={`transition-transform duration-300 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4 group-hover:rotate-90'}`} />
             {!isCollapsed && <span className="text-sm font-semibold whitespace-nowrap">New Diagram</span>}
@@ -124,6 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-surface-hover/50 border border-border/50 rounded-lg pl-9 pr-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-surface-hover transition-all"
+                    aria-label="Search Diagrams"
                 />
             </div>
         )}
@@ -159,6 +162,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                             }
                         `}
                         title={isCollapsed ? project.name : ''}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                !isEditing && onSelectProject(project.id)
+                            }
+                        }}
                     >
                         {/* Project Icon / Avatar */}
                         <div className={`
@@ -183,6 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             autoFocus
                                             onClick={(e) => e.stopPropagation()}
                                             className="bg-background border border-primary/50 text-text text-sm rounded px-1.5 py-0.5 focus:outline-none w-full min-w-0"
+                                            aria-label="Rename Project"
                                         />
                                     </div>
                                 ) : (
@@ -205,6 +216,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     onClick={(e) => startEditing(project, e)}
                                     className="p-1.5 rounded-md hover:bg-surface hover:text-text text-text-muted transition-colors"
                                     title="Rename"
+                                    aria-label="Rename"
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
                                 </button>
@@ -218,6 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         }}
                                         className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-text-muted transition-colors"
                                         title="Delete"
+                                        aria-label="Delete"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -233,6 +246,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     submitRename(project.id);
                                 }}
                                 className="p-1.5 rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"
+                                aria-label="Confirm Rename"
                             >
                                 <Check className="w-3.5 h-3.5" />
                             </button>
@@ -330,6 +344,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ${isCollapsed ? 'justify-center w-10 h-10 p-0' : 'w-full p-2'}
             `}
             title="Community Gallery"
+            aria-label="Open Community Gallery"
         >
              <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:border-primary/50 transition-all shrink-0">
                 <Globe className="w-4 h-4 text-accent" />
@@ -368,6 +383,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ${isCollapsed ? 'w-8 h-8' : 'w-full py-1.5 hover:bg-surface-hover mt-1'}
             `}
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
