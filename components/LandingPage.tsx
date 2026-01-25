@@ -17,17 +17,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const HERO_DIAGRAM = `graph TD
-    User((User)) -->|HTTPS| CDN[Cloudflare]
-    CDN --> LB[Load Balancer]
-    LB --> API[API Gateway]
-    
-    subgraph Cluster
-        API --> Auth[Auth Service]
-        API --> Core[Core Service]
-        Core -.-> Redis[(Redis Cache)]
-        Core --> DB[(Postgres)]
-    end`;
+  const HERO_DIAGRAM = `architecture-beta
+    group api(logos:aws-lambda)[API]
+
+    service db(logos:aws-aurora)[Database] in api
+    service disk1(logos:aws-glacier)[Storage] in api
+    service disk2(logos:aws-s3)[Storage] in api
+    service server(logos:aws-ec2)[Server] in api
+
+    db:L -- R:server
+    disk1:T -- B:server
+    disk2:T -- B:db`;
 
   const BACKEND_ARCH_DIAGRAM = `graph TD
     User((User)) -->|HTTPS| CDN[Cloudflare CDN]
@@ -253,10 +253,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                         </div>
                         <div className="flex-1 w-full">
                             <div className="bg-[#050507] rounded-xl p-5 border border-white/10 font-mono text-xs text-emerald-300/80 opacity-80 group-hover:opacity-100 transition-opacity shadow-inner">
-                                @startuml<br/>
-                                Alice -> Bob: Authentication Request<br/>
-                                Bob --> Alice: Authentication Response<br/>
+                                
+                                @startuml
+                                <br/>
+                                Alice -&gt; Bob: Authentication Request
+                                <br/>
+                                Bob --&gt; Alice: Authentication Response
+                                <br/>
                                 @enduml
+                                
                             </div>
                         </div>
                     </div>
