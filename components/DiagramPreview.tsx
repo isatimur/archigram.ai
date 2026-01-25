@@ -124,21 +124,9 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                 }
             };
 
-            // Note: google-cloud-icons often causes build issues with Rollup due to size/structure
-            // We use a direct fetch loader for it to avoid build-time resolution errors.
-            const googleCloudLoader = { 
-                name: 'gcp', 
-                loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) 
-            };
 
             const loaders = [
-                // AWS
-                loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
-                // Azure
-                loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
-                // Google Cloud (Runtime Fetch Only)
-                Promise.resolve(googleCloudLoader),
-                // Logos (General Tech)
+    // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
                 loadPack('@iconify-json/fa6-regular', 'fa', 'https://esm.sh/@iconify-json/fa6-regular@1/icons.json'),
