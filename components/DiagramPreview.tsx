@@ -111,14 +111,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         
         try {
             // Helper to load pack either from module (via importmap) or CDN fallback
-            // This ensures if npm install failed for types, we can still load the JSON at runtime
             const loadPack = async (pkg: string, name: string, fallbackUrl?: string) => {
                 try {
                      // @ts-ignore
                     const mod = await import(pkg);
                     return { name, icons: mod.icons || mod.default?.icons };
                 } catch(e) {
-                    // console.warn(`Failed to import ${pkg}, trying fallback...`);
                     if (fallbackUrl) {
                         return { name, loader: () => fetch(fallbackUrl).then(res => res.json()) };
                     }
@@ -126,26 +124,20 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                 }
             };
 
+            // Note: google-cloud-icons often causes build issues with Rollup due to size/structure
+            // We use a direct fetch loader for it to avoid build-time resolution errors.
+            const googleCloudLoader = { 
+                name: 'gcp', 
+                loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) 
+            };
+
             const loaders = [
                 // AWS
                 loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
                 // Azure
                 loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
-                // Google Cloud (GCP)
-                (async () => {
-                    try {
-                        // @ts-ignore
-                        const mod = await import('@iconify-json/google-cloud-icons');
-                        const icons = mod.icons || mod.default?.icons;
-                        return [
-                            { name: 'gcp', icons },
-                            { name: 'google-cloud', icons },
-                            { name: 'google', icons }
-                        ];
-                    } catch(e) {
-                         return { name: 'gcp', loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
-                    }
-                })(),
+                // Google Cloud (Runtime Fetch Only)
+                Promise.resolve(googleCloudLoader),
                 // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
@@ -218,8 +210,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
     };
 
     if (unsafeForHandDrawn) {
-        // STRICT: Explicitly force 'classic' look to prevent 'reading decision' crash
-        // This overrides the user's "Blueprint" or "HandDrawn" style preset for unsupported diagrams
         config.look = 'classic';
         config.flowchart = { htmlLabels: true, curve: 'basis' };
     } else if (isHandDrawn) {
@@ -254,7 +244,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         
         if (isMounted) {
             let processedSvg = svg;
-            // Add subtle drop shadow to lines for 'classic' cyberpunk look
             if (activeStyle.diagramLook === 'classic' && activeStyle.lineColor === '#00ff9d') {
                 processedSvg = svg.replace(/<style>/, `<style>.edgePath .path { filter: drop-shadow(0 0 2px ${activeStyle.lineColor}); } `);
             }
