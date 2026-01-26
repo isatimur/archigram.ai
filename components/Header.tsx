@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon, Save, Grid, Workflow } from 'lucide-react';
+import { Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, UploadCloud, Rocket, Sun, Moon, Save, Grid, ShieldCheck, Binary } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
@@ -19,6 +19,7 @@ interface HeaderProps {
   onPublish: () => void;
   onNavigate: (view: AppView) => void;
   onSaveVersion: (label: string) => void;
+  onAudit: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -32,11 +33,10 @@ const Header: React.FC<HeaderProps> = ({
   onNewProject,
   activeProject,
   onRenameProject,
-  customStyle = {},
-  onUpdateStyle,
   onPublish,
   onNavigate,
-  onSaveVersion
+  onSaveVersion,
+  onAudit
 }) => {
   const [showThemes, setShowThemes] = useState(false);
   const [showTools, setShowTools] = useState(false);
@@ -79,10 +79,10 @@ const Header: React.FC<HeaderProps> = ({
   const isDarkMode = currentTheme !== 'neutral';
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
+    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
       
       {/* 1. Brand Identity & Project Title */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
         <div className="flex flex-col justify-center select-none shrink-0">
             <h1 
                 onClick={() => onNavigate('landing')}
@@ -91,14 +91,14 @@ const Header: React.FC<HeaderProps> = ({
               <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                   <Rocket className="w-3 h-3 text-white" />
               </div>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">Archi</span><span className="text-text font-bold">Gram</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">.ai</span>
+              <span className="hidden lg:inline"><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">Archi</span><span className="text-text font-bold">Gram</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">.ai</span></span>
             </h1>
         </div>
         
         <div className="h-6 w-px bg-border/50 hidden md:block"></div>
 
         {/* Project Title (Editable) */}
-        <div className="flex items-center relative group min-w-[200px]">
+        <div className="flex items-center relative group min-w-0 flex-1">
             {isEditingTitle ? (
                 <input
                     type="text"
@@ -107,15 +107,15 @@ const Header: React.FC<HeaderProps> = ({
                     onBlur={handleTitleSubmit}
                     onKeyDown={handleKeyDown}
                     autoFocus
-                    className="bg-surface border border-primary/50 text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+                    className="bg-surface border border-primary/50 text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 w-full min-w-[120px]"
                 />
             ) : (
                 <div 
                     onClick={() => setIsEditingTitle(true)}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover rounded-md px-2 py-1 transition-colors text-sm font-medium text-text group"
+                    className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover rounded-md px-2 py-1 transition-colors text-sm font-medium text-text group truncate"
                     title="Click to rename"
                 >
-                    <span className="truncate max-w-[200px]">{activeProject?.name || 'Untitled Diagram'}</span>
+                    <span className="truncate">{activeProject?.name || 'Untitled Diagram'}</span>
                     <Pencil className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
             )}
@@ -123,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 2. Middle: View & Tools */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         
         {/* Tools Dropdown */}
         <div className="relative">
@@ -132,20 +132,25 @@ const Header: React.FC<HeaderProps> = ({
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
             >
                 <Grid className="w-3.5 h-3.5" />
-                Tools
+                <span className="hidden md:inline">Tools</span>
                 <ChevronDown className="w-3 h-3 opacity-50" />
             </button>
             
             {showTools && (
                 <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
-                <div className="absolute top-full left-0 mt-2 w-48 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
-                    <button onClick={() => onNavigate('app')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                <div className="absolute top-full left-0 mt-2 w-56 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <button onClick={() => { onNavigate('app'); setShowTools(false); }} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
                         <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
                     </button>
-                    <button onClick={() => onNavigate('plantuml')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-sm bg-green-600 text-[8px] text-white flex items-center justify-center font-bold">P</div>
+                    <button onClick={() => { onNavigate('plantuml'); setShowTools(false); }} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <Binary className="w-4 h-4 text-emerald-500" />
                         PlantUML Studio
+                    </button>
+                    <div className="h-px bg-border/50 my-1"></div>
+                    <button onClick={() => { onAudit(); setShowTools(false); }} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-orange-400" />
+                        Run Audit
                     </button>
                 </div>
                 </>
@@ -189,7 +194,7 @@ const Header: React.FC<HeaderProps> = ({
              </button>
 
              {/* Theme Dropdown */}
-             <div className="relative">
+             <div className="relative hidden sm:block">
                 <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
                     <button 
                         onClick={() => setShowThemes(!showThemes)}
@@ -235,16 +240,26 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 3. Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
          
+         {/* Audit Button (Visible on MD+) */}
+         <button 
+            onClick={onAudit}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 rounded-lg transition-all"
+            title="Perform AI Security & Architecture Audit"
+         >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Audit</span>
+         </button>
+
          {/* Save Version Button */}
          <button 
             onClick={() => onSaveVersion("Manual Save")}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
             title="Create a Checkpoint"
          >
             <Save className="w-3.5 h-3.5" />
-            Save Version
+            <span className="hidden xl:inline">Save</span>
          </button>
 
          {/* Publish Button */}
@@ -254,7 +269,7 @@ const Header: React.FC<HeaderProps> = ({
             title="Publish to Community Gallery"
          >
             <UploadCloud className="w-3.5 h-3.5" />
-            Publish
+            <span className="hidden xl:inline">Publish</span>
         </button>
 
          <button 
@@ -262,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({
             className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
         >
             <Plus className="w-3.5 h-3.5" />
-            New
+            <span className="hidden xl:inline">New</span>
         </button>
 
         <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
@@ -290,7 +305,7 @@ const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
         >
           <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
-          Share
+          <span className="hidden sm:inline">Share</span>
         </button>
       </div>
     </header>

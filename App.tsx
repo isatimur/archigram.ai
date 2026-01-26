@@ -5,6 +5,7 @@ import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle, UploadCloud, X, Loader2 } from 'lucide-react';
 import { publishDiagram } from './services/supabaseClient.ts';
+import { auditDiagram, AuditReport } from './services/geminiService.ts';
 
 // Dynamic Component Imports
 const Header = lazy(() => import('./components/Header.tsx'));
@@ -22,6 +23,7 @@ const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
 const BPMNStudio = lazy(() => import('./components/BPMNStudio.tsx'));
 // Modals
 const ImageImportModal = lazy(() => import('./components/ImageImportModal.tsx'));
+const AuditModal = lazy(() => import('./components/AuditModal.tsx'));
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -119,6 +121,10 @@ function App() {
   // --- 4. Modal States ---
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isImageImportModalOpen, setIsImageImportModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
+
   const [publishData, setPublishData] = useState({ title: '', author: '', description: '', tags: '' });
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -529,6 +535,25 @@ function App() {
       setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
   };
 
+  // Audit Handler
+  const handleAudit = async () => {
+      setIsAuditModalOpen(true);
+      setIsAuditing(true);
+      setAuditReport(null); // Reset previous report
+
+      try {
+          const report = await auditDiagram(code);
+          setAuditReport(report);
+      } catch (e) {
+          console.error(e);
+          setShowToast({ message: 'Audit failed. Please try again.', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+          setIsAuditModalOpen(false);
+      } finally {
+          setIsAuditing(false);
+      }
+  };
+
   // --- 9. Export/Share Handlers ---
 
   const handleShare = () => {
@@ -801,6 +826,7 @@ function App() {
             onPublish={openPublishModal}
             onNavigate={setCurrentView}
             onSaveVersion={handleManualSnapshot}
+            onAudit={handleAudit}
         />
       </Suspense>
 
@@ -978,6 +1004,17 @@ function App() {
               <ImageImportModal 
                   onClose={() => setIsImageImportModalOpen(false)}
                   onImport={handleImageImport}
+              />
+          </Suspense>
+      )}
+
+      {/* Audit Modal */}
+      {isAuditModalOpen && (
+          <Suspense fallback={null}>
+              <AuditModal 
+                  onClose={() => setIsAuditModalOpen(false)}
+                  isLoading={isAuditing}
+                  report={auditReport}
               />
           </Suspense>
       )}

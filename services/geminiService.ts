@@ -41,6 +41,60 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string, 
   }
 };
 
+export interface AuditReport {
+    score: number;
+    summary: string;
+    risks: { severity: 'High' | 'Medium' | 'Low'; title: string; description: string }[];
+    strengths: string[];
+    improvements: string[];
+}
+
+export const auditDiagram = async (code: string): Promise<AuditReport> => {
+    const ai = getAI();
+    const prompt = `You are a Principal Software Architect and Security Engineer.
+    Analyze the following Mermaid.js architecture diagram.
+    
+    Diagram Code:
+    \`\`\`mermaid
+    ${code}
+    \`\`\`
+    
+    Perform a rigorous architectural audit. Look for:
+    1. Single Points of Failure (SPOF).
+    2. Security Risks (e.g., missing WAF, databases exposed to public, unencrypted flows).
+    3. Scalability Bottlenecks.
+    4. Missing Industry Standards (Caching, Load Balancing, Monitoring).
+
+    Return the result as a raw JSON object (no markdown formatting) with this structure:
+    {
+      "score": number (0-100),
+      "summary": "Short executive summary of the architecture health.",
+      "risks": [
+         { "severity": "High"|"Medium"|"Low", "title": "Risk Title", "description": "Why this is bad" }
+      ],
+      "strengths": ["List of good patterns found"],
+      "improvements": ["Specific recommendations to fix risks"]
+    }`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json'
+            }
+        });
+
+        const text = response.text || '{}';
+        // Cleanup if the model adds markdown despite instructions
+        const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanJson);
+    } catch (error) {
+        console.error("Audit Error:", error);
+        throw new Error("Failed to audit diagram.");
+    }
+};
+
 export const imageToDiagram = async (base64Image: string, mimeType: string): Promise<string> => {
     const ai = getAI();
     // Clean base64 string if it contains the data header
