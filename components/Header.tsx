@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, UploadCloud, Rocket, Sun, Moon, Save, Grid, ShieldCheck, Binary } from 'lucide-react';
+import { Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, UploadCloud, Rocket, Sun, Moon, Save, Grid, ShieldCheck, Binary, Twitter, Linkedin, Link2, Copy } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
@@ -40,8 +40,35 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showThemes, setShowThemes] = useState(false);
   const [showTools, setShowTools] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+
+  const shareText = `Check out this architecture diagram I created with ArchiGram.ai! ${activeProject?.name || 'Untitled Diagram'}`;
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://archigram-ai.vercel.app';
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleShareTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank', 'width=550,height=420');
+    setShowShareMenu(false);
+  };
+
+  const handleShareLinkedIn = () => {
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank', 'width=550,height=420');
+    setShowShareMenu(false);
+  };
 
   // Sync title when active project changes
   useEffect(() => {
@@ -300,13 +327,64 @@ const Header: React.FC<HeaderProps> = ({
             </button>
         </div>
 
-        <button 
-            onClick={onShare}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
-        >
-          <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
-          <span className="hidden sm:inline">Share</span>
-        </button>
+        <div className="relative">
+          <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
+          >
+            <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
+
+          {showShareMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)}></div>
+              <div className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">Share Diagram</div>
+
+                <button
+                  onClick={() => { onShare(); setShowShareMenu(false); }}
+                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                >
+                  <Link2 className="w-4 h-4 text-primary" />
+                  Get Share Link
+                </button>
+
+                <button
+                  onClick={handleCopyLink}
+                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-text-muted" />}
+                  {copied ? 'Copied!' : 'Copy Link'}
+                </button>
+
+                <div className="h-px bg-border/50 my-1"></div>
+
+                <button
+                  onClick={handleShareTwitter}
+                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                >
+                  <Twitter className="w-4 h-4 text-sky-500" />
+                  Share on Twitter
+                </button>
+
+                <button
+                  onClick={handleShareLinkedIn}
+                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                >
+                  <Linkedin className="w-4 h-4 text-blue-600" />
+                  Share on LinkedIn
+                </button>
+
+                <div className="h-px bg-border/50 my-1"></div>
+
+                <div className="px-4 py-2 text-[10px] text-text-muted">
+                  Made with <span className="text-primary font-semibold">ArchiGram.ai</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
