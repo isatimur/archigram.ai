@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, UploadCloud, Rocket, Sun, Moon, Save, Grid, ShieldCheck, Binary, Twitter, Linkedin, Link2, Copy } from 'lucide-react';
+import { Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, UploadCloud, Rocket, Sun, Moon, Save, Grid, ShieldCheck, Binary, Twitter, Linkedin, Link2, Copy, Code, X } from 'lucide-react';
 import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
@@ -41,12 +41,15 @@ const Header: React.FC<HeaderProps> = ({
   const [showThemes, setShowThemes] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
 
   const shareText = `Check out this architecture diagram I created with ArchiGram.ai! ${activeProject?.name || 'Untitled Diagram'}`;
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://archigram-ai.vercel.app';
+  const embedCode = `<iframe src="${shareUrl}?embed=true" width="100%" height="500" frameborder="0" style="border-radius: 8px; border: 1px solid #333;"></iframe>`;
 
   const handleCopyLink = async () => {
     try {
@@ -68,6 +71,16 @@ const Header: React.FC<HeaderProps> = ({
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
     window.open(url, '_blank', 'width=550,height=420');
     setShowShareMenu(false);
+  };
+
+  const handleCopyEmbed = async () => {
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setEmbedCopied(true);
+      setTimeout(() => setEmbedCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy embed code:', err);
+    }
   };
 
   // Sync title when active project changes
@@ -378,6 +391,16 @@ const Header: React.FC<HeaderProps> = ({
 
                 <div className="h-px bg-border/50 my-1"></div>
 
+                <button
+                  onClick={() => { setShowEmbedModal(true); setShowShareMenu(false); }}
+                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                >
+                  <Code className="w-4 h-4 text-purple-500" />
+                  Embed Diagram
+                </button>
+
+                <div className="h-px bg-border/50 my-1"></div>
+
                 <div className="px-4 py-2 text-[10px] text-text-muted">
                   Made with <span className="text-primary font-semibold">ArchiGram.ai</span>
                 </div>
@@ -386,6 +409,51 @@ const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Embed Modal */}
+      {showEmbedModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEmbedModal(false)}>
+          <div className="bg-surface border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Code className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-text">Embed Diagram</h3>
+                  <p className="text-xs text-text-muted">Add this diagram to your website or docs</p>
+                </div>
+              </div>
+              <button onClick={() => setShowEmbedModal(false)} className="p-2 hover:bg-surface-hover rounded-lg transition-colors">
+                <X className="w-5 h-5 text-text-muted" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-text-muted mb-2 block">Embed Code</label>
+                <div className="relative">
+                  <pre className="bg-background border border-border rounded-lg p-3 text-xs text-text-muted overflow-x-auto font-mono">
+                    {embedCode}
+                  </pre>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCopyEmbed}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-all"
+              >
+                {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {embedCopied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
+              </button>
+
+              <div className="text-xs text-text-muted text-center">
+                Powered by <span className="text-primary font-semibold">ArchiGram.ai</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
