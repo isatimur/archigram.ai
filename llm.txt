@@ -1,3 +1,4 @@
+
 --- START OF FILE index.tsx ---
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -14,9 +15,7 @@ if (!rootElement) {
 try {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+    <App />
   );
   console.log("React mounted successfully.");
 } catch (error) {
@@ -186,6 +185,7 @@ try {
   "imports": {
     "react": "https://esm.sh/react@18.2.0?dev",
     "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime?dev",
+    "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime?dev",
     "react-dom": "https://esm.sh/react-dom@18.2.0?deps=react@18.2.0&dev",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0&dev",
     "lucide-react": "https://esm.sh/lucide-react@0.469.0?deps=react@18.2.0",
@@ -200,8 +200,8 @@ try {
     "@iconify-json/fa6-regular": "https://esm.sh/@iconify-json/fa6-regular@1",
     "@iconify-json/fa6-solid": "https://esm.sh/@iconify-json/fa6-solid@1",
     "@iconify-json/material-symbols": "https://esm.sh/@iconify-json/material-symbols@1",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "pako": "https://esm.sh/pako@2.1.0",
+    "bpmn-js/": "https://esm.sh/bpmn-js@^18.10.1/"
   }
 }
 </script>
@@ -253,6 +253,14 @@ export interface DiagramState {
   error: string | null;
 }
 
+export interface ProjectVersion {
+  id: string;
+  timestamp: number;
+  code: string;
+  label: string;
+  source: 'ai' | 'manual' | 'auto';
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -260,6 +268,8 @@ export interface Project {
   updatedAt: number;
   thumbnail?: string; 
   styleConfig?: DiagramStyleConfig;
+  versions?: ProjectVersion[];
+  type?: 'mermaid' | 'plantuml'; 
 }
 
 export interface CommunityDiagram {
@@ -274,7 +284,7 @@ export interface CommunityDiagram {
   createdAt: string;
 }
 
-export type AppView = 'landing' | 'app' | 'docs' | 'gallery';
+export type AppView = 'landing' | 'app' | 'plantuml' | 'docs' | 'gallery' | 'faq' | 'privacy' | 'terms' | 'license';
 --- END OF FILE types.ts ---
 
 --- START OF FILE constants.ts ---
@@ -526,6 +536,25 @@ export const COMMUNITY_DATA = [
     style Ledger fill:#10b981,stroke:#064e3b,color:#fff`
   }
 ];
+
+export const FAQ_DATA = [
+    {
+        question: "What is ArchiGram.ai?",
+        answer: "ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly."
+    },
+    {
+        question: "How does the System Design Copilot work?",
+        answer: "The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you."
+    },
+    {
+        question: "Is ArchiGram free to use?",
+        answer: "Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment."
+    },
+    {
+        question: "Can I export diagrams to other formats?",
+        answer: "Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion."
+    }
+];
 --- END OF FILE constants.ts ---
 
 --- START OF FILE services/geminiService.ts ---
@@ -563,8 +592,50 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string, 
       },
     });
 
-    const text = response.text || '';
-    
+    return extractMermaidCode(response.text || '');
+
+  } catch (error) {
+    console.error("Gemini 3 Flash Generation Error:", error);
+    throw error;
+  }
+};
+
+export const fixDiagramSyntax = async (code: string, errorMessage: string): Promise<string> => {
+  const ai = getAI();
+  const prompt = `You are an expert Mermaid.js debugger.
+The user's diagram code has a syntax error.
+
+Error Message: "${errorMessage}"
+
+Current Code:
+\`\`\`mermaid
+${code}
+\`\`\`
+
+Task: Fix the syntax error in the code. 
+Rules:
+1. Return ONLY the corrected Mermaid.js code. 
+2. Do not add markdown backticks if possible, or ensure they are standard.
+3. Maintain the original logic/structure, only fix the syntax.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        temperature: 0.1, // Very low temperature for precise fixes
+      },
+    });
+
+    return extractMermaidCode(response.text || '');
+  } catch (error) {
+    console.error("Gemini Syntax Fix Error:", error);
+    throw error;
+  }
+};
+
+// Helper to extract code from response
+const extractMermaidCode = (text: string): string => {
     // Extract code from markdown blocks
     const match = text.match(/```(?:mermaid)?\n([\s\S]*?)\n```/);
     if (match && match[1]) {
@@ -572,23 +643,24 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string, 
     }
     
     // Fallback if no code block found but text resembles mermaid
-    if (text.includes('sequenceDiagram') || text.includes('graph ') || text.includes('classDiagram')) {
+    if (text.includes('sequenceDiagram') || text.includes('graph ') || text.includes('classDiagram') || text.includes('flowchart')) {
+        return text.trim();
+    }
+    
+    // If it looks like raw code (starts with a keyword)
+    const lines = text.split('\n');
+    if (lines.length > 0 && /^[a-z]+/.test(lines[0])) {
         return text.trim();
     }
 
     throw new Error("No valid Mermaid code generated.");
-
-  } catch (error) {
-    console.error("Gemini 3 Flash Generation Error:", error);
-    throw error;
-  }
-};
+}
 --- END OF FILE services/geminiService.ts ---
 
 --- START OF FILE components/Header.tsx ---
 import React, { useState, useEffect } from 'react';
-import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon } from 'lucide-react';
-import { ViewMode, DiagramTheme, Project, DiagramStyleConfig } from '../types.ts';
+import { LayoutTemplate, Share2, Palette, Code2, Columns, Eye, Image as ImageIcon, FileCode, Check, ChevronDown, Plus, Pencil, Paintbrush, Globe, UploadCloud, Rocket, Shield, Sun, Moon, Save, Grid, Workflow } from 'lucide-react';
+import { ViewMode, DiagramTheme, Project, DiagramStyleConfig, AppView } from '../types.ts';
 
 interface HeaderProps {
   viewMode: ViewMode;
@@ -604,6 +676,8 @@ interface HeaderProps {
   customStyle?: DiagramStyleConfig;
   onUpdateStyle: (style: DiagramStyleConfig) => void;
   onPublish: () => void;
+  onNavigate: (view: AppView) => void;
+  onSaveVersion: (label: string) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -619,13 +693,14 @@ const Header: React.FC<HeaderProps> = ({
   onRenameProject,
   customStyle = {},
   onUpdateStyle,
-  onPublish
+  onPublish,
+  onNavigate,
+  onSaveVersion
 }) => {
   const [showThemes, setShowThemes] = useState(false);
-  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
-  const [isDeploying, setIsDeploying] = useState(false);
 
   // Sync title when active project changes
   useEffect(() => {
@@ -660,18 +735,6 @@ const Header: React.FC<HeaderProps> = ({
       neutral: '#f43f5e',  // Rose
   };
 
-  const handleStyleChange = (key: keyof DiagramStyleConfig, value: string) => {
-      onUpdateStyle({ ...customStyle, [key]: value });
-  };
-
-  const handleDeploy = () => {
-      setIsDeploying(true);
-      setTimeout(() => {
-          setIsDeploying(false);
-          alert("Enterprise Deployment Gateway:\n\nTo deploy this pipeline to production, please upgrade to the Enterprise Edition for SLA guarantees and RBAC controls.");
-      }, 1500);
-  };
-
   const isDarkMode = currentTheme !== 'neutral';
 
   return (
@@ -680,7 +743,10 @@ const Header: React.FC<HeaderProps> = ({
       {/* 1. Brand Identity & Project Title */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col justify-center select-none shrink-0">
-            <h1 className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer">
+            <h1 
+                onClick={() => onNavigate('landing')}
+                className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                   <Rocket className="w-3 h-3 text-white" />
               </div>
@@ -718,6 +784,35 @@ const Header: React.FC<HeaderProps> = ({
       {/* 2. Middle: View & Tools */}
       <div className="flex items-center gap-4">
         
+        {/* Tools Dropdown */}
+        <div className="relative">
+            <button 
+                onClick={() => setShowTools(!showTools)}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
+            >
+                <Grid className="w-3.5 h-3.5" />
+                Tools
+                <ChevronDown className="w-3 h-3 opacity-50" />
+            </button>
+            
+            {showTools && (
+                <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
+                <div className="absolute top-full left-0 mt-2 w-48 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <button onClick={() => onNavigate('app')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
+                    </button>
+                    <button onClick={() => onNavigate('plantuml')} className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-sm bg-green-600 text-[8px] text-white flex items-center justify-center font-bold">P</div>
+                        PlantUML Studio
+                    </button>
+                </div>
+                </>
+            )}
+        </div>
+
+        <div className="hidden md:block h-6 w-px bg-border/50"></div>
+
         {/* View Switcher */}
         <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
           {[
@@ -801,14 +896,14 @@ const Header: React.FC<HeaderProps> = ({
       {/* 3. Actions */}
       <div className="flex items-center gap-3">
          
-         {/* Deploy Button (Phase 2 Feature) */}
+         {/* Save Version Button */}
          <button 
-            onClick={handleDeploy}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
-            title="Deploy to Staging (One-Click)"
+            onClick={() => onSaveVersion("Manual Save")}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
+            title="Create a Checkpoint"
          >
-            {isDeploying ? <div className="w-3.5 h-3.5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div> : <Rocket className="w-3.5 h-3.5" />}
-            {isDeploying ? 'Deploying...' : 'Deploy Pipeline'}
+            <Save className="w-3.5 h-3.5" />
+            Save Version
          </button>
 
          {/* Publish Button */}
@@ -866,7 +961,7 @@ export default Header;
 
 --- START OF FILE components/CodeEditor.tsx ---
 import React, { useRef, useEffect, useMemo, useState } from 'react';
-import { Undo, Redo, AlertCircle, AlertTriangle, CheckCircle2, XCircle, Terminal, FileJson } from 'lucide-react';
+import { Undo, Redo, AlertCircle, AlertTriangle, CheckCircle2, XCircle, Terminal, FileJson, Wrench, Sparkles, Loader2 } from 'lucide-react';
 import { DiagramTheme } from '../types.ts';
 
 interface CodeEditorProps {
@@ -881,6 +976,8 @@ interface CodeEditorProps {
   theme?: DiagramTheme;
   hideToolbar?: boolean;
   collapseStatus?: boolean; // Prop to force collapse if no error
+  onFixError?: () => void;
+  isFixing?: boolean;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
@@ -894,7 +991,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   selectionRequest,
   theme = 'dark',
   hideToolbar = false,
-  collapseStatus = false
+  collapseStatus = false,
+  onFixError,
+  isFixing = false
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -1194,16 +1293,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             <div className="flex-1 overflow-y-auto p-0 font-mono text-xs">
                 {error ? (
                     <div 
-                        className="flex items-start gap-3 p-3 hover:bg-red-500/5 transition-colors cursor-pointer group border-l-2 border-red-500"
-                        onClick={() => {
-                             if(textareaRef.current && errorLine) {
-                                const lineHeight = 24; 
-                                textareaRef.current.scrollTop = (errorLine - 5) * lineHeight;
-                            }
-                        }}
+                        className="flex items-center gap-3 p-3 hover:bg-red-500/5 transition-colors group border-l-2 border-red-500"
                     >
-                        <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                        <div className="flex-1">
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0 self-start mt-0.5" />
+                        <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                                if(textareaRef.current && errorLine) {
+                                    const lineHeight = 24; 
+                                    textareaRef.current.scrollTop = (errorLine - 5) * lineHeight;
+                                }
+                            }}
+                        >
                             <p className="text-text group-hover:text-text transition-colors">
                                 {error}
                             </p>
@@ -1211,6 +1312,23 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                                 {errorLine ? `Source: mermaid-parser (Line ${errorLine})` : 'Source: mermaid-parser'}
                             </p>
                         </div>
+                        {onFixError && (
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onFixError();
+                                }}
+                                disabled={isFixing}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface border border-border text-text hover:bg-primary hover:text-white hover:border-primary/50 transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                            >
+                                {isFixing ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                )}
+                                <span className="font-bold text-[10px] tracking-wide">{isFixing ? 'Fixing...' : 'Fix with AI'}</span>
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full min-h-[50px] text-text-muted gap-2 opacity-50">
@@ -1234,7 +1352,7 @@ import mermaid from 'mermaid';
 import { 
     ZoomIn, ZoomOut, Maximize, AlertCircle, Move, RotateCcw, 
     Box, MousePointer2, Minus, Plus, Settings2, Palette, 
-    Grid, Layout, Eye, Download, Image as ImageIcon 
+    Grid, Layout, Eye, Download, Image as ImageIcon, Sliders 
 } from 'lucide-react';
 import { DiagramTheme, DiagramStyleConfig, BackgroundPattern, DiagramLook } from '../types.ts';
 
@@ -1341,14 +1459,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         
         try {
             // Helper to load pack either from module (via importmap) or CDN fallback
-            // This ensures if npm install failed for types, we can still load the JSON at runtime
             const loadPack = async (pkg: string, name: string, fallbackUrl?: string) => {
                 try {
                      // @ts-ignore
                     const mod = await import(pkg);
                     return { name, icons: mod.icons || mod.default?.icons };
                 } catch(e) {
-                    // console.warn(`Failed to import ${pkg}, trying fallback...`);
                     if (fallbackUrl) {
                         return { name, loader: () => fetch(fallbackUrl).then(res => res.json()) };
                     }
@@ -1356,26 +1472,20 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
                 }
             };
 
+            // Note: google-cloud-icons often causes build issues with Rollup due to size/structure
+            // We use a direct fetch loader for it to avoid build-time resolution errors.
+            const googleCloudLoader = { 
+                name: 'gcp', 
+                loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) 
+            };
+
             const loaders = [
                 // AWS
                 loadPack('@iconify-json/aws', 'aws', 'https://esm.sh/@iconify-json/aws@1/icons.json'),
                 // Azure
                 loadPack('@iconify-json/azure', 'azure', 'https://esm.sh/@iconify-json/azure@1/icons.json'),
-                // Google Cloud (GCP)
-                (async () => {
-                    try {
-                        // @ts-ignore
-                        const mod = await import('@iconify-json/google-cloud-icons');
-                        const icons = mod.icons || mod.default?.icons;
-                        return [
-                            { name: 'gcp', icons },
-                            { name: 'google-cloud', icons },
-                            { name: 'google', icons }
-                        ];
-                    } catch(e) {
-                         return { name: 'gcp', loader: () => fetch('https://esm.sh/@iconify-json/google-cloud-icons@1/icons.json').then(res => res.json()) };
-                    }
-                })(),
+                // Google Cloud (Runtime Fetch Only)
+                Promise.resolve(googleCloudLoader),
                 // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
@@ -1448,8 +1558,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
     };
 
     if (unsafeForHandDrawn) {
-        // STRICT: Explicitly force 'classic' look to prevent 'reading decision' crash
-        // This overrides the user's "Blueprint" or "HandDrawn" style preset for unsupported diagrams
         config.look = 'classic';
         config.flowchart = { htmlLabels: true, curve: 'basis' };
     } else if (isHandDrawn) {
@@ -1484,7 +1592,6 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         
         if (isMounted) {
             let processedSvg = svg;
-            // Add subtle drop shadow to lines for 'classic' cyberpunk look
             if (activeStyle.diagramLook === 'classic' && activeStyle.lineColor === '#00ff9d') {
                 processedSvg = svg.replace(/<style>/, `<style>.edgePath .path { filter: drop-shadow(0 0 2px ${activeStyle.lineColor}); } `);
             }
@@ -1510,10 +1617,17 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
         isMounted = false; 
         clearTimeout(renderTimer);
     };
-  }, [code, iconsLoaded, activeStyle.diagramLook, activeStyle.lineColor, shouldRender]);
+  }, [
+      code, 
+      iconsLoaded, 
+      activeStyle.diagramLook, 
+      activeStyle.lineColor, 
+      activeStyle.nodeColor, 
+      activeStyle.textColor, 
+      theme, 
+      shouldRender
+  ]);
 
-  // ... (Interaction Handlers preserved below)
-  
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -1600,6 +1714,12 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       return baseStyle;
   };
 
+  const updateStyle = (key: keyof DiagramStyleConfig, value: any) => {
+      if (onUpdateStyle) {
+          onUpdateStyle({ ...activeStyle, [key]: value });
+      }
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col select-none group/canvas bg-[#09090b]">
       <div className="absolute inset-0 z-0 pointer-events-none transition-all duration-500 ease-in-out" style={getBackgroundStyle()}>
@@ -1645,65 +1765,132 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
       {showControls && (
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3">
          {showStyleMenu && onUpdateStyle && (
-             <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20">
+             <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20 overflow-hidden">
                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
                      <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                          <Palette className="w-3.5 h-3.5" /> Style Studio
                      </span>
                      <button onClick={() => setShowStyleMenu(false)} className="text-zinc-400 hover:text-white"><Eye className="w-3.5 h-3.5" /></button>
                  </div>
-                 <div className="grid grid-cols-2 gap-2 mb-4">
-                     {Object.keys(STYLE_PRESETS).map(preset => (
-                         <button
-                            key={preset}
-                            onClick={() => onUpdateStyle(STYLE_PRESETS[preset])}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
-                                JSON.stringify(activeStyle) === JSON.stringify(STYLE_PRESETS[preset])
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                            }`}
-                         >
-                            {preset}
-                         </button>
-                     ))}
-                 </div>
-                 <div className="mb-4">
-                     <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Render Mode</label>
-                     <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
-                         <button 
-                            onClick={() => onUpdateStyle({...activeStyle, diagramLook: 'classic'})}
-                            className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'classic' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                         >
-                            Classic
-                         </button>
-                         <button 
-                            onClick={() => onUpdateStyle({...activeStyle, diagramLook: 'handDrawn'})}
-                            className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'handDrawn' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                         >
-                            Sketch
-                         </button>
+                 
+                 <div className="space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2">
+                     {/* Presets */}
+                     <div>
+                         <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Presets</label>
+                         <div className="grid grid-cols-2 gap-2">
+                             {Object.keys(STYLE_PRESETS).map(preset => (
+                                 <button
+                                    key={preset}
+                                    onClick={() => onUpdateStyle(STYLE_PRESETS[preset])}
+                                    className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
+                                        JSON.stringify(activeStyle) === JSON.stringify(STYLE_PRESETS[preset])
+                                        ? 'bg-primary/20 border-primary text-primary'
+                                        : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                                    }`}
+                                 >
+                                    {preset}
+                                 </button>
+                             ))}
+                         </div>
                      </div>
-                 </div>
-                 <div className="mb-2">
-                     <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Canvas Pattern</label>
-                     <div className="flex gap-2">
-                         {(['solid', 'dots', 'grid', 'crossline'] as BackgroundPattern[]).map(pat => (
-                             <button
-                                key={pat}
-                                onClick={() => onUpdateStyle({...activeStyle, backgroundPattern: pat})}
-                                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                                    activeStyle.backgroundPattern === pat 
-                                    ? 'border-primary bg-primary/10 text-primary' 
-                                    : 'border-white/10 bg-zinc-800 text-zinc-500 hover:border-white/30'
-                                }`}
-                                title={pat}
+
+                     {/* Colors */}
+                     <div>
+                        <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Custom Colors</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Node</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.nodeColor || '#000000'} 
+                                    onChange={(e) => updateStyle('nodeColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Line</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.lineColor || '#000000'} 
+                                    onChange={(e) => updateStyle('lineColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Text</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.textColor || '#ffffff'} 
+                                    onChange={(e) => updateStyle('textColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
+                                <span className="text-xs text-zinc-400">Bg</span>
+                                <input 
+                                    type="color" 
+                                    value={activeStyle.backgroundColor || '#000000'} 
+                                    onChange={(e) => updateStyle('backgroundColor', e.target.value)}
+                                    className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0" 
+                                />
+                            </div>
+                        </div>
+                     </div>
+
+                     {/* Render Mode */}
+                     <div>
+                         <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">Render Mode</label>
+                         <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
+                             <button 
+                                onClick={() => updateStyle('diagramLook', 'classic')}
+                                className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'classic' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                              >
-                                {pat === 'solid' && <Box className="w-3.5 h-3.5" />}
-                                {pat === 'dots' && <Grid className="w-3.5 h-3.5" />}
-                                {pat === 'grid' && <Layout className="w-3.5 h-3.5" />}
-                                {pat === 'crossline' && <Settings2 className="w-3.5 h-3.5" />}
+                                Classic
                              </button>
-                         ))}
+                             <button 
+                                onClick={() => updateStyle('diagramLook', 'handDrawn')}
+                                className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'handDrawn' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                             >
+                                Sketch
+                             </button>
+                         </div>
+                     </div>
+
+                     {/* Canvas Pattern & Opacity */}
+                     <div>
+                         <div className="flex justify-between items-center mb-2">
+                             <label className="text-[10px] text-zinc-500 font-bold uppercase block">Pattern</label>
+                             <span className="text-[9px] text-zinc-500">{(activeStyle.backgroundOpacity || 1) * 100}%</span>
+                         </div>
+                         <div className="flex gap-2 mb-3">
+                             {(['solid', 'dots', 'grid', 'crossline'] as BackgroundPattern[]).map(pat => (
+                                 <button
+                                    key={pat}
+                                    onClick={() => updateStyle('backgroundPattern', pat)}
+                                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+                                        activeStyle.backgroundPattern === pat 
+                                        ? 'border-primary bg-primary/10 text-primary' 
+                                        : 'border-white/10 bg-zinc-800 text-zinc-500 hover:border-white/30'
+                                    }`}
+                                    title={pat}
+                                 >
+                                    {pat === 'solid' && <Box className="w-3.5 h-3.5" />}
+                                    {pat === 'dots' && <Grid className="w-3.5 h-3.5" />}
+                                    {pat === 'grid' && <Layout className="w-3.5 h-3.5" />}
+                                    {pat === 'crossline' && <Settings2 className="w-3.5 h-3.5" />}
+                                 </button>
+                             ))}
+                         </div>
+                         <div className="flex items-center gap-2">
+                             <Sliders className="w-3 h-3 text-zinc-600" />
+                             <input 
+                                type="range" 
+                                min="0" max="1" step="0.05"
+                                value={activeStyle.backgroundOpacity ?? 1}
+                                onChange={(e) => updateStyle('backgroundOpacity', parseFloat(e.target.value))}
+                                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                             />
+                         </div>
                      </div>
                  </div>
              </div>
@@ -1772,19 +1959,21 @@ export default DiagramPreview;
 
 --- START OF FILE components/AIChat.tsx ---
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send } from 'lucide-react';
+import { Sparkles, Loader2, X, Bot, History as HistoryIcon, MessageSquare, Clock, Copy, RefreshCw, Check, Zap, ThumbsUp, ThumbsDown, ChevronDown, RotateCcw, Send, Archive } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
-import { ChatMessage, DiagramTheme, CopilotDomain } from '../types.ts';
+import { ChatMessage, DiagramTheme, CopilotDomain, ProjectVersion } from '../types.ts';
 
 interface AIChatProps {
+  projectId: string;
   currentCode: string;
   onCodeUpdate: (code: string) => void;
   theme?: DiagramTheme;
+  versions: ProjectVersion[];
+  onRestoreVersion: (version: ProjectVersion) => void;
+  onSaveVersion: (label: string) => void;
 }
 
-const CHAT_STORAGE_KEY = 'aistudio_chat_history';
-
-type Tab = 'chat' | 'history';
+const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
 
 const SUGGESTED_PROMPTS = [
     "Add a validation step",
@@ -1793,31 +1982,48 @@ const SUGGESTED_PROMPTS = [
     "Connect to Data Lake"
 ];
 
-const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
-
-const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dark' }) => {
+const AIChat: React.FC<AIChatProps> = ({ 
+    projectId,
+    currentCode, 
+    onCodeUpdate, 
+    theme = 'dark',
+    versions,
+    onRestoreVersion,
+    onSaveVersion
+}) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
   const [justCopied, setJustCopied] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<CopilotDomain>('General');
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to load chat history", e);
-      return [];
-    }
-  });
+  // Project-Specific Message Handling
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load chat for specific project
   useEffect(() => {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-  }, [messages]);
+      const key = `archigram_chat_${projectId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+          try {
+              setMessages(JSON.parse(saved));
+          } catch(e) {
+              setMessages([]);
+          }
+      } else {
+          setMessages([]);
+      }
+  }, [projectId]);
+
+  // Save chat for specific project
+  useEffect(() => {
+      if (projectId) {
+          localStorage.setItem(`archigram_chat_${projectId}`, JSON.stringify(messages));
+      }
+  }, [messages, projectId]);
 
   useEffect(() => {
     if (activeTab === 'chat' && scrollRef.current) {
@@ -1906,13 +2112,12 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
   };
 
   const handleClearHistory = () => {
-    if(confirm('Clear all chat history and saved versions?')) {
+    if(confirm('Clear all chat history for this project?')) {
         setMessages([]);
-        localStorage.removeItem(CHAT_STORAGE_KEY);
+        localStorage.removeItem(`archigram_chat_${projectId}`);
     }
   }
 
-  const historyItems = messages.filter(m => m.role === 'model' && m.codeSnapshot);
   const lastMessage = messages[messages.length - 1];
   const canRegenerate = !isLoading && lastMessage?.role === 'model';
 
@@ -1920,7 +2125,7 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
     return (
         <button 
             onClick={() => setIsExpanded(true)}
-            className="absolute bottom-6 left-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
+            className="absolute bottom-6 right-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
             title="Open ArchiGram Copilot"
         >
             <Sparkles className="w-6 h-6 animate-pulse-slow" />
@@ -1933,10 +2138,10 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
   }
   
   return (
-    <div className="absolute bottom-6 left-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
+    <div className="absolute bottom-6 right-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
       <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         
-        {/* Header with Domain Selector (Phase 1 Wedge) */}
+        {/* Header with Domain Selector */}
         <div className="border-b border-border/50 bg-gradient-to-r from-surface-hover/50 to-transparent flex flex-col shrink-0">
             <div className="flex justify-between items-center p-4 pb-2">
                  <div className="flex items-center gap-3">
@@ -2011,8 +2216,8 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
                     }`}
                 >
                     <HistoryIcon className="w-3.5 h-3.5" />
-                    Runs
-                    <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{historyItems.length}</span>
+                    History
+                    <span className="bg-surface-hover border border-border text-text-muted px-1.5 rounded-full text-[9px] font-mono">{versions.length}</span>
                 </button>
             </div>
         </div>
@@ -2139,93 +2344,122 @@ const AIChat: React.FC<AIChatProps> = ({ currentCode, onCodeUpdate, theme = 'dar
 
             {/* --- TAB: HISTORY --- */}
             {activeTab === 'history' && (
-                <div className="p-4 space-y-4 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border">
-                     {historyItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
-                            <Clock className="w-8 h-8 opacity-20" />
-                            <p>No pipeline history yet.</p>
-                        </div>
-                    ) : (
-                        <div className="relative border-l border-border ml-3 space-y-6">
-                            {historyItems.map((item, index) => {
-                                const itemIndex = messages.findIndex(m => m.id === item.id);
-                                const promptMsg = itemIndex > 0 ? messages[itemIndex - 1] : null;
-                                const promptText = promptMsg?.role === 'user' ? promptMsg.text : 'Manual Generation';
+                <div className="flex flex-col h-full">
+                    {/* Manual Save Button */}
+                    <div className="p-3 border-b border-border bg-surface/50">
+                        <button 
+                            onClick={() => onSaveVersion('Manual Snapshot')}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all"
+                        >
+                            <Archive className="w-3.5 h-3.5 text-primary" />
+                            Create Snapshot
+                        </button>
+                    </div>
 
-                                return (
-                                    <div key={item.id} className="relative pl-6 group">
-                                        <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-surface border border-border group-hover:border-primary group-hover:bg-primary transition-colors"></div>
-                                        
-                                        <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all shadow-sm">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className="text-[10px] font-mono text-text-muted">
-                                                    {new Date(item.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                                </span>
-                                                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">v{historyItems.length - index}</span>
-                                            </div>
-                                            <p className="text-xs text-text mb-3 line-clamp-2">{promptText}</p>
+                    <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-4 space-y-4">
+                        {versions.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
+                                <Clock className="w-8 h-8 opacity-20" />
+                                <p>No saved versions yet.</p>
+                            </div>
+                        ) : (
+                            <div className="relative border-l border-border ml-3 space-y-6">
+                                {versions.slice().reverse().map((version, index) => {
+                                    return (
+                                        <div key={version.id} className="relative pl-6 group">
+                                            <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border transition-colors ${
+                                                version.source === 'manual' ? 'bg-emerald-500 border-emerald-600' : 'bg-surface border-border group-hover:bg-primary group-hover:border-primary'
+                                            }`}></div>
                                             
-                                            <div className="flex items-center gap-2">
-                                                <button 
-                                                    onClick={() => onCodeUpdate(item.codeSnapshot!)}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors"
-                                                >
-                                                    <RotateCcw className="w-3 h-3" />
-                                                    Restore
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleCopyCode(item.codeSnapshot!, item.id)}
-                                                    className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
-                                                >
-                                                    {justCopied === item.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                </button>
+                                            <div className="bg-surface border border-border rounded-xl p-3 hover:bg-surface-hover transition-all shadow-sm">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-text flex items-center gap-2">
+                                                            {version.label}
+                                                            {version.source === 'manual' && (
+                                                                <span className="text-[8px] uppercase tracking-wider bg-emerald-500/10 text-emerald-500 px-1 py-0.5 rounded">Saved</span>
+                                                            )}
+                                                        </span>
+                                                        <span className="text-[10px] font-mono text-text-muted mt-0.5">
+                                                            {new Date(version.timestamp).toLocaleString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                                                        v{versions.length - index}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="p-2 bg-background/50 rounded border border-border/50 mb-3 overflow-hidden">
+                                                    <pre className="text-[9px] font-mono text-text-muted line-clamp-3 opacity-70">
+                                                        {version.code}
+                                                    </pre>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => onRestoreVersion(version)}
+                                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors group/restore"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3 group-hover/restore:rotate-[-45deg] transition-transform" />
+                                                        Restore
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleCopyCode(version.code, version.id)}
+                                                        className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
+                                                        title="Copy Code"
+                                                    >
+                                                        {justCopied === version.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
 
-        {/* Input Area */}
-        <div className="p-3 bg-surface border-t border-border">
-            <form 
-                onSubmit={handleSubmit}
-                className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
-            >
-                <textarea 
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmit(e);
-                        }
-                    }}
-                    placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
-                    className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
-                    disabled={isLoading}
-                />
-                <button 
-                    type="submit"
-                    disabled={isLoading || !prompt.trim()}
-                    className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+        {/* Input Area (Only visible in Chat Tab) */}
+        {activeTab === 'chat' && (
+            <div className="p-3 bg-surface border-t border-border">
+                <form 
+                    onSubmit={handleSubmit}
+                    className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
                 >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-            </form>
-            <div className="flex justify-between items-center px-1 mt-2">
-                <span className="text-[9px] text-text-muted">Gemini 3 Flash • {selectedDomain} Context</span>
-                {messages.length > 0 && (
-                    <button onClick={handleClearHistory} className="text-[9px] text-text-muted hover:text-red-500 transition-colors">
-                        Clear History
+                    <textarea 
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                            }
+                        }}
+                        placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
+                        className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
+                        disabled={isLoading}
+                    />
+                    <button 
+                        type="submit"
+                        disabled={isLoading || !prompt.trim()}
+                        className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
-                )}
+                </form>
+                <div className="flex justify-between items-center px-1 mt-2">
+                    <span className="text-[9px] text-text-muted">Gemini 3 Flash • {selectedDomain} Context</span>
+                    {messages.length > 0 && (
+                        <button onClick={handleClearHistory} className="text-[9px] text-text-muted hover:text-red-500 transition-colors">
+                            Clear Chat
+                        </button>
+                    )}
+                </div>
             </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -2235,22 +2469,39 @@ export default AIChat;
 --- END OF FILE components/AIChat.tsx ---
 
 --- START OF FILE App.tsx ---
-import React, { useState, useEffect, useRef } from 'react';
-import Header from './components/Header.tsx';
-import CodeEditor from './components/CodeEditor.tsx';
-import DiagramPreview from './components/DiagramPreview.tsx';
-import AIChat from './components/AIChat.tsx';
-import LandingPage from './components/LandingPage.tsx';
-import Sidebar from './components/Sidebar.tsx';
-import Documentation from './components/Documentation.tsx';
-import CommunityGallery from './components/CommunityGallery.tsx'; 
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram, ProjectVersion } from './types.ts';
 import { INITIAL_CODE, STORAGE_KEY, TEMPLATES } from './constants.ts';
-import { ViewMode, DiagramTheme, AppView, Project, DiagramStyleConfig, CommunityDiagram } from './types.ts';
 import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
 import { CheckCircle2, PanelLeftOpen, Trash2, AlertTriangle, UploadCloud, X, Loader2 } from 'lucide-react';
 import { publishDiagram } from './services/supabaseClient.ts';
 
+// Dynamic Component Imports
+const Header = lazy(() => import('./components/Header.tsx'));
+const CodeEditor = lazy(() => import('./components/CodeEditor.tsx'));
+const DiagramPreview = lazy(() => import('./components/DiagramPreview.tsx'));
+const AIChat = lazy(() => import('./components/AIChat.tsx'));
+const LandingPage = lazy(() => import('./components/LandingPage.tsx'));
+const Sidebar = lazy(() => import('./components/Sidebar.tsx'));
+const Documentation = lazy(() => import('./components/Documentation.tsx'));
+const CommunityGallery = lazy(() => import('./components/CommunityGallery.tsx')); 
+const FAQPage = lazy(() => import('./components/FAQPage.tsx'));
+const LegalPage = lazy(() => import('./components/LegalPage.tsx'));
+// New Studios
+const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
+const BPMNStudio = lazy(() => import('./components/BPMNStudio.tsx'));
+
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
+
+// Loading Fallback
+const LoadingScreen = () => (
+  <div className="h-screen w-screen flex items-center justify-center bg-[#09090b] text-white">
+      <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-zinc-500 font-mono animate-pulse">Loading ArchiGram...</p>
+      </div>
+  </div>
+);
 
 // Theme Configuration for CSS Variables (RGB Tuples)
 const THEMES: Record<DiagramTheme, React.CSSProperties> = {
@@ -2328,6 +2579,7 @@ function App() {
   const [theme, setTheme] = useState<DiagramTheme>('dark');
   const [showToast, setShowToast] = useState<{message: string, visible: boolean}>({ message: '', visible: false });
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(null);
+  const [isFixing, setIsFixing] = useState(false);
 
   // --- 3. Style State ---
   const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
@@ -2365,7 +2617,8 @@ function App() {
                     id: 'legacy-' + Date.now(),
                     name: 'My First Diagram',
                     code: legacyCode,
-                    updatedAt: Date.now()
+                    updatedAt: Date.now(),
+                    versions: []
                 };
                 loadedProjects.push(legacyProject);
                 localStorage.removeItem(STORAGE_KEY);
@@ -2376,7 +2629,8 @@ function App() {
                     id: 'init-' + Date.now(),
                     name: 'Uber System Flow',
                     code: INITIAL_CODE,
-                    updatedAt: Date.now()
+                    updatedAt: Date.now(),
+                    versions: []
                 });
             }
 
@@ -2394,7 +2648,7 @@ function App() {
             }
         } catch (e) {
             console.error("Failed to load projects", e);
-            setProjects([{ id: 'err', name: 'New Diagram', code: INITIAL_CODE, updatedAt: Date.now() }]);
+            setProjects([{ id: 'err', name: 'New Diagram', code: INITIAL_CODE, updatedAt: Date.now(), versions: [] }]);
             setActiveProjectId('err');
             setCode(INITIAL_CODE);
         }
@@ -2410,7 +2664,8 @@ function App() {
                 id: 'shared-' + Date.now(),
                 name: 'Shared Diagram',
                 code: decoded,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
+                versions: []
             };
             setProjects(prev => [sharedProject, ...prev]);
             setActiveProjectId(sharedProject.id);
@@ -2517,13 +2772,58 @@ function App() {
       }
   };
 
+  const addVersionToProject = (projectId: string, newCode: string, label: string, source: 'ai' | 'manual') => {
+      setProjects(prev => prev.map(p => {
+          if (p.id === projectId) {
+              const newVersion: ProjectVersion = {
+                  id: Date.now().toString(),
+                  timestamp: Date.now(),
+                  code: newCode,
+                  label,
+                  source
+              };
+              // Keep only last 50 versions to prevent localStorage bloat
+              const updatedVersions = [newVersion, ...(p.versions || [])].slice(0, 50);
+              return { ...p, versions: updatedVersions };
+          }
+          return p;
+      }));
+  };
+
   const handleAIUpdate = (newCode: string) => {
+      // 1. Undo/Redo History
       setHistory(prev => {
           const upToCurrent = prev.slice(0, historyIndex + 1);
           return [...upToCurrent, newCode];
       });
       setHistoryIndex(prev => prev + 1);
       setCode(newCode);
+
+      // 2. Version History (Auto Snapshot)
+      if (activeProjectId) {
+          addVersionToProject(activeProjectId, newCode, 'AI Update', 'ai');
+      }
+  };
+
+  const handleManualSnapshot = (label: string = 'Manual Save') => {
+      if (activeProjectId) {
+          addVersionToProject(activeProjectId, code, label, 'manual');
+          setShowToast({ message: 'Version saved successfully', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
+      }
+  };
+
+  const handleRestoreVersion = (version: ProjectVersion) => {
+      setCode(version.code);
+      // Also add to undo stack so user can undo the restore
+      setHistory(prev => {
+          const upToCurrent = prev.slice(0, historyIndex + 1);
+          return [...upToCurrent, version.code];
+      });
+      setHistoryIndex(prev => prev + 1);
+      
+      setShowToast({ message: `Restored version: ${version.label}`, visible: true });
+      setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
   };
 
   // --- 8. Project Actions ---
@@ -2534,7 +2834,8 @@ function App() {
           name: `Diagram ${projects.length + 1}`,
           code: `graph TD\n    A[Start] --> B[Process]\n    B --> C[End]`,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
       
       const updatedProjects = [newProject, ...projects];
@@ -2561,7 +2862,8 @@ function App() {
           name: templateName,
           code: templateCode,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
 
       const updatedProjects = [newProject, ...projects];
@@ -2589,7 +2891,8 @@ function App() {
           name: `Fork: ${diagram.title}`,
           code: diagram.code,
           updatedAt: Date.now(),
-          styleConfig: {}
+          styleConfig: {},
+          versions: []
       };
 
       const updatedProjects = [newProject, ...projects];
@@ -2682,24 +2985,53 @@ function App() {
     });
   };
 
-  const getSvgElement = () => {
+  const getSvgData = () => {
     const container = document.getElementById('diagram-output-container');
     const svg = container?.querySelector('svg');
-    if (!svg) {
-      console.error("Export failed: No SVG element found.");
-      return null;
+    if (!svg) return null;
+
+    // Clone to safely modify
+    const clone = svg.cloneNode(true) as SVGElement;
+    
+    // Get natural dimensions
+    let width = 0, height = 0;
+    const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
+    
+    if (viewBox && viewBox.length === 4) {
+        width = viewBox[2];
+        height = viewBox[3];
+    } else {
+        const rect = svg.getBoundingClientRect();
+        const transform = container?.style.transform;
+        const scaleMatch = transform?.match(/scale\(([\d.]+)\)/);
+        const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+        width = rect.width / currentScale;
+        height = rect.height / currentScale;
     }
-    return { svg, container };
+
+    // Explicitly set width/height on clone for export consistency
+    clone.setAttribute('width', width.toString());
+    clone.setAttribute('height', height.toString());
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    // Apply Background Color
+    const bgColor = customStyle.backgroundColor || (theme === 'neutral' ? '#ffffff' : '#131316');
+    clone.style.backgroundColor = bgColor;
+
+    return { clone, width, height, bgColor };
   };
 
   const handleExportSvg = () => {
-    const result = getSvgElement();
-    if (!result) return;
-    const { svg } = result;
+    const data = getSvgData();
+    if (!data) {
+        setShowToast({ message: 'Export failed: No diagram found', visible: true });
+        return;
+    }
+    const { clone } = data;
 
     try {
         const serializer = new XMLSerializer();
-        const svgData = serializer.serializeToString(svg);
+        const svgData = serializer.serializeToString(clone);
         const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         
@@ -2711,54 +3043,36 @@ function App() {
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error("SVG Export failed:", e);
+        setShowToast({ message: 'SVG Export failed', visible: true });
     }
   };
 
   const handleExportPng = () => {
-    const result = getSvgElement();
-    if (!result) return;
-    const { svg, container } = result;
+    const data = getSvgData();
+    if (!data) return;
+    const { clone, width, height, bgColor } = data;
 
     try {
       const serializer = new XMLSerializer();
-      const svgData = serializer.serializeToString(svg);
+      const svgData = serializer.serializeToString(clone);
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
-        let width = 0;
-        let height = 0;
-
-        if (viewBox && viewBox.length === 4) {
-             width = viewBox[2];
-             height = viewBox[3];
-        } else {
-             const rect = svg.getBoundingClientRect();
-             const transform = container?.style.transform;
-             const scaleMatch = transform?.match(/scale\(([\d.]+)\)/);
-             const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-             width = rect.width / currentScale;
-             height = rect.height / currentScale;
-        }
-
+        // High resolution export
         const scale = 3; 
         canvas.width = width * scale;
         canvas.height = height * scale;
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
-            // Apply current style background to export
-            if (customStyle.backgroundColor) {
-                ctx.fillStyle = customStyle.backgroundColor;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            } else {
-                ctx.fillStyle = theme === 'neutral' ? '#ffffff' : '#131316'; 
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+            // Draw background explicitly on canvas (safer than SVG background for PNG)
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Draw image
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
             const link = document.createElement('a');
@@ -2768,9 +3082,15 @@ function App() {
         }
         URL.revokeObjectURL(url);
       };
+      img.onerror = (e) => {
+          console.error("Image load error for PNG export", e);
+          setShowToast({ message: 'PNG Generation failed', visible: true });
+          URL.revokeObjectURL(url);
+      }
       img.src = url;
     } catch (e) {
       console.error("PNG Export failed:", e);
+      setShowToast({ message: 'PNG Export failed', visible: true });
     }
   };
   
@@ -2816,6 +3136,30 @@ function App() {
       }
   };
 
+  // Syntax Fix Handler
+  const handleFixError = async () => {
+      if (!code || !error) return;
+      
+      setIsFixing(true);
+      try {
+          const { fixDiagramSyntax } = await import('./services/geminiService.ts');
+          const fixedCode = await fixDiagramSyntax(code, error);
+          if (fixedCode) {
+              setCode(fixedCode);
+              handleAIUpdate(fixedCode); // Save to history
+              setError(null); // Clear error immediately (re-render will verify)
+              setShowToast({ message: 'Syntax error auto-corrected', visible: true });
+              setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+          }
+      } catch (e) {
+          console.error("Auto-fix failed:", e);
+          setShowToast({ message: 'Failed to fix code automatically.', visible: true });
+          setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+      } finally {
+          setIsFixing(false);
+      }
+  };
+
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -2826,15 +3170,51 @@ function App() {
   const appStyle = THEMES[theme] || THEMES.dark;
 
   if (currentView === 'landing') {
-      return <LandingPage onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <LandingPage onNavigate={setCurrentView} />
+        </Suspense>
+      );
   }
   
   if (currentView === 'docs') {
-      return <Documentation onNavigate={setCurrentView} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <Documentation onNavigate={setCurrentView} />
+        </Suspense>
+      );
   }
 
   if (currentView === 'gallery') {
-      return <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />;
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />
+        </Suspense>
+      );
+  }
+
+  if (currentView === 'faq') {
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <FAQPage onNavigate={setCurrentView} />
+        </Suspense>
+      );
+  }
+
+  if (currentView === 'privacy' || currentView === 'terms' || currentView === 'license') {
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+            <LegalPage type={currentView} onNavigate={setCurrentView} />
+        </Suspense>
+      );
+  }
+
+  if (currentView === 'plantuml') {
+      return (
+          <Suspense fallback={<LoadingScreen />}>
+              <PlantUMLStudio onNavigate={setCurrentView} />
+          </Suspense>
+      );
   }
 
   return (
@@ -2842,21 +3222,25 @@ function App() {
         className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
         style={appStyle}
     >
-      <Header 
-        viewMode={viewMode} 
-        setViewMode={setViewMode} 
-        onExportPng={handleExportPng}
-        onExportSvg={handleExportSvg}
-        currentTheme={theme}
-        setTheme={setTheme}
-        onShare={handleShare}
-        onNewProject={handleCreateProject}
-        activeProject={activeProject}
-        onRenameProject={handleRenameProject}
-        customStyle={customStyle}
-        onUpdateStyle={setCustomStyle}
-        onPublish={openPublishModal}
-      />
+      <Suspense fallback={<div className="h-16 border-b border-border bg-background/80"></div>}>
+        <Header 
+            viewMode={viewMode} 
+            setViewMode={setViewMode} 
+            onExportPng={handleExportPng}
+            onExportSvg={handleExportSvg}
+            currentTheme={theme}
+            setTheme={setTheme}
+            onShare={handleShare}
+            onNewProject={handleCreateProject}
+            activeProject={activeProject}
+            onRenameProject={handleRenameProject}
+            customStyle={customStyle}
+            onUpdateStyle={setCustomStyle}
+            onPublish={openPublishModal}
+            onNavigate={setCurrentView}
+            onSaveVersion={handleManualSnapshot}
+        />
+      </Suspense>
 
       <main className="flex-1 flex overflow-hidden relative">
         
@@ -2865,21 +3249,23 @@ function App() {
                 hidden md:block h-full relative z-10 transition-[width] duration-300 ease-in-out
                 ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
             `}>
-                <Sidebar 
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    onSelectProject={handleSelectProject}
-                    onCreateProject={handleCreateProject}
-                    onCreateFromTemplate={handleCreateFromTemplate}
-                    onDeleteProject={handleDeleteProject}
-                    onClose={() => setIsSidebarOpen(false)}
-                    lastSaved={lastSaved}
-                    saveStatus={saveStatus}
-                    onRenameProject={handleRenameProject}
-                    isCollapsed={isSidebarCollapsed}
-                    toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    onOpenGallery={() => setCurrentView('gallery')}
-                />
+                <Suspense fallback={<div className="w-full h-full bg-surface/80 border-r border-border"></div>}>
+                    <Sidebar 
+                        projects={projects}
+                        activeProjectId={activeProjectId}
+                        onSelectProject={handleSelectProject}
+                        onCreateProject={handleCreateProject}
+                        onCreateFromTemplate={handleCreateFromTemplate}
+                        onDeleteProject={handleDeleteProject}
+                        onClose={() => setIsSidebarOpen(false)}
+                        lastSaved={lastSaved}
+                        saveStatus={saveStatus}
+                        onRenameProject={handleRenameProject}
+                        isCollapsed={isSidebarCollapsed}
+                        toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        onOpenGallery={() => setCurrentView('gallery')}
+                    />
+                </Suspense>
             </div>
         )}
 
@@ -2887,33 +3273,35 @@ function App() {
         {isSidebarOpen && (
            <div className="md:hidden absolute inset-0 z-40 flex">
              <div className="w-72 h-full shadow-2xl relative z-50">
-               <Sidebar 
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    onSelectProject={(id) => {
-                        handleSelectProject(id);
-                        setIsSidebarOpen(false);
-                    }}
-                    onCreateProject={() => {
-                        handleCreateProject();
-                        setIsSidebarOpen(false);
-                    }}
-                    onCreateFromTemplate={(name, code) => {
-                        handleCreateFromTemplate(name, code);
-                        setIsSidebarOpen(false);
-                    }}
-                    onDeleteProject={handleDeleteProject}
-                    onClose={() => setIsSidebarOpen(false)}
-                    lastSaved={lastSaved}
-                    saveStatus={saveStatus}
-                    onRenameProject={handleRenameProject}
-                    isCollapsed={false}
-                    toggleCollapse={() => {}} // No collapse on mobile
-                    onOpenGallery={() => {
-                        setCurrentView('gallery');
-                        setIsSidebarOpen(false);
-                    }}
-                />
+               <Suspense fallback={<div className="w-full h-full bg-surface"></div>}>
+                    <Sidebar 
+                        projects={projects}
+                        activeProjectId={activeProjectId}
+                        onSelectProject={(id) => {
+                            handleSelectProject(id);
+                            setIsSidebarOpen(false);
+                        }}
+                        onCreateProject={() => {
+                            handleCreateProject();
+                            setIsSidebarOpen(false);
+                        }}
+                        onCreateFromTemplate={(name, code) => {
+                            handleCreateFromTemplate(name, code);
+                            setIsSidebarOpen(false);
+                        }}
+                        onDeleteProject={handleDeleteProject}
+                        onClose={() => setIsSidebarOpen(false)}
+                        lastSaved={lastSaved}
+                        saveStatus={saveStatus}
+                        onRenameProject={handleRenameProject}
+                        isCollapsed={false}
+                        toggleCollapse={() => {}} // No collapse on mobile
+                        onOpenGallery={() => {
+                            setCurrentView('gallery');
+                            setIsSidebarOpen(false);
+                        }}
+                    />
+               </Suspense>
              </div>
              <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
            </div>
@@ -2934,39 +3322,55 @@ function App() {
             flex flex-col transition-all duration-300 ease-in-out border-r border-border
             ${viewMode === ViewMode.Split ? 'w-1/3' : 'w-full'}
           `}>
-            <CodeEditor 
-                code={code} 
-                onChange={setCode}
-                onUndo={undo}
-                onRedo={redo}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                error={error}
-                selectionRequest={selectionRequest}
-                theme={theme}
-            />
+            <Suspense fallback={<div className="w-full h-full bg-background animate-pulse"></div>}>
+                <CodeEditor 
+                    code={code} 
+                    onChange={setCode}
+                    onUndo={undo}
+                    onRedo={redo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    error={error}
+                    selectionRequest={selectionRequest}
+                    theme={theme}
+                    onFixError={handleFixError}
+                    isFixing={isFixing}
+                />
+            </Suspense>
           </div>
         )}
 
         {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
           <div className={`${viewMode === ViewMode.Split ? 'w-2/3' : 'w-full'} bg-surface/50 relative`}>
-            <DiagramPreview 
-                code={code} 
-                onError={setError} 
-                theme={theme}
-                customStyle={customStyle}
-                onUpdateStyle={setCustomStyle}
-                onElementClick={(text) => {
-                     setSelectionRequest({ text, ts: Date.now() });
-                     if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
-                }}
-            />
+            <Suspense fallback={
+                <div className="w-full h-full flex items-center justify-center text-text-muted">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+            }>
+                <DiagramPreview 
+                    code={code} 
+                    onError={setError} 
+                    theme={theme}
+                    customStyle={customStyle}
+                    onUpdateStyle={setCustomStyle}
+                    onElementClick={(text) => {
+                        setSelectionRequest({ text, ts: Date.now() });
+                        if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
+                    }}
+                />
+            </Suspense>
             
-            <AIChat 
-                currentCode={code} 
-                onCodeUpdate={handleAIUpdate} 
-                theme={theme}
-            />
+            <Suspense fallback={null}>
+                <AIChat 
+                    projectId={activeProjectId}
+                    currentCode={code} 
+                    onCodeUpdate={handleAIUpdate} 
+                    theme={theme}
+                    versions={activeProject?.versions || []}
+                    onRestoreVersion={handleRestoreVersion}
+                    onSaveVersion={handleManualSnapshot}
+                />
+            </Suspense>
           </div>
         )}
       </main>
@@ -3139,57 +3543,96 @@ export const decodeCodeFromUrl = (hash: string): string | null => {
 
 --- START OF FILE components/LandingPage.tsx ---
 import React from 'react';
-import { LayoutTemplate, ArrowRight, Zap, CheckCircle2, Cpu, Share2, Shield, Code2, Globe, FileJson, Layers, Command, Rocket, Bot, Database, Server, GitBranch, HelpCircle, Workflow } from 'lucide-react';
+import { LayoutTemplate, ArrowRight, Zap, CheckCircle2, Cpu, Share2, Shield, Code2, Globe, FileJson, Layers, Command, Rocket, Bot, Database, Server, GitBranch, HelpCircle, Workflow, ChevronDown, Binary, Box } from 'lucide-react';
 import { AppView } from '../types.ts';
 import LiveDiagramBlock from './LiveDiagramBlock.tsx';
+import { FAQ_DATA } from '../constants.ts';
 
 interface LandingPageProps {
   onNavigate: (view: AppView) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+  const [showTools, setShowTools] = React.useState(false);
   
   const scrollTo = (id: string) => {
       const el = document.getElementById(id);
       if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const HERO_DIAGRAM = `graph TD
-    User((User)) -->|HTTPS| CDN[Cloudflare]
+  const HERO_DIAGRAM = `architecture-beta
+    group api(logos:aws-lambda)[API]
+
+    service db(logos:aws-aurora)[Database] in api
+    service disk1(logos:aws-glacier)[Storage] in api
+    service disk2(logos:aws-s3)[Storage] in api
+    service server(logos:aws-ec2)[Server] in api
+
+    db:L -- R:server
+    disk1:T -- B:server
+    disk2:T -- B:db`;
+
+  const BACKEND_ARCH_DIAGRAM = `graph TD
+    User((User)) -->|HTTPS| CDN[Cloudflare CDN]
     CDN --> LB[Load Balancer]
-    LB --> API[API Gateway]
     
-    subgraph Cluster
-        API --> Auth[Auth Service]
-        API --> Core[Core Service]
-        Core -.-> Redis[(Redis Cache)]
-        Core --> DB[(Postgres)]
-    end`;
+    subgraph VPC [Cloud VPC]
+        LB --> Gateway[API Gateway]
+        
+        subgraph Service_Mesh [Microservices]
+            Auth[Auth Service]
+            Order[Order API]
+            Pay[Payment API]
+        end
+        
+        Gateway --> Auth
+        Gateway --> Order
+        Gateway --> Pay
+        
+        Auth -.-> Redis[(Redis Session)]
+        Order --> PSQL[(Postgres DB)]
+        Pay --> Stripe[Stripe SDK]
+    end
+    
+    style VPC fill:#18181b,stroke:#3f3f46,color:#fff
+    style Service_Mesh fill:#27272a,stroke:#3f3f46,color:#fff
+    style Gateway fill:#4f46e5,stroke:#fff,color:#fff`;
 
-  const USE_CASE_DIAGRAM = `sequenceDiagram
-    autonumber
-    actor Client
-    participant API as API Gateway
-    participant Auth as Auth Service
-    participant Svc as Order Service
-    participant DB as Postgres
-
-    Client->>API: POST /orders
-    API->>Auth: Validate Token
-    Auth-->>API: Token Valid
-    API->>Svc: Create Order
-    Svc->>DB: INSERT order
-    DB-->>Svc: Order ID
-    Svc-->>Client: 201 Created`;
+  // JSON-LD Schema for FAQPage
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": FAQ_DATA.map(item => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": item.answer
+      }
+    }))
+  };
 
   return (
-    <div className="h-screen w-screen bg-[#09090b] text-white overflow-y-auto overflow-x-hidden landing-grid relative font-sans scroll-smooth">
+    <div className="h-screen w-screen bg-[#09090b] text-white overflow-y-auto overflow-x-hidden relative font-sans scroll-smooth group/landing">
       
+      {/* Animated Background Grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+      </div>
+      
+      {/* Dynamic Ambient Glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen animate-pulse-slow z-0"></div>
+
+      {/* Inject JSON-LD */}
+      <script type="application/ld+json">
+        {JSON.stringify(faqSchema)}
+      </script>
+
       {/* Semantic Header / Navbar */}
-      <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl px-6 h-20 flex items-center justify-between" role="banner">
-         <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <Rocket className="w-6 h-6 text-white" />
+      <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl px-6 h-20 flex items-center justify-between transition-all duration-300" role="banner">
+         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo(0,0)}>
+             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
+                <Rocket className="w-5 h-5 text-white" />
              </div>
              <div>
                 <div className="text-xl tracking-tight flex items-center">
@@ -3197,105 +3640,183 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                     <span className="text-white font-bold">Gram</span>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">.ai</span>
                 </div>
-                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono leading-none">Intelligent Architecture</p>
+                <p className="text-[10px] text-zinc-500 tracking-widest uppercase font-mono leading-none group-hover:text-indigo-400 transition-colors">Intelligent Architecture</p>
              </div>
          </div>
          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400" role="navigation">
+            
+            {/* Tools Dropdown */}
+            <div className="relative group">
+                <button 
+                    className="hover:text-white transition-colors flex items-center gap-1 py-4"
+                    onMouseEnter={() => setShowTools(true)}
+                    onClick={() => setShowTools(!showTools)}
+                >
+                    Tools <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform duration-300" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                <div 
+                    className={`absolute top-full left-0 w-64 bg-[#18181b]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 origin-top-left ${showTools ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}`}
+                    onMouseLeave={() => setShowTools(false)}
+                >
+                    <div className="p-2 space-y-1">
+                        <button onClick={() => onNavigate('app')} className="flex items-center gap-3 w-full p-3 hover:bg-white/5 rounded-xl text-left transition-colors group/item">
+                            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center group-hover/item:bg-indigo-500/20 text-indigo-400 transition-colors">
+                                <Rocket className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="text-white font-bold text-xs">Mermaid Studio</div>
+                                <div className="text-[10px] text-zinc-500">Diagrams as Code</div>
+                            </div>
+                        </button>
+                        <button onClick={() => onNavigate('plantuml')} className="flex items-center gap-3 w-full p-3 hover:bg-white/5 rounded-xl text-left transition-colors group/item">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover/item:bg-emerald-500/20 text-emerald-400 transition-colors">
+                                <Binary className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="text-white font-bold text-xs">PlantUML Studio</div>
+                                <div className="text-[10px] text-zinc-500">Standard UML Editor</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <button onClick={() => scrollTo('features')} className="hover:text-white transition-colors">Platform</button>
             <button onClick={() => onNavigate('gallery')} className="hover:text-indigo-400 text-indigo-200 transition-colors flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" />Community</button>
             <button onClick={() => scrollTo('use-cases')} className="hover:text-white transition-colors">Use Cases</button>
             <button onClick={() => onNavigate('docs')} className="hover:text-white transition-colors">Docs</button>
          </nav>
          <div className="flex items-center gap-4">
-             <button onClick={() => onNavigate('app')} className="hidden md:block text-sm font-medium text-zinc-300 hover:text-white">Sign In</button>
+             <button onClick={() => onNavigate('app')} className="hidden md:block text-sm font-medium text-zinc-300 hover:text-white transition-colors">Sign In</button>
              <button 
                 onClick={() => onNavigate('app')}
-                className="bg-white text-black px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                className="group relative bg-white text-black px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] overflow-hidden"
              >
-                Launch Studio
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <span className="relative">Launch Studio</span>
              </button>
          </div>
       </header>
 
-      <main>
-        {/* Hero Section: H1 optimized for "AI Diagram Tool" keywords */}
-        <section className="relative pt-40 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center text-center z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium mb-8 animate-fade-in">
-                <Zap className="w-3.5 h-3.5" />
-                <span>v0.1 Public Beta • Powered by Gemini 3 Flash</span>
+      <main className="relative z-10">
+        {/* Hero Section */}
+        <section className="relative pt-48 pb-24 px-6 max-w-7xl mx-auto flex flex-col items-center text-center">
+            
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-medium mb-8 animate-fade-in hover:bg-white/10 transition-colors cursor-default backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                </span>
+                <span className="tracking-wide">v0.2 Now Available • Multi-Engine Support</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-zinc-500 animate-slide-up leading-tight">
-                Architect Complex Systems <br className="hidden md:block"/>
-                at the Speed of Thought.
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-zinc-600 animate-slide-up leading-[1.1]">
+                Architect Systems <br className="hidden md:block"/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300">Like Magic.</span>
             </h1>
             
-            <h2 className="text-lg md:text-xl text-zinc-400 max-w-3xl mb-10 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                The intelligent canvas for modern engineering. Generate <strong>Mermaid.js diagrams</strong>, 
-                visualize <strong>cloud infrastructure</strong>, and map <strong>microservices</strong> with code-first precision and AI assistance.
+            <h2 className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-12 leading-relaxed animate-slide-up opacity-0" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
+                The intelligent canvas for modern engineering. Generate <strong>Mermaid.js and PlantUML</strong> diagrams 
+                with code-first precision and 100B parameter AI models.
             </h2>
 
-            <div className="flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col sm:flex-row items-center gap-5 animate-slide-up opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
                 <button 
                     onClick={() => onNavigate('app')}
-                    className="group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl font-bold text-lg shadow-2xl shadow-indigo-500/30 hover:scale-105 transition-all duration-300 overflow-hidden"
+                    className="group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl font-bold text-lg shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] transition-all duration-300 overflow-hidden"
                     aria-label="Start Diagramming Now"
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                    <span className="relative flex items-center gap-2">
+                    <span className="relative flex items-center gap-3">
                         Start Diagramming
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                 </button>
                 <button 
                     onClick={() => onNavigate('gallery')}
-                    className="px-8 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all flex items-center gap-2"
+                    className="px-8 py-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl font-bold text-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all flex items-center gap-2 hover:border-zinc-700"
                 >
                     <Globe className="w-5 h-5" />
-                    Explore Examples
+                    Explore Gallery
                 </button>
             </div>
         </section>
 
-        {/* Live Demo: High engagement signal for SEO */}
-        <section className="max-w-6xl mx-auto px-6 mb-32 relative z-10 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <LiveDiagramBlock 
-                initialCode={HERO_DIAGRAM}
-                title="Interactive Architecture Preview"
-                height="500px"
-                enableZoom={true}
-            />
-            <div className="text-center mt-4 text-xs text-zinc-500 font-mono">
-                Try editing the code on the left to update the diagram instantly! Zoom supported.
+        {/* Live Demo with Floating Effect */}
+        <section className="max-w-6xl mx-auto px-6 mb-40 relative z-10 animate-slide-up opacity-0" style={{ animationDelay: '0.6s', animationFillMode: 'forwards' }}>
+            <div className="relative group perspective-1000">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative rounded-xl bg-[#09090b] ring-1 ring-white/10 shadow-2xl transform transition-transform duration-500 hover:scale-[1.005]">
+                    <LiveDiagramBlock 
+                        initialCode={HERO_DIAGRAM}
+                        title="Interactive Architecture Preview"
+                        height="550px"
+                        enableZoom={true}
+                    />
+                </div>
+            </div>
+            <div className="flex justify-center gap-8 mt-8 text-zinc-500 text-xs font-mono tracking-widest uppercase opacity-70">
+                <span className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-indigo-500" /> Mermaid.js Native</span>
+                <span className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> PlantUML Support</span>
             </div>
         </section>
 
-        {/* Generative Engine Optimization (GEO) Block 
-            This section is text-heavy and structured to answer "What is..." questions from LLMs 
-        */}
-        <article className="max-w-4xl mx-auto px-6 mb-24 border border-white/5 bg-white/5 rounded-2xl p-8">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Bot className="w-5 h-5 text-emerald-400" />
-                How ArchiGram Works (Technical Overview)
-            </h3>
-            <p className="text-zinc-400 leading-relaxed mb-4">
-                ArchiGram is a <strong>text-to-diagram tool</strong> that leverages the <strong>Google Gemini 3 Flash</strong> model to understand natural language architectural descriptions. It converts these descriptions into syntactically correct <strong>Mermaid.js code</strong>, which is then rendered into SVG/PNG vector graphics in real-time.
-            </p>
-            <p className="text-zinc-400 leading-relaxed">
-                Unlike traditional drag-and-drop editors (like Draw.io or Lucidchart), ArchiGram treats <strong>diagrams as code</strong>. This enables version control via Git, easy diffing of infrastructure changes, and rapid iteration using AI prompts. It supports standard patterns including Sequence Diagrams, Flowcharts, C4 Models, and Gantt charts.
-            </p>
-        </article>
+        {/* Professional Suites Section */}
+        <section className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none"></div>
+            
+            <div className="text-center mb-16 relative z-10">
+                <h2 className="text-3xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-zinc-500">Enterprise Modeling Suites</h2>
+                <p className="text-zinc-400 max-w-2xl mx-auto text-lg">
+                    Specialized environments for strict UML compliance and enterprise business process modeling.
+                </p>
+            </div>
 
-        {/* Features Grid with Keyword Rich Headings */}
-        <section id="features" className="max-w-7xl mx-auto px-6 py-24 scroll-mt-20">
-            <div className="text-center mb-20">
-                <h2 className="text-3xl md:text-5xl font-bold mb-6">Built for Modern DevOps & Engineering</h2>
+            <div className="flex justify-center relative z-10">
+                {/* PlantUML Card */}
+                <div 
+                    onClick={() => onNavigate('plantuml')}
+                    className="group relative bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:shadow-emerald-500/10 max-w-3xl w-full"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="p-10 flex flex-col md:flex-row gap-10 items-center">
+                        <div className="flex-1">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-8 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                                <Binary className="w-7 h-7" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white mb-3 flex items-center gap-3">
+                                PlantUML Studio
+                                <ArrowRight className="w-6 h-6 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-emerald-400" />
+                            </h3>
+                            <p className="text-zinc-400 mb-8 text-lg leading-relaxed">
+                                The industry standard for textual UML. Generate Sequence, Use Case, Class, and Component diagrams using the powerful PlantUML syntax.
+                            </p>
+                        </div>
+                        <div className="flex-1 w-full">
+                            <div className="bg-[#050507] rounded-xl p-5 border border-white/10 font-mono text-xs text-emerald-300/80 opacity-80 group-hover:opacity-100 transition-opacity shadow-inner">
+                                @startuml<br/>
+                                Alice -> Bob: Authentication Request<br/>
+                                Bob --> Alice: Authentication Response<br/>
+                                @enduml
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* Features Grid */}
+        <section id="features" className="max-w-7xl mx-auto px-6 py-32 scroll-mt-20">
+            <div className="text-center mb-24">
+                <h2 className="text-3xl md:text-5xl font-bold mb-6">Engineered for Engineers</h2>
                 <p className="text-zinc-400 max-w-2xl mx-auto text-lg">
                     Stop fighting with UI tools. Treat your system design like you treat your code.
                 </p>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-8">
                 <FeatureCard 
                     icon={<Code2 className="w-6 h-6 text-indigo-400" />}
                     title="Code-First Diagrams"
@@ -3329,159 +3850,178 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             </div>
         </section>
         
-        {/* Use Cases Section with Semantic Articles */}
-        <section id="use-cases" className="bg-zinc-900/30 py-24 border-y border-white/5">
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="grid md:grid-cols-2 gap-16 items-center">
+        {/* Use Cases Section */}
+        <section id="use-cases" className="bg-zinc-900/30 py-32 border-y border-white/5 relative">
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+                <div className="grid md:grid-cols-2 gap-20 items-center">
                     <div>
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">From Idea to Infrastructure</h2>
-                        <div className="space-y-6">
-                            <article className="flex gap-4">
-                                <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
-                                    <Server className="w-5 h-5 text-indigo-400" />
+                        <h2 className="text-4xl md:text-5xl font-bold mb-8">From Idea to <br/>Infrastructure</h2>
+                        <div className="space-y-8">
+                            <article className="flex gap-6 group">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-colors">
+                                    <Server className="w-6 h-6 text-indigo-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">Backend Architecture</h3>
-                                    <p className="text-zinc-400 text-sm mt-1">Map out API gateways, microservices, and database relationships (ERD) before writing a single line of code.</p>
+                                    <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">Backend Architecture</h3>
+                                    <p className="text-zinc-400 text-base mt-2 leading-relaxed">Map out API gateways, microservices, and database relationships (ERD) before writing a single line of code.</p>
                                 </div>
                             </article>
-                            <article className="flex gap-4">
-                                <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0 border border-pink-500/20">
-                                    <Database className="w-5 h-5 text-pink-400" />
+                            <article className="flex gap-6 group">
+                                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center shrink-0 border border-pink-500/20 group-hover:bg-pink-500/20 transition-colors">
+                                    <Database className="w-6 h-6 text-pink-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">Data Engineering Pipelines</h3>
-                                    <p className="text-zinc-400 text-sm mt-1">Visualize ETL pipelines, data lakes, and streaming workflows (Kafka/Flink) using standard flowcharts.</p>
+                                    <h3 className="text-xl font-bold text-white group-hover:text-pink-400 transition-colors">Data Engineering Pipelines</h3>
+                                    <p className="text-zinc-400 text-base mt-2 leading-relaxed">Visualize ETL pipelines, data lakes, and streaming workflows (Kafka/Flink) using standard flowcharts.</p>
                                 </div>
                             </article>
-                            <article className="flex gap-4">
-                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                                    <Cpu className="w-5 h-5 text-emerald-400" />
+                            <article className="flex gap-6 group">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                                    <Cpu className="w-6 h-6 text-emerald-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">Machine Learning Ops (MLOps)</h3>
-                                    <p className="text-zinc-400 text-sm mt-1">Design training pipelines, inference services, and model registries with specialized templates.</p>
+                                    <h3 className="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors">Machine Learning Ops (MLOps)</h3>
+                                    <p className="text-zinc-400 text-base mt-2 leading-relaxed">Design training pipelines, inference services, and model registries with specialized templates.</p>
                                 </div>
                             </article>
                         </div>
                     </div>
                     <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-2xl blur-3xl"></div>
-                        <LiveDiagramBlock 
-                            initialCode={USE_CASE_DIAGRAM} 
-                            title="Backend Sequence Flow"
-                            height="400px"
-                            enableZoom={true}
-                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-3xl blur-3xl transform rotate-3"></div>
+                        <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                             <LiveDiagramBlock 
+                                initialCode={BACKEND_ARCH_DIAGRAM} 
+                                title="Backend Architecture Preview"
+                                height="550px"
+                                enableZoom={true}
+                             />
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        {/* FAQ Section - Highly indexable content for Search Snippets */}
-        <section id="faq" className="max-w-4xl mx-auto px-6 py-24 scroll-mt-20">
-            <div className="text-center mb-16">
+        {/* FAQ Section */}
+        <section id="faq" className="max-w-4xl mx-auto px-6 py-32 scroll-mt-20">
+            <div className="text-center mb-20">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
                 <p className="text-zinc-400">Everything you need to know about AI-powered architecture.</p>
             </div>
             <div className="grid gap-6" itemScope itemType="https://schema.org/FAQPage">
-                <FaqItem 
-                    question="What is ArchiGram.ai?" 
-                    answer="ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly." 
-                />
-                <FaqItem 
-                    question="How does the System Design Copilot work?" 
-                    answer="The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you." 
-                />
-                <FaqItem 
-                    question="Is ArchiGram free to use?" 
-                    answer="Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment." 
-                />
-                <FaqItem 
-                    question="Can I export diagrams to other formats?" 
-                    answer="Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion." 
-                />
+                {FAQ_DATA.map((item, index) => (
+                    <FaqItem 
+                        key={index}
+                        question={item.question} 
+                        answer={item.answer} 
+                    />
+                ))}
+            </div>
+            <div className="mt-16 text-center">
+                <button 
+                    onClick={() => onNavigate('faq')}
+                    className="text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-2 mx-auto transition-colors group"
+                >
+                    View All FAQs
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
             </div>
         </section>
 
         {/* CTA */}
-        <section className="py-24 px-6 text-center border-t border-white/5">
-            <h2 className="text-4xl font-bold mb-6">Ready to upgrade your workflow?</h2>
-            <p className="text-zinc-400 mb-8">Join thousands of architects building better systems.</p>
-            <button 
-                onClick={() => onNavigate('app')}
-                className="px-10 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-zinc-200 transition-colors shadow-2xl shadow-white/10"
-            >
-                Launch Studio Free
-            </button>
+        <section className="py-32 px-6 text-center border-t border-white/5 relative overflow-hidden">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+            <div className="relative z-10">
+                <h2 className="text-5xl md:text-6xl font-bold mb-8 tracking-tight">Ready to upgrade your workflow?</h2>
+                <p className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto">Join thousands of architects building better systems with AI assistance.</p>
+                <button 
+                    onClick={() => onNavigate('app')}
+                    className="px-12 py-5 bg-white text-black rounded-2xl font-bold text-xl hover:bg-zinc-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.25)] hover:scale-105"
+                >
+                    Launch Studio Free
+                </button>
+            </div>
         </section>
       </main>
 
-      {/* Footer with Semantic Links */}
-      <footer className="border-t border-white/5 bg-[#050507] py-12">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8 mb-12">
+      {/* Footer */}
+      <footer className="border-t border-white/5 bg-[#050507] py-16">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                    <Rocket className="w-5 h-5 text-indigo-500" />
-                    <span className="font-bold text-lg">ArchiGram.ai</span>
+                <div className="flex items-center gap-2 mb-6">
+                    <Rocket className="w-6 h-6 text-indigo-500" />
+                    <span className="font-bold text-xl">ArchiGram.ai</span>
                 </div>
-                <p className="text-zinc-500 text-sm max-w-xs leading-relaxed">
+                <p className="text-zinc-500 text-sm max-w-sm leading-relaxed">
                     The open-source standard for architecture diagramming. 
-                    Built by engineers, for engineers.
+                    Built by engineers, for engineers. Empowering the next generation of system design.
                 </p>
             </div>
             <div>
-                <h4 className="text-white font-bold mb-4">Platform</h4>
-                <ul className="space-y-2 text-sm text-zinc-500">
-                    <li><button onClick={() => scrollTo('features')} className="hover:text-indigo-400">AI Features</button></li>
-                    <li><button onClick={() => onNavigate('gallery')} className="hover:text-indigo-400">Community Templates</button></li>
-                    <li><button onClick={() => onNavigate('docs')} className="hover:text-indigo-400">Mermaid.js Documentation</button></li>
+                <h4 className="text-white font-bold mb-6">Platform</h4>
+                <ul className="space-y-4 text-sm text-zinc-500">
+                    <li><button onClick={() => scrollTo('features')} className="hover:text-indigo-400 transition-colors">AI Features</button></li>
+                    <li><button onClick={() => onNavigate('gallery')} className="hover:text-indigo-400 transition-colors">Community Templates</button></li>
+                    <li><button onClick={() => onNavigate('docs')} className="hover:text-indigo-400 transition-colors">Mermaid.js Documentation</button></li>
                 </ul>
             </div>
              <div>
-                <h4 className="text-white font-bold mb-4">Legal</h4>
-                <ul className="space-y-2 text-sm text-zinc-500">
-                    <li><button className="hover:text-indigo-400">Privacy Policy</button></li>
-                    <li><button className="hover:text-indigo-400">Terms of Service</button></li>
-                    <li><button className="hover:text-indigo-400">Open Source License</button></li>
+                <h4 className="text-white font-bold mb-6">Legal</h4>
+                <ul className="space-y-4 text-sm text-zinc-500">
+                    <li><button onClick={() => onNavigate('privacy')} className="hover:text-indigo-400 transition-colors">Privacy Policy</button></li>
+                    <li><button onClick={() => onNavigate('terms')} className="hover:text-indigo-400 transition-colors">Terms of Service</button></li>
+                    <li><button onClick={() => onNavigate('license')} className="hover:text-indigo-400 transition-colors">Open Source License</button></li>
                 </ul>
             </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-white/5 text-center text-zinc-600 text-sm flex flex-col md:flex-row justify-between items-center gap-4">
-            <p>&copy; {new Date().getFullYear()} ArchiGram.ai OSS.</p>
-            <div className="flex gap-4">
+            <div className="flex flex-col md:flex-row items-center gap-2">
+                <p>&copy; {new Date().getFullYear()} ArchiGram.ai OSS.</p>
+                <span className="hidden md:block text-zinc-800">•</span>
+                <a href="https://beyond9to6.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors flex items-center gap-1 group">
+                    Part of <span className="font-bold text-zinc-500 group-hover:text-white transition-colors underline decoration-dotted underline-offset-4 decoration-zinc-700">Beyond 9to6</span>
+                </a>
+            </div>
+            <div className="flex gap-6">
                 <a href="#" className="hover:text-white transition-colors" aria-label="GitHub">GitHub</a>
                 <a href="#" className="hover:text-white transition-colors" aria-label="Twitter">Twitter</a>
                 <a href="#" className="hover:text-white transition-colors" aria-label="Discord">Discord</a>
             </div>
         </div>
       </footer>
-      
-      {/* Background Ambience */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none"></div>
     </div>
   );
 };
 
-const FeatureCard = ({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-    <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5 hover:border-indigo-500/30 hover:bg-zinc-900/80 transition-all duration-300 group hover:-translate-y-1">
-        <div className="w-12 h-12 rounded-lg bg-zinc-950 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-inner">
+interface FeatureCardProps {
+    icon: React.ReactNode;
+    title: string;
+    desc: string;
+}
+
+const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, desc }) => (
+    <div className="p-8 rounded-3xl bg-zinc-900/40 border border-white/5 hover:border-indigo-500/30 hover:bg-zinc-900/80 transition-all duration-300 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/5">
+        <div className="w-14 h-14 rounded-2xl bg-zinc-950 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner group-hover:border-indigo-500/20">
             {icon}
         </div>
-        <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-        <p className="text-zinc-400 text-sm leading-relaxed">{desc}</p>
+        <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+        <p className="text-zinc-400 text-base leading-relaxed">{desc}</p>
     </div>
 );
 
-const FaqItem = ({ question, answer }: { question: string, answer: string }) => (
-    <div className="bg-zinc-900/40 border border-white/5 rounded-xl p-6 text-left" itemScope itemProp="mainEntity" itemType="https://schema.org/Question">
-        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2" itemProp="name">
-            <HelpCircle className="w-4 h-4 text-indigo-400" />
+interface FaqItemProps {
+    question: string;
+    answer: string;
+}
+
+const FaqItem: React.FC<FaqItemProps> = ({ question, answer }) => (
+    <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-8 text-left hover:border-indigo-500/20 transition-colors" itemScope itemProp="mainEntity" itemType="https://schema.org/Question">
+        <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-3" itemProp="name">
+            <HelpCircle className="w-5 h-5 text-indigo-400 shrink-0" />
             {question}
         </h3>
         <div itemScope itemProp="acceptedAnswer" itemType="https://schema.org/Answer">
-             <p className="text-zinc-400 text-sm leading-relaxed pl-6" itemProp="text">{answer}</p>
+             <p className="text-zinc-400 text-base leading-relaxed pl-8 border-l-2 border-white/5 ml-2.5" itemProp="text">{answer}</p>
         </div>
     </div>
 );
@@ -3601,6 +4141,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ${isCollapsed ? 'w-10 h-10 rounded-xl mx-auto' : 'w-full py-2.5 px-4'}
             `}
             title="Create New Diagram"
+            aria-label="Create New Diagram"
         >
             <Plus className={`transition-transform duration-300 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4 group-hover:rotate-90'}`} />
             {!isCollapsed && <span className="text-sm font-semibold whitespace-nowrap">New Diagram</span>}
@@ -3616,6 +4157,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-surface-hover/50 border border-border/50 rounded-lg pl-9 pr-3 py-2 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-surface-hover transition-all"
+                    aria-label="Search Diagrams"
                 />
             </div>
         )}
@@ -3651,6 +4193,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                             }
                         `}
                         title={isCollapsed ? project.name : ''}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                !isEditing && onSelectProject(project.id)
+                            }
+                        }}
                     >
                         {/* Project Icon / Avatar */}
                         <div className={`
@@ -3675,6 +4224,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             autoFocus
                                             onClick={(e) => e.stopPropagation()}
                                             className="bg-background border border-primary/50 text-text text-sm rounded px-1.5 py-0.5 focus:outline-none w-full min-w-0"
+                                            aria-label="Rename Project"
                                         />
                                     </div>
                                 ) : (
@@ -3697,6 +4247,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     onClick={(e) => startEditing(project, e)}
                                     className="p-1.5 rounded-md hover:bg-surface hover:text-text text-text-muted transition-colors"
                                     title="Rename"
+                                    aria-label="Rename"
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
                                 </button>
@@ -3710,6 +4261,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                         }}
                                         className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-text-muted transition-colors"
                                         title="Delete"
+                                        aria-label="Delete"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -3725,6 +4277,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     submitRename(project.id);
                                 }}
                                 className="p-1.5 rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"
+                                aria-label="Confirm Rename"
                             >
                                 <Check className="w-3.5 h-3.5" />
                             </button>
@@ -3822,1034 +4375,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ${isCollapsed ? 'justify-center w-10 h-10 p-0' : 'w-full p-2'}
             `}
             title="Community Gallery"
+            aria-label="Open Community Gallery"
         >
-             <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:border-primary/50 transition-all shrink-0">
-                <Globe className="w-4 h-4 text-accent" />
-            </div>
-            {!isCollapsed && (
-                <div className="flex flex-col overflow-hidden text-left animate-fade-in">
-                    <span className="text-xs font-bold truncate">Community</span>
-                    <span className="text-[10px] text-text-muted truncate">Explore & Fork</span>
-                </div>
-            )}
-        </button>
-        
-        {/* User Profile */}
-        <div className={`
-            flex items-center rounded-xl hover:bg-surface transition-colors cursor-pointer group
-            ${isCollapsed ? 'justify-center p-0 w-10 h-10' : 'p-2 gap-3'}
-        `}>
-             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-background group-hover:ring-primary/20 transition-all shrink-0">
-                AI
-            </div>
-            {!isCollapsed && (
-                <div className="flex flex-col overflow-hidden animate-fade-in">
-                    <span className="text-xs font-bold text-text truncate">ArchiGram User</span>
-                    <span className="text-[10px] text-text-muted truncate">
-                       {lastSaved ? 'Synced just now' : 'Online'}
-                    </span>
-                </div>
-            )}
-        </div>
-
-        {/* Collapse Toggle */}
-        <button 
-            onClick={toggleCollapse}
-            className={`
-                flex items-center justify-center rounded-lg hover:bg-surface transition-colors text-text-muted hover:text-text
-                ${isCollapsed ? 'w-8 h-8' : 'w-full py-1.5 hover:bg-surface-hover mt-1'}
-            `}
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default Sidebar;
---- END OF FILE components/Sidebar.tsx ---
-
---- START OF FILE components/Documentation.tsx ---
-import React, { useState } from 'react';
-import { Book, Code2, Keyboard, Zap, LayoutTemplate, ArrowLeft, Search, FileText, Share2, Copy, Check, GitBranch, Database, Clock, Network, BrainCircuit } from 'lucide-react';
-import { AppView } from '../types.ts';
-import LiveDiagramBlock from './LiveDiagramBlock.tsx';
-
-interface DocumentationProps {
-  onNavigate: (view: AppView) => void;
-}
-
-const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
-  const [activeSection, setActiveSection] = useState('getting-started');
-
-  const scrollTo = (id: string) => {
-    setActiveSection(id);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  return (
-    <div className="h-screen w-screen bg-[#09090b] text-text flex flex-col font-sans overflow-hidden">
-      
-      {/* Doc Navbar */}
-      <nav className="h-16 border-b border-border bg-surface/50 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-50">
-         <div className="flex items-center gap-4">
-             <button 
-                onClick={() => onNavigate('landing')}
-                className="p-2 hover:bg-surface-hover rounded-lg text-text-muted hover:text-text transition-colors"
-                title="Back to Home"
-             >
-                <ArrowLeft className="w-5 h-5" />
-             </button>
-             <div className="h-6 w-px bg-border"></div>
-             <div className="flex items-center gap-2">
-                 <Book className="w-5 h-5 text-primary" />
-                 <span className="font-bold text-lg tracking-tight">Documentation</span>
-             </div>
-         </div>
-         
-         <div className="hidden md:flex items-center gap-2 max-w-md w-full mx-4">
-            <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <input 
-                    type="text" 
-                    placeholder="Search docs..." 
-                    className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-1.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-            </div>
-         </div>
-
-         <button 
-            onClick={() => onNavigate('app')}
-            className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 transition-all"
-         >
-            Open App
-         </button>
-      </nav>
-
-      <div className="flex-1 flex overflow-hidden">
-        
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-border bg-surface/30 hidden md:flex flex-col overflow-y-auto shrink-0">
-            <div className="p-4 space-y-8">
-                <div>
-                    <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">Essentials</h3>
-                    <div className="space-y-1">
-                        <SidebarLink active={activeSection === 'getting-started'} onClick={() => scrollTo('getting-started')} icon={<Zap className="w-4 h-4"/>}>Getting Started</SidebarLink>
-                        <SidebarLink active={activeSection === 'ai-prompting'} onClick={() => scrollTo('ai-prompting')} icon={<Code2 className="w-4 h-4"/>}>AI Prompting</SidebarLink>
-                        <SidebarLink active={activeSection === 'shortcuts'} onClick={() => scrollTo('shortcuts')} icon={<Keyboard className="w-4 h-4"/>}>Shortcuts</SidebarLink>
-                    </div>
-                </div>
-                
-                <div>
-                    <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">Diagram Syntax</h3>
-                    <div className="space-y-1">
-                        <SidebarLink active={activeSection === 'sequence'} onClick={() => scrollTo('sequence')} icon={<LayoutTemplate className="w-4 h-4"/>}>Sequence</SidebarLink>
-                        <SidebarLink active={activeSection === 'flowchart'} onClick={() => scrollTo('flowchart')} icon={<Network className="w-4 h-4"/>}>Flowchart</SidebarLink>
-                        <SidebarLink active={activeSection === 'class'} onClick={() => scrollTo('class')} icon={<LayoutTemplate className="w-4 h-4"/>}>Class</SidebarLink>
-                        <SidebarLink active={activeSection === 'state'} onClick={() => scrollTo('state')} icon={<LayoutTemplate className="w-4 h-4"/>}>State</SidebarLink>
-                        <SidebarLink active={activeSection === 'er'} onClick={() => scrollTo('er')} icon={<Database className="w-4 h-4"/>}>ER Diagram</SidebarLink>
-                        <SidebarLink active={activeSection === 'gantt'} onClick={() => scrollTo('gantt')} icon={<Clock className="w-4 h-4"/>}>Gantt</SidebarLink>
-                        <SidebarLink active={activeSection === 'mindmap'} onClick={() => scrollTo('mindmap')} icon={<BrainCircuit className="w-4 h-4"/>}>Mindmap</SidebarLink>
-                        <SidebarLink active={activeSection === 'git'} onClick={() => scrollTo('git')} icon={<GitBranch className="w-4 h-4"/>}>Git Graph</SidebarLink>
-                    </div>
-                </div>
-
-                 <div>
-                    <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">Guides</h3>
-                    <div className="space-y-1">
-                        <SidebarLink active={activeSection === 'exporting'} onClick={() => scrollTo('exporting')} icon={<Share2 className="w-4 h-4"/>}>Export & Share</SidebarLink>
-                        <SidebarLink active={activeSection === 'themes'} onClick={() => scrollTo('themes')} icon={<FileText className="w-4 h-4"/>}>Custom Themes</SidebarLink>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-8 md:p-12 max-w-4xl mx-auto">
-            
-            <section id="getting-started" className="mb-16 scroll-mt-20">
-                <h1 className="text-4xl font-bold mb-6 text-white">Getting Started</h1>
-                <p className="text-lg text-text-muted mb-6 leading-relaxed">
-                    Archigram.ai combines the structured power of Mermaid.js with the generative intelligence of Gemini 3 Flash. 
-                    Unlike traditional drag-and-drop tools, Archigram uses a "Code-First, AI-Assisted" approach.
-                </p>
-                <div className="bg-surface border border-border rounded-xl p-6 mb-6">
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-accent" />
-                        Quick Start
-                    </h3>
-                    <ol className="list-decimal list-inside space-y-3 text-text-muted">
-                        <li>Click <strong>New Diagram</strong> in the sidebar.</li>
-                        <li>Type your request in the AI Copilot (e.g., "Create a login flow").</li>
-                        <li>Watch the diagram generate instantly.</li>
-                        <li>Refine the code manually in the editor or continue chatting with the AI.</li>
-                    </ol>
-                </div>
-            </section>
-
-            <section id="ai-prompting" className="mb-16 scroll-mt-20">
-                <h2 className="text-3xl font-bold mb-6 text-white flex items-center gap-3">
-                    <Code2 className="w-8 h-8 text-primary" />
-                    AI Prompting Guide
-                </h2>
-                <p className="text-text-muted mb-6">
-                    To get the best results from Gemini 3 Flash, be specific about the technical components and the flow logic.
-                </p>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="p-5 border border-red-500/20 bg-red-500/5 rounded-xl">
-                        <span className="text-xs font-bold text-red-400 uppercase tracking-wide mb-2 block">Poor Prompt</span>
-                        <p className="text-sm">"Make a diagram for an app."</p>
-                    </div>
-                    <div className="p-5 border border-emerald-500/20 bg-emerald-500/5 rounded-xl">
-                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-2 block">Great Prompt</span>
-                        <p className="text-sm">"Create a sequence diagram for a ride-sharing app where a User requests a ride, the System matches a Driver, and the Driver accepts the ride. Include database transactions."</p>
-                    </div>
-                </div>
-            </section>
-
-            <section id="shortcuts" className="mb-16 scroll-mt-20">
-                 <h2 className="text-3xl font-bold mb-6 text-white flex items-center gap-3">
-                    <Keyboard className="w-8 h-8 text-primary" />
-                    Keyboard Shortcuts
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ShortcutKey combo={['Cmd', 'Z']} desc="Undo changes" />
-                    <ShortcutKey combo={['Cmd', 'Y']} desc="Redo changes" />
-                    <ShortcutKey combo={['Cmd', 'Enter']} desc="Submit AI Prompt" />
-                    <ShortcutKey combo={['Esc']} desc="Close AI Chat / Modals" />
-                </div>
-            </section>
-
-             <hr className="border-border my-12" />
-
-             {/* DIAGRAM TYPES */}
-             
-             <section id="sequence" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Sequence Diagrams</h2>
-                <p className="text-text-muted mb-6">
-                    Used to show interactions between objects or systems in sequential order. Essential for API design and communication flows.
-                </p>
-                <LiveDiagramBlock title="Sequence Diagram" initialCode={`sequenceDiagram
-    autonumber
-    actor User
-    participant API as Backend API
-    participant DB as Database
-
-    User->>API: Request Data
-    activate API
-    API->>DB: Query
-    DB-->>API: Result
-    API-->>User: Response Payload
-    deactivate API`} />
-            </section>
-
-            <section id="flowchart" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Flowcharts</h2>
-                <p className="text-text-muted mb-6">
-                    Versatile diagrams for mapping process flows, decision trees, and system logic. Supports Top-Down (TD) and Left-Right (LR) layouts.
-                </p>
-                <LiveDiagramBlock title="Flowchart" initialCode={`graph TD
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C[Great!]
-    B -->|No| D[Debug]
-    D --> B
-    C --> E[End]`} />
-            </section>
-
-            <section id="class" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Class Diagrams</h2>
-                <p className="text-text-muted mb-6">
-                    Standard UML class diagrams for object-oriented modeling. Define properties, methods, and relationships.
-                </p>
-                <LiveDiagramBlock title="Class Diagram" initialCode={`classDiagram
-    class Animal {
-        +String name
-        +int age
-        +eat()
-    }
-    class Duck {
-        +swim()
-        +quack()
-    }
-    class Fish {
-        +swim()
-    }
-    Animal <|-- Duck
-    Animal <|-- Fish`} />
-            </section>
-
-            <section id="state" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">State Diagrams</h2>
-                <p className="text-text-muted mb-6">
-                    Describe the states of a system and the transitions between them. Useful for lifecycle management (e.g., Order Status, Auth Flow).
-                </p>
-                <LiveDiagramBlock title="State Diagram" initialCode={`stateDiagram-v2
-    [*] --> Idle
-    Idle --> Processing : Submit Event
-    Processing --> Success : Valid
-    Processing --> Error : Invalid
-    Success --> [*]
-    Error --> Idle : Retry`} />
-            </section>
-
-            <section id="er" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">ER Diagrams</h2>
-                <p className="text-text-muted mb-6">
-                    Entity-Relationship diagrams for database schema design. Define entities, attributes, and cardinality (one-to-one, one-to-many).
-                </p>
-                <LiveDiagramBlock title="ER Diagram" initialCode={`erDiagram
-    CUSTOMER ||--o{ ORDER : places
-    ORDER ||--|{ LINE-ITEM : contains
-    CUSTOMER {
-        string name
-        string email
-    }
-    ORDER {
-        int id
-        date created_at
-    }`} />
-            </section>
-
-            <section id="gantt" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Gantt Charts</h2>
-                <p className="text-text-muted mb-6">
-                    Project management timelines. Visualize schedules, dependencies, and milestones.
-                </p>
-                <LiveDiagramBlock title="Gantt Chart" initialCode={`gantt
-    title Project Timeline
-    dateFormat  YYYY-MM-DD
-    section Design
-    Wireframing      :a1, 2024-01-01, 7d
-    Prototyping      :after a1, 5d
-    section Dev
-    Backend API      :2024-01-10, 10d
-    Frontend         :2024-01-12, 10d`} />
-            </section>
-
-             <section id="mindmap" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Mindmaps</h2>
-                <p className="text-text-muted mb-6">
-                    Hierarchical layout for brainstorming and organizing ideas.
-                </p>
-                <LiveDiagramBlock title="Mindmap" initialCode={`mindmap
-  root((Archigram))
-    Features
-      AI Generation
-      Live Preview
-      Export SVG
-    Tech Stack
-      React
-      Mermaid.js
-      Gemini 3`} />
-            </section>
-
-            <section id="git" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-2 text-white">Git Graph</h2>
-                <p className="text-text-muted mb-6">
-                    Visualize git branching strategies, commits, and merges.
-                </p>
-                <LiveDiagramBlock title="Git Graph" initialCode={`gitGraph
-   commit
-   commit
-   branch develop
-   checkout develop
-   commit
-   commit
-   checkout main
-   merge develop
-   commit`} />
-            </section>
-
-             <hr className="border-border my-12" />
-
-            <section id="exporting" className="mb-16 scroll-mt-20">
-                <h2 className="text-2xl font-bold mb-4 text-white">Export & Sharing</h2>
-                <div className="space-y-4 text-text-muted">
-                    <p><strong>SVG Export:</strong> Best for high-quality printing and editing in vector tools like Illustrator.</p>
-                    <p><strong>PNG Export:</strong> Best for slides, documents, and quick sharing. Renders at 3x resolution for crispness.</p>
-                    <p><strong>Share Link:</strong> Generates a URL with the entire diagram code compressed. No server storage required.</p>
-                </div>
-            </section>
-
-            <footer className="mt-20 pt-10 border-t border-border text-center text-text-muted text-sm pb-10">
-                <p>Still have questions?</p>
-                <a href="mailto:support@archigram.ai" className="text-primary hover:underline">Contact Support</a>
-            </footer>
-
-        </main>
-      </div>
-    </div>
-  );
-};
-
-const SidebarLink = ({ children, active, onClick, icon }: any) => (
-    <button 
-        onClick={onClick}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-primary/10 text-primary' : 'text-text-muted hover:text-text hover:bg-surface-hover'}`}
-    >
-        {icon}
-        {children}
-    </button>
-);
-
-const ShortcutKey = ({ combo, desc }: any) => (
-    <div className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg">
-        <span className="text-sm text-text-muted">{desc}</span>
-        <div className="flex gap-1">
-            {combo.map((k: string) => (
-                <kbd key={k} className="px-2 py-1 bg-background border border-border rounded text-xs font-mono text-text font-bold shadow-sm">
-                    {k}
-                </kbd>
-            ))}
-        </div>
-    </div>
-);
-
-export default Documentation;
---- END OF FILE components/Documentation.tsx ---
-
---- START OF FILE components/CommunityGallery.tsx ---
-import React, { useState, useEffect } from 'react';
-import { Search, GitFork, Heart, Eye, Filter, ArrowLeft, Globe, Star, TrendingUp, Clock, Zap, Link as LinkIcon, Download, Loader2 } from 'lucide-react';
-import { AppView, CommunityDiagram } from '../types.ts';
-import { COMMUNITY_DATA } from '../constants.ts';
-import DiagramPreview from './DiagramPreview.tsx';
-import { decodeCodeFromUrl } from '../utils/url.ts';
-import { fetchCommunityDiagrams, updateDiagramLikes, incrementDiagramViews } from '../services/supabaseClient.ts';
-
-interface CommunityGalleryProps {
-  onNavigate: (view: AppView) => void;
-  onFork: (diagram: CommunityDiagram) => void;
-}
-
-const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork }) => {
-  const [filter, setFilter] = useState<'trending' | 'new' | 'top'>('trending');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
-  const [importUrl, setImportUrl] = useState('');
-  const [importError, setImportError] = useState('');
-  
-  // Data State
-  const [diagrams, setDiagrams] = useState<CommunityDiagram[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-
-  // Load Likes from Local Storage
-  useEffect(() => {
-    const saved = localStorage.getItem('archigram_liked_ids');
-    if (saved) {
-        try {
-            setLikedIds(new Set(JSON.parse(saved)));
-        } catch(e) {}
-    }
-  }, []);
-
-  // Fetch Data on Mount
-  useEffect(() => {
-    const loadData = async () => {
-        setIsLoading(true);
-        const fetched = await fetchCommunityDiagrams();
-        
-        if (fetched && fetched.length > 0) {
-            setDiagrams(fetched);
-        } else {
-            // Fallback to static data if DB is empty or fails (ensures app doesn't look broken)
-            setDiagrams(COMMUNITY_DATA);
-        }
-        setIsLoading(false);
-    };
-    loadData();
-  }, []);
-
-  const filteredData = diagrams.filter(d => 
-    d.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    d.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    d.author.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleLike = async (e: React.MouseEvent, id: string, currentLikes: number) => {
-      e.stopPropagation();
-      
-      const isLiked = likedIds.has(id);
-      const newLikes = isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
-      
-      // Optimistic UI Update
-      const newLikedIds = new Set(likedIds);
-      if (isLiked) newLikedIds.delete(id);
-      else newLikedIds.add(id);
-      
-      setLikedIds(newLikedIds);
-      localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(newLikedIds)));
-      
-      setDiagrams(prev => prev.map(d => d.id === id ? { ...d, likes: newLikes } : d));
-
-      // API Call
-      const success = await updateDiagramLikes(id, newLikes);
-      
-      if (!success) {
-          // Revert if API fails
-          setDiagrams(prev => prev.map(d => d.id === id ? { ...d, likes: currentLikes } : d));
-          setLikedIds(prev => {
-              const reverted = new Set(prev);
-              if (isLiked) reverted.add(id); else reverted.delete(id);
-              localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(reverted)));
-              return reverted;
-          });
-      }
-  };
-
-  const handleForkWithStats = (diagram: CommunityDiagram) => {
-      // Fire and forget view increment for analytics
-      incrementDiagramViews(diagram.id);
-      // Execute original fork behavior
-      onFork(diagram);
-  };
-
-  const handleImport = () => {
-      setImportError('');
-      if (!importUrl) return;
-
-      try {
-          // 1. Extract hash
-          let hash = '';
-          if (importUrl.includes('#')) {
-              hash = importUrl.split('#')[1];
-          } else {
-              // assume the whole string might be the hash if no # present
-              hash = importUrl;
-          }
-
-          // 2. Decode
-          const code = decodeCodeFromUrl(hash);
-          if (!code) {
-              setImportError('Invalid or corrupted link.');
-              return;
-          }
-
-          // 3. Create simulated diagram object
-          const importedDiagram: CommunityDiagram = {
-              id: `imported-${Date.now()}`,
-              title: 'Imported Diagram',
-              author: 'External User',
-              description: 'Imported via shared link.',
-              code: code,
-              likes: 0,
-              views: 0,
-              tags: ['Imported'],
-              createdAt: 'Just now'
-          };
-
-          onFork(importedDiagram);
-          setShowImport(false);
-          setImportUrl('');
-
-      } catch (e) {
-          setImportError('Failed to parse URL.');
-      }
-  };
-
-  return (
-    <div className="h-screen w-screen bg-[#09090b] text-text flex flex-col font-sans overflow-hidden relative">
-      
-      {/* Navbar */}
-      <nav className="h-16 border-b border-border bg-surface/50 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-50">
-         <div className="flex items-center gap-4">
-             <button 
-                onClick={() => onNavigate('landing')}
-                className="p-2 hover:bg-surface-hover rounded-lg text-text-muted hover:text-text transition-colors"
-                title="Back to Home"
-             >
-                <ArrowLeft className="w-5 h-5" />
-             </button>
-             <div className="h-6 w-px bg-border"></div>
-             <div className="flex items-center gap-2">
-                 <Globe className="w-5 h-5 text-accent" />
-                 <span className="font-bold text-lg tracking-tight">Community Gallery</span>
-             </div>
-         </div>
-         
-         <div className="hidden md:flex items-center gap-2 max-w-md w-full mx-4">
-            <div className="relative w-full group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
-                <input 
-                    type="text" 
-                    placeholder="Search diagrams, tags, or authors..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-hover transition-all"
-                />
-            </div>
-         </div>
-
-         <div className="flex items-center gap-3">
-             <button 
-                onClick={() => setShowImport(true)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted hover:text-text border border-border hover:bg-surface rounded-lg transition-all"
-             >
-                <Download className="w-4 h-4" />
-                Import
-             </button>
-
-             <button 
-                onClick={() => onNavigate('app')}
-                className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 transition-all"
-             >
-                My Workspace
-             </button>
-         </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-6 md:p-10">
-        
-        {/* Header / Stats */}
-        <div className="max-w-7xl mx-auto mb-10">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                <div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Discover & Fork</h1>
-                    <p className="text-text-muted max-w-xl">
-                        Explore thousands of architecture diagrams built by engineers from top companies. 
-                        Fork any diagram to your workspace to start customizing instantly.
-                    </p>
-                </div>
-                <div className="flex gap-2 bg-surface border border-border p-1 rounded-xl">
-                    <FilterButton active={filter === 'trending'} onClick={() => setFilter('trending')} icon={<TrendingUp className="w-4 h-4" />}>Trending</FilterButton>
-                    <FilterButton active={filter === 'new'} onClick={() => setFilter('new')} icon={<Clock className="w-4 h-4" />}>Newest</FilterButton>
-                    <FilterButton active={filter === 'top'} onClick={() => setFilter('top')} icon={<Star className="w-4 h-4" />}>Top Rated</FilterButton>
-                </div>
-            </div>
-
-            {/* Loading State */}
-            {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-64 gap-4">
-                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                    <p className="text-text-muted">Loading community diagrams...</p>
-                </div>
-            ) : (
-                /* Grid */
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredData.map((diagram) => (
-                        <div 
-                            key={diagram.id}
-                            className="group bg-surface border border-border hover:border-primary/50 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
-                            onMouseEnter={() => setHoveredId(diagram.id)}
-                            onMouseLeave={() => setHoveredId(null)}
-                        >
-                            {/* Preview Area */}
-                            <div className="relative h-48 bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer" onClick={() => handleForkWithStats(diagram)}>
-                                <div className="absolute inset-0 pointer-events-none transform scale-[0.6] origin-top-left w-[166%] h-[166%]">
-                                    <DiagramPreview 
-                                        code={diagram.code} 
-                                        onError={() => {}} 
-                                        theme="midnight" 
-                                    />
-                                </div>
-                                <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-50"></div>
-                                
-                                {/* Overlay Fork Button */}
-                                <div className={`absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${hoveredId === diagram.id ? 'opacity-100' : 'opacity-0'}`}>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleForkWithStats(diagram);
-                                        }}
-                                        className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl transform scale-90 group-hover:scale-100 transition-all"
-                                    >
-                                        <GitFork className="w-5 h-5" />
-                                        Fork Diagram
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Info Area */}
-                            <div className="p-5 flex-1 flex flex-col">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold text-lg text-text group-hover:text-primary transition-colors line-clamp-1">{diagram.title}</h3>
-                                    <span className="text-[10px] bg-surface-hover border border-border text-text-muted px-2 py-0.5 rounded-full whitespace-nowrap">
-                                        {diagram.createdAt}
-                                    </span>
-                                </div>
-                                
-                                <p className="text-sm text-text-muted line-clamp-2 mb-4 h-10">{diagram.description}</p>
-                                
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {diagram.tags.map(tag => (
-                                        <span key={tag} className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">#{tag}</span>
-                                    ))}
-                                </div>
-
-                                <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
-                                            {diagram.author.substring(0,2).toUpperCase()}
-                                        </div>
-                                        <span className="text-xs text-text-muted font-medium hover:text-text cursor-pointer">@{diagram.author}</span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs text-text-muted">
-                                        <button 
-                                            onClick={(e) => handleLike(e, diagram.id, diagram.likes)}
-                                            className={`flex items-center gap-1.5 transition-all group/like ${
-                                                likedIds.has(diagram.id) 
-                                                ? 'text-red-500' 
-                                                : 'text-text-muted hover:text-red-400'
-                                            }`}
-                                        >
-                                            <Heart className={`w-3.5 h-3.5 transition-transform ${
-                                                likedIds.has(diagram.id) 
-                                                ? 'fill-current scale-110' 
-                                                : 'group-hover/like:scale-110'
-                                            }`} />
-                                            <span className="font-medium">{formatNumber(diagram.likes)}</span>
-                                        </button>
-                                        <div className="flex items-center gap-1">
-                                            <Eye className="w-3.5 h-3.5" />
-                                            {formatNumber(diagram.views)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Empty State / CTA */}
-            {!isLoading && filteredData.length === 0 && (
-                 <div className="mt-20 p-10 rounded-2xl bg-gradient-to-br from-surface to-surface-hover border border-border text-center">
-                    <p className="text-text-muted">No diagrams found matching your search.</p>
-                 </div>
-            )}
-
-            {!isLoading && (
-                <div className="mt-20 p-10 rounded-2xl bg-gradient-to-br from-surface to-surface-hover border border-border text-center">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Zap className="w-8 h-8 text-primary" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Contribution Rewards Program</h3>
-                    <p className="text-text-muted max-w-lg mx-auto mb-6">
-                        Publish your best diagrams to the community. Top contributors receive Archigram Pro for free and exclusive profile badges.
-                    </p>
-                    <button 
-                        onClick={() => onNavigate('app')}
-                        className="bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-colors"
-                    >
-                        Create Submission
-                    </button>
-                </div>
-            )}
-        </div>
-      </main>
-
-      {/* Import Modal */}
-      {showImport && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md animate-slide-up">
-                  <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                      <LinkIcon className="w-5 h-5 text-primary" />
-                      Import from Link
-                  </h3>
-                  <p className="text-sm text-text-muted mb-4">
-                      Paste a shared Archigram URL to fork the diagram into your workspace.
-                  </p>
-                  
-                  <input 
-                      type="text"
-                      value={importUrl}
-                      onChange={(e) => setImportUrl(e.target.value)}
-                      placeholder="https://archigram.ai/#..."
-                      className="w-full bg-background border border-border rounded-lg p-3 text-sm text-text focus:outline-none focus:border-primary mb-2"
-                      autoFocus
-                  />
-                  
-                  {importError && (
-                      <p className="text-xs text-red-500 mb-3">{importError}</p>
-                  )}
-                  
-                  <div className="flex justify-end gap-3 mt-4">
-                      <button 
-                          onClick={() => {
-                              setShowImport(false);
-                              setImportUrl('');
-                              setImportError('');
-                          }}
-                          className="px-4 py-2 text-sm text-text-muted hover:text-text"
-                      >
-                          Cancel
-                      </button>
-                      <button 
-                          onClick={handleImport}
-                          className="px-4 py-2 text-sm font-bold bg-primary hover:bg-primary-hover text-white rounded-lg"
-                      >
-                          Import Diagram
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-    </div>
-  );
-};
-
-const FilterButton = ({ active, onClick, icon, children }: any) => (
-    <button 
-        onClick={onClick}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            active 
-            ? 'bg-background text-text shadow-sm ring-1 ring-border' 
-            : 'text-text-muted hover:text-text hover:bg-surface-hover'
-        }`}
-    >
-        {icon}
-        {children}
-    </button>
-);
-
-const formatNumber = (num: number) => {
-    return num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num.toString();
-};
-
-export default CommunityGallery;
---- END OF FILE components/CommunityGallery.tsx ---
-
---- START OF FILE services/supabaseClient.ts ---
-import { createClient } from '@supabase/supabase-js';
-import { CommunityDiagram } from '../types.ts';
-
-// Credentials provided by the user
-const SUPABASE_URL = 'https://hcuqmiikexwvfnjreihg.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Se-nCOZXhf903JD57PKETg_mAS5LCYg';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-export interface DbDiagram {
-    id: string;
-    created_at: string;
-    title: string;
-    author: string;
-    description: string;
-    code: string;
-    tags: string[];
-    likes: number;
-    views: number;
-}
-
-// Helper to handle error objects cleanly in console
-const logSupabaseError = (context: string, error: any) => {
-    const msg = error?.message || JSON.stringify(error);
-    console.warn(`[Supabase] ${context}: ${msg}`);
-};
-
-export const fetchCommunityDiagrams = async (): Promise<CommunityDiagram[]> => {
-    try {
-        const { data, error } = await supabase
-            .from('community_diagrams')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            // We use warn here because the app has a fallback to static data
-            logSupabaseError('Fetch failed, falling back to local data', error);
-            return [];
-        }
-
-        if (!data) return [];
-
-        return data.map((d: DbDiagram) => ({
-            id: d.id,
-            title: d.title,
-            author: d.author || 'Anonymous',
-            description: d.description || '',
-            code: d.code,
-            likes: d.likes || 0,
-            views: d.views || 0,
-            tags: d.tags || [],
-            createdAt: new Date(d.created_at).toLocaleDateString()
-        }));
-    } catch (e) {
-        logSupabaseError('Client exception', e);
-        return [];
-    }
-};
-
-export const publishDiagram = async (diagram: {
-    title: string;
-    author: string;
-    description: string;
-    code: string;
-    tags: string[];
-}): Promise<boolean> => {
-    try {
-        const { error } = await supabase
-            .from('community_diagrams')
-            .insert([
-                {
-                    title: diagram.title,
-                    author: diagram.author,
-                    description: diagram.description,
-                    code: diagram.code,
-                    tags: diagram.tags,
-                    likes: 0,
-                    views: 0
-                }
-            ]);
-
-        if (error) {
-            logSupabaseError('Publish failed', error);
-            return false;
-        }
-        return true;
-    } catch (e) {
-        logSupabaseError('Publish exception', e);
-        return false;
-    }
-};
-
-export const updateDiagramLikes = async (id: string, count: number): Promise<boolean> => {
-    try {
-        const { error } = await supabase
-            .from('community_diagrams')
-            .update({ likes: count })
-            .eq('id', id);
-
-        if (error) {
-            logSupabaseError('Like update failed', error);
-            return false;
-        }
-        return true;
-    } catch (e) {
-        logSupabaseError('Like exception', e);
-        return false;
-    }
-};
-
-export const incrementDiagramViews = async (id: string): Promise<boolean> => {
-    try {
-        // Optimistic update: Read then Write
-        // (In a production env, use an RPC function 'increment_views' for atomicity)
-        const { data, error } = await supabase
-            .from('community_diagrams')
-            .select('views')
-            .eq('id', id)
-            .single();
-
-        if (error) {
-            logSupabaseError('Fetch views failed', error);
-            return false;
-        }
-
-        const { error: updateError } = await supabase
-            .from('community_diagrams')
-            .update({ views: (data.views || 0) + 1 })
-            .eq('id', id);
-
-        if (updateError) {
-             logSupabaseError('Update views failed', updateError);
-             return false;
-        }
-        return true;
-    } catch (e) {
-        logSupabaseError('Increment views exception', e);
-        return false;
-    }
-};
---- END OF FILE services/supabaseClient.ts ---
-
---- START OF FILE components/LiveDiagramBlock.tsx ---
-import React, { useState } from 'react';
-import CodeEditor from './CodeEditor.tsx';
-import DiagramPreview from './DiagramPreview.tsx';
-import { Copy, Check, Maximize2 } from 'lucide-react';
-
-interface LiveDiagramBlockProps {
-    initialCode: string;
-    title?: string;
-    height?: string;
-    className?: string;
-    enableZoom?: boolean;
-}
-
-const LiveDiagramBlock: React.FC<LiveDiagramBlockProps> = ({ 
-    initialCode, 
-    title = 'Interactive Preview', 
-    height = '450px', 
-    className = '',
-    enableZoom = true
-}) => {
-    const [code, setCode] = useState(initialCode);
-    const [error, setError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className={`rounded-xl overflow-hidden border border-white/10 bg-[#09090b] shadow-2xl flex flex-col ${className}`} style={{ height }}>
-            {/* Window Header */}
-            <div className="h-9 bg-[#18181b] border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none">
-                <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5 group">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50 group-hover:bg-red-500 transition-colors"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50 group-hover:bg-yellow-500 transition-colors"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 group-hover:bg-emerald-500 transition-colors"></div>
-                    </div>
-                    {title && <span className="ml-3 text-xs font-medium text-zinc-500 font-mono tracking-tight">{title}</span>}
-                </div>
-                <div className="flex items-center gap-3">
-                     {enableZoom && (
-                         <span className="text-[10px] text-zinc-600 font-mono hidden md:inline">
-                             Zoom & Pan Enabled
-                         </span>
-                     )}
-                    <button
-                        onClick={handleCopy}
-                        className="text-xs font-medium text-zinc-500 hover:text-white flex items-center gap-1.5 transition-colors group"
-                    >
-                        {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 group-hover:text-primary" />}
-                        {copied ? 'Copied' : 'Copy'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Split Pane Body */}
-            <div className="flex-1 flex flex-col md:flex-row min-h-0">
-                {/* Editor Pane */}
-                <div className="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-white/5 relative bg-[#09090b]">
-                    <CodeEditor
-                        code={code}
-                        onChange={setCode}
-                        error={error}
-                        theme="midnight"
-                        hideToolbar={true}
-                        collapseStatus={true}
-                    />
-                    <div className="absolute top-0 right-0 p-2 pointer-events-none">
-                        <span className="text-[10px] text-zinc-700 font-mono">EDITABLE</span>
-                    </div>
-                </div>
-
-                {/* Preview Pane */}
-                <div className="w-full md:w-1/2 bg-[#0d0d10] relative group">
-                    <DiagramPreview
-                        code={code}
-                        onError={setError}
-                        theme="midnight"
-                        showControls={enableZoom} // Enable the HUD
-                        customStyle={{ backgroundPattern: 'dots', backgroundColor: '#0d0d10' }}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-export default LiveDiagramBlock;
---- END OF FILE components/LiveDiagramBlock.tsx ---
+             <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:border-primary/50 transition-all shrink-

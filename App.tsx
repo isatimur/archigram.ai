@@ -19,6 +19,9 @@ const FAQPage = lazy(() => import('./components/FAQPage.tsx'));
 const LegalPage = lazy(() => import('./components/LegalPage.tsx'));
 // New Studios
 const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
+const BPMNStudio = lazy(() => import('./components/BPMNStudio.tsx'));
+// Modals
+const ImageImportModal = lazy(() => import('./components/ImageImportModal.tsx'));
 
 const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
@@ -113,8 +116,9 @@ function App() {
   // --- 3. Style State ---
   const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
   
-  // --- 4. Publish Modal State ---
+  // --- 4. Modal States ---
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isImageImportModalOpen, setIsImageImportModalOpen] = useState(false);
   const [publishData, setPublishData] = useState({ title: '', author: '', description: '', tags: '' });
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -496,6 +500,35 @@ function App() {
       setPendingDeleteId(null);
   };
 
+  // Image Import Handler
+  const handleImageImport = (importedCode: string) => {
+      const newProject: Project = {
+          id: 'imported-' + Date.now(),
+          name: 'Scanned Diagram',
+          code: importedCode,
+          updatedAt: Date.now(),
+          styleConfig: {},
+          versions: []
+      };
+
+      const updatedProjects = [newProject, ...projects];
+      setProjects(updatedProjects);
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+
+      setActiveProjectId(newProject.id);
+      setCode(newProject.code);
+      setCustomStyle({});
+      setHistory([newProject.code]);
+      setHistoryIndex(0);
+
+      if (window.innerWidth >= 768) {
+        setViewMode(ViewMode.Split);
+      }
+      
+      setShowToast({ message: 'Diagram successfully scanned!', visible: true });
+      setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+  };
+
   // --- 9. Export/Share Handlers ---
 
   const handleShare = () => {
@@ -793,6 +826,7 @@ function App() {
                         isCollapsed={isSidebarCollapsed}
                         toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                         onOpenGallery={() => setCurrentView('gallery')}
+                        onScanImage={() => setIsImageImportModalOpen(true)}
                     />
                 </Suspense>
             </div>
@@ -829,6 +863,7 @@ function App() {
                             setCurrentView('gallery');
                             setIsSidebarOpen(false);
                         }}
+                        onScanImage={() => setIsImageImportModalOpen(true)}
                     />
                </Suspense>
              </div>
@@ -935,6 +970,16 @@ function App() {
                 </div>
             </div>
         </div>
+      )}
+
+      {/* Image Import Modal */}
+      {isImageImportModalOpen && (
+          <Suspense fallback={null}>
+              <ImageImportModal 
+                  onClose={() => setIsImageImportModalOpen(false)}
+                  onImport={handleImageImport}
+              />
+          </Suspense>
       )}
 
       {/* Publish Modal */}

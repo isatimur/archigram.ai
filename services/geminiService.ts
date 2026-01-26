@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { DOMAIN_INSTRUCTIONS } from "../constants.ts";
 import { CopilotDomain } from "../types.ts";
@@ -38,6 +39,40 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string, 
     console.error("Gemini 3 Flash Generation Error:", error);
     throw error;
   }
+};
+
+export const imageToDiagram = async (base64Image: string, mimeType: string): Promise<string> => {
+    const ai = getAI();
+    // Clean base64 string if it contains the data header
+    const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, '');
+
+    const prompt = `You are an expert System Architect and Mermaid.js specialist.
+    Analyze the provided image. It represents a software architecture, flowchart, or mindmap.
+    
+    Your Goal: Convert this visual diagram into valid Mermaid.js syntax.
+    
+    Rules:
+    1. Identify all nodes, actors, and databases. Use appropriate shapes (e.g., cylinders for DBs).
+    2. Identify all connections and labels on arrows.
+    3. If text is illegible, infer logical labels based on context.
+    4. Return ONLY the Mermaid code block. No markdown, no explanation.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image', // Specialized for vision tasks
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: mimeType, data: cleanBase64 } },
+                    { text: prompt }
+                ]
+            }
+        });
+
+        return extractMermaidCode(response.text || '');
+    } catch (error) {
+        console.error("Gemini Vision Error:", error);
+        throw error;
+    }
 };
 
 export const fixDiagramSyntax = async (code: string, errorMessage: string): Promise<string> => {

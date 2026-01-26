@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight, LayoutTemplate, FileCode, Zap, Globe, Check } from 'lucide-react';
+import { Plus, Trash2, Box, Search, Pencil, ChevronLeft, ChevronRight, LayoutTemplate, FileCode, Zap, Globe, Check, ScanLine } from 'lucide-react';
 import { Project } from '../types.ts';
 import { TEMPLATES, ML_TEMPLATES } from '../constants.ts';
 
@@ -18,6 +18,7 @@ interface SidebarProps {
   isCollapsed: boolean;
   toggleCollapse: () => void;
   onOpenGallery: () => void;
+  onScanImage: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -33,7 +34,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onRenameProject,
   isCollapsed,
   toggleCollapse,
-  onOpenGallery
+  onOpenGallery,
+  onScanImage
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -114,6 +116,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
             <Plus className={`transition-transform duration-300 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4 group-hover:rotate-90'}`} />
             {!isCollapsed && <span className="text-sm font-semibold whitespace-nowrap">New Diagram</span>}
+        </button>
+
+        {/* Scan Button */}
+        <button 
+            onClick={onScanImage}
+            className={`
+                flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover border border-border text-text rounded-lg transition-all group
+                ${isCollapsed ? 'w-10 h-10 rounded-xl mx-auto' : 'w-full py-2.5 px-4'}
+            `}
+            title="Scan Image to Diagram"
+            aria-label="Scan Image to Diagram"
+        >
+            <ScanLine className={`text-indigo-400 ${isCollapsed ? 'w-5 h-5' : 'w-4 h-4'}`} />
+            {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap">Scan Image</span>}
         </button>
 
         {/* Search Bar (Expanded Only) */}

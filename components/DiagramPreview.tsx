@@ -125,8 +125,9 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({ code, onError, theme, c
             };
 
 
+
             const loaders = [
-    // Logos (General Tech)
+  // Logos (General Tech)
                 loadPack('@iconify-json/logos', 'logos', 'https://esm.sh/@iconify-json/logos@1/icons.json'),
                 // Font Awesome
                 loadPack('@iconify-json/fa6-regular', 'fa', 'https://esm.sh/@iconify-json/fa6-regular@1/icons.json'),
