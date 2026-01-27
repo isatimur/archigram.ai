@@ -2,8 +2,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
+import { Plausible } from '@plausible-analytics/tracker';
 
 console.log("Initializing ArchiGram AI...");
+
+// Initialize Plausible Analytics
+Plausible.init({
+  domain: 'archigram-ai.vercel.app',
+  apiHost: 'https://plausible.io'
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
