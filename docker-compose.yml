@@ -1,0 +1,102 @@
+# ArchiGram.ai Docker Compose
+#
+# Usage:
+#   docker compose up                    # Frontend only (no RAG)
+#   docker compose --profile rag up      # Full stack with RAG + Qdrant
+#
+# Note: The frontend works independently of RAG services.
+# When RAG is unavailable, diagram generation proceeds without company context.
+
+services:
+  # ======================
+  # ArchiGram Frontend
+  # ======================
+  archigram:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_KEY: ${VITE_SUPABASE_KEY}
+        VITE_PLAUSIBLE_DOMAIN: ${VITE_PLAUSIBLE_DOMAIN}
+        VITE_RAG_URL: ${VITE_RAG_URL:-http://localhost:8000}
+        VITE_RAG_ENABLED: ${VITE_RAG_ENABLED:-false}
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    # No depends_on for RAG - graceful degradation if RAG is down
+
+  # ======================
+  # RAG Backend (FastAPI)
+  # ======================
+  rag:
+    build:
+      context: ./rag
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - RAG_QDRANT_URL=http://qdrant:6333
+      - RAG_USE_CLOUD_EMBEDDINGS=${RAG_USE_CLOUD_EMBEDDINGS:-false}
+      - RAG_GEMINI_API_KEY=${RAG_GEMINI_API_KEY:-}
+      - RAG_INGEST_API_KEY=${RAG_INGEST_API_KEY}
+      - RAG_LOG_LEVEL=${RAG_LOG_LEVEL:-INFO}
+      - RAG_MAX_FILE_SIZE_MB=${RAG_MAX_FILE_SIZE_MB:-10}
+      - RAG_SEARCH_TIMEOUT_SEC=${RAG_SEARCH_TIMEOUT_SEC:-5}
+      - RAG_CORS_ORIGINS=${RAG_CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - rag_models:/app/models
+    depends_on:
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s  # Allow time for model loading
+    restart: unless-stopped
+    profiles:
+      - rag
+
+  # ======================
+  # Qdrant Vector Database
+  # ======================
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"  # gRPC port
+    environment:
+      - QDRANT__LOG_LEVEL=${QDRANT_LOG_LEVEL:-INFO}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    # Note: Qdrant image has no curl/wget; RAG service uses retries to wait for Qdrant
+    restart: unless-stopped
+    profiles:
+      - rag
+
+# ======================
+# Volumes
+# ======================
+volumes:
+  qdrant_data:
+    driver: local
+  rag_models:
+    driver: local
+
+# ======================
+# Networks
+# ======================
+networks:
+  default:
+    name: archigram_network

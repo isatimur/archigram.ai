@@ -1,0 +1,33 @@
+# RAG Service Dependencies
+# All packages are MIT/Apache 2.0/BSD compatible
+
+# Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.18
+
+# Validation & Configuration
+pydantic==2.10.5
+pydantic-settings==2.7.1
+
+# Vector Database
+qdrant-client==1.13.2
+
+# Embeddings (Local)
+sentence-transformers>=3.0.0
+torch>=2.0.0
+
+# Document Parsing
+pypdf==5.1.0
+
+# Logging
+structlog==24.4.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# HTTP Client (for cloud embeddings)
+httpx==0.28.1
+
+# Security
+python-jose[cryptography]==3.3.0
