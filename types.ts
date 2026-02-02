@@ -1,4 +1,3 @@
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -12,7 +11,7 @@ export interface ChatMessage {
 export enum ViewMode {
   Split = 'SPLIT',
   Code = 'CODE',
-  Preview = 'PREVIEW'
+  Preview = 'PREVIEW',
 }
 
 export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
@@ -51,10 +50,10 @@ export interface Project {
   name: string;
   code: string;
   updatedAt: number;
-  thumbnail?: string; 
+  thumbnail?: string;
   styleConfig?: DiagramStyleConfig;
   versions?: ProjectVersion[];
-  type?: 'mermaid' | 'plantuml'; 
+  type?: 'mermaid' | 'plantuml';
 }
 
 export interface CommunityDiagram {
@@ -67,6 +66,25 @@ export interface CommunityDiagram {
   views: number;
   tags: string[];
   createdAt: string;
+  /** Timestamp for sorting (ms). Optional for static fallback data. */
+  createdAtTimestamp?: number;
 }
 
-export type AppView = 'landing' | 'app' | 'plantuml' | 'docs' | 'gallery' | 'faq' | 'privacy' | 'terms' | 'license';
+export type AppView =
+  | 'landing'
+  | 'app'
+  | 'plantuml'
+  | 'docs'
+  | 'gallery'
+  | 'faq'
+  | 'privacy'
+  | 'terms'
+  | 'license';
+
+export interface User {
+  id: string;
+  email?: string;
+  username?: string;
+  avatar_url?: string;
+  created_at?: string;
+}

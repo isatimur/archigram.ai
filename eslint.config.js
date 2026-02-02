@@ -62,6 +62,10 @@ export default [
         AbortSignal: 'readonly',
         SVGElement: 'readonly',
         XMLSerializer: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLPreElement: 'readonly',
+        Element: 'readonly',
+        confirm: 'readonly',
       },
     },
     plugins: {

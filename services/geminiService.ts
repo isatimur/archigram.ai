@@ -1,25 +1,55 @@
-
-import { GoogleGenAI } from "@google/genai";
-import { DOMAIN_INSTRUCTIONS } from "../constants.ts";
-import { CopilotDomain } from "../types.ts";
+import { GoogleGenAI } from '@google/genai';
+import { DOMAIN_INSTRUCTIONS } from '../constants.ts';
+import { CopilotDomain } from '../types.ts';
+import { getRAGContext, isRAGEnabled } from './ragClient.ts';
 
 let aiInstance: GoogleGenAI | null = null;
 
 const getAI = (): GoogleGenAI => {
   if (!aiInstance) {
     if (!process.env.API_KEY) {
-      throw new Error("API Key is missing. Please ensure process.env.API_KEY is available.");
+      throw new Error('API Key is missing. Please ensure process.env.API_KEY is available.');
     }
     aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return aiInstance;
 };
 
-export const generateDiagramCode = async (prompt: string, currentCode?: string, domain: CopilotDomain = 'General'): Promise<string> => {
+export interface GenerateDiagramOptions {
+  /** Enable RAG context injection (default: true if RAG enabled) */
+  useRAG?: boolean;
+  /** Company ID for RAG filtering (multi-tenant) */
+  companyId?: string;
+}
+
+export const generateDiagramCode = async (
+  prompt: string,
+  currentCode?: string,
+  domain: CopilotDomain = 'General',
+  options: GenerateDiagramOptions = {}
+): Promise<string> => {
   const ai = getAI();
-  const instruction = DOMAIN_INSTRUCTIONS[domain] || DOMAIN_INSTRUCTIONS["General"];
-  
-  const fullPrompt = currentCode 
+  let instruction = DOMAIN_INSTRUCTIONS[domain] || DOMAIN_INSTRUCTIONS['General'];
+
+  // Inject RAG context if enabled
+  const { useRAG = isRAGEnabled(), companyId } = options;
+  if (useRAG) {
+    try {
+      const ragContext = await getRAGContext(prompt, {
+        topK: 5,
+        companyId,
+        timeout: 5000,
+      });
+      if (ragContext) {
+        instruction = instruction + ragContext;
+      }
+    } catch (error) {
+      // Graceful degradation - continue without RAG context
+      console.warn('RAG context retrieval failed, continuing without:', error);
+    }
+  }
+
+  const fullPrompt = currentCode
     ? `Current Diagram Code:\n\`\`\`mermaid\n${currentCode}\n\`\`\`\n\nUser Request: ${prompt}\n\nUpdate the diagram based on the request. Return the FULL updated mermaid code.`
     : `User Request: ${prompt}\n\nGenerate a mermaid diagram for this request.`;
 
@@ -34,24 +64,23 @@ export const generateDiagramCode = async (prompt: string, currentCode?: string, 
     });
 
     return extractMermaidCode(response.text || '');
-
   } catch (error) {
-    console.error("Gemini 3 Flash Generation Error:", error);
+    console.error('Gemini 3 Flash Generation Error:', error);
     throw error;
   }
 };
 
 export interface AuditReport {
-    score: number;
-    summary: string;
-    risks: { severity: 'High' | 'Medium' | 'Low'; title: string; description: string }[];
-    strengths: string[];
-    improvements: string[];
+  score: number;
+  summary: string;
+  risks: { severity: 'High' | 'Medium' | 'Low'; title: string; description: string }[];
+  strengths: string[];
+  improvements: string[];
 }
 
 export const auditDiagram = async (code: string): Promise<AuditReport> => {
-    const ai = getAI();
-    const prompt = `You are a Principal Software Architect and Security Engineer.
+  const ai = getAI();
+  const prompt = `You are a Principal Software Architect and Security Engineer.
     Analyze the following Mermaid.js architecture diagram.
     
     Diagram Code:
@@ -76,31 +105,34 @@ export const auditDiagram = async (code: string): Promise<AuditReport> => {
       "improvements": ["Specific recommendations to fix risks"]
     }`;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json'
-            }
-        });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
 
-        const text = response.text || '{}';
-        // Cleanup if the model adds markdown despite instructions
-        const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanJson);
-    } catch (error) {
-        console.error("Audit Error:", error);
-        throw new Error("Failed to audit diagram.");
-    }
+    const text = response.text || '{}';
+    // Cleanup if the model adds markdown despite instructions
+    const cleanJson = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error('Audit Error:', error);
+    throw new Error('Failed to audit diagram.');
+  }
 };
 
 export const imageToDiagram = async (base64Image: string, mimeType: string): Promise<string> => {
-    const ai = getAI();
-    // Clean base64 string if it contains the data header
-    const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, '');
+  const ai = getAI();
+  // Clean base64 string if it contains the data header
+  const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, '');
 
-    const prompt = `You are an expert System Architect and Mermaid.js specialist.
+  const prompt = `You are an expert System Architect and Mermaid.js specialist.
     Analyze the provided image. It represents a software architecture, flowchart, or mindmap.
     
     Your Goal: Convert this visual diagram into valid Mermaid.js syntax.
@@ -111,22 +143,19 @@ export const imageToDiagram = async (base64Image: string, mimeType: string): Pro
     3. If text is illegible, infer logical labels based on context.
     4. Return ONLY the Mermaid code block. No markdown, no explanation.`;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image', // Specialized for vision tasks
-            contents: {
-                parts: [
-                    { inlineData: { mimeType: mimeType, data: cleanBase64 } },
-                    { text: prompt }
-                ]
-            }
-        });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image', // Specialized for vision tasks
+      contents: {
+        parts: [{ inlineData: { mimeType: mimeType, data: cleanBase64 } }, { text: prompt }],
+      },
+    });
 
-        return extractMermaidCode(response.text || '');
-    } catch (error) {
-        console.error("Gemini Vision Error:", error);
-        throw error;
-    }
+    return extractMermaidCode(response.text || '');
+  } catch (error) {
+    console.error('Gemini Vision Error:', error);
+    throw error;
+  }
 };
 
 export const fixDiagramSyntax = async (code: string, errorMessage: string): Promise<string> => {
@@ -158,29 +187,34 @@ Rules:
 
     return extractMermaidCode(response.text || '');
   } catch (error) {
-    console.error("Gemini Syntax Fix Error:", error);
+    console.error('Gemini Syntax Fix Error:', error);
     throw error;
   }
 };
 
 // Helper to extract code from response
 const extractMermaidCode = (text: string): string => {
-    // Extract code from markdown blocks
-    const match = text.match(/```(?:mermaid)?\n([\s\S]*?)\n```/);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-    
-    // Fallback if no code block found but text resembles mermaid
-    if (text.includes('sequenceDiagram') || text.includes('graph ') || text.includes('classDiagram') || text.includes('flowchart')) {
-        return text.trim();
-    }
-    
-    // If it looks like raw code (starts with a keyword)
-    const lines = text.split('\n');
-    if (lines.length > 0 && /^[a-z]+/.test(lines[0])) {
-        return text.trim();
-    }
+  // Extract code from markdown blocks
+  const match = text.match(/```(?:mermaid)?\n([\s\S]*?)\n```/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
 
-    throw new Error("No valid Mermaid code generated.");
-}
+  // Fallback if no code block found but text resembles mermaid
+  if (
+    text.includes('sequenceDiagram') ||
+    text.includes('graph ') ||
+    text.includes('classDiagram') ||
+    text.includes('flowchart')
+  ) {
+    return text.trim();
+  }
+
+  // If it looks like raw code (starts with a keyword)
+  const lines = text.split('\n');
+  if (lines.length > 0 && /^[a-z]+/.test(lines[0])) {
+    return text.trim();
+  }
+
+  throw new Error('No valid Mermaid code generated.');
+};

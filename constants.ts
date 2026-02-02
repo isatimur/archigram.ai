@@ -1,4 +1,3 @@
-
 export const INITIAL_CODE = `sequenceDiagram
     autonumber
     box "User Interaction" #11111b
@@ -66,37 +65,37 @@ export const INITIAL_CODE = `sequenceDiagram
 
 // Phase 1: Domain-Specific Copilot Contexts
 export const DOMAIN_INSTRUCTIONS: Record<string, string> = {
-  "General": `You are ArchiGram.ai, an expert Technical Architect.
+  General: `You are ArchiGram.ai, an expert Technical Architect.
 Rules:
 1. Output ONLY valid Mermaid.js code inside a markdown code block.
 2. Prioritize clarity and standard architectural patterns.`,
 
-  "Healthcare": `You are ArchiGram.ai (Healthcare Edition), an expert in HIPAA-compliant architectures and HL7/FHIR standards.
+  Healthcare: `You are ArchiGram.ai (Healthcare Edition), an expert in HIPAA-compliant architectures and HL7/FHIR standards.
 Rules:
 1. Output ONLY valid Mermaid.js code.
 2. Emphasize data privacy, encryption at rest/transit, and PHI isolation.
 3. Use terms like "EHR Integration", "FHIR Store", "De-identification Service".
 4. Suggest secure enclaves for ML training on patient data.`,
 
-  "Finance": `You are ArchiGram.ai (FinTech Edition), an expert in PCI-DSS, high-frequency trading, and fraud detection systems.
+  Finance: `You are ArchiGram.ai (FinTech Edition), an expert in PCI-DSS, high-frequency trading, and fraud detection systems.
 Rules:
 1. Output ONLY valid Mermaid.js code.
 2. Focus on ACID transactions, ledger immutability, and low-latency pipelines.
 3. Use components like "Ledger", "Risk Engine", "KYC Service", "Audit Log".
 4. Ensure audit trails are visualized in workflows.`,
 
-  "E-commerce": `You are ArchiGram.ai (Retail Edition), an expert in high-scale recommendation engines and inventory management.
+  'E-commerce': `You are ArchiGram.ai (Retail Edition), an expert in high-scale recommendation engines and inventory management.
 Rules:
 1. Output ONLY valid Mermaid.js code.
 2. Focus on caching (Redis), CDNs, and event-driven architecture (Kafka) for inventory updates.
-3. Include "Recommendation Engine", "User Behavior Tracker", "Cart Service".`
+3. Include "Recommendation Engine", "User Behavior Tracker", "Cart Service".`,
 };
 
 export const STORAGE_KEY = 'archigram_diagram_v2';
 
 // Phase 1: One-Click Pipeline Templates
 export const ML_TEMPLATES: Record<string, string> = {
-  "Text Classifier Pipeline": `graph LR
+  'Text Classifier Pipeline': `graph LR
     A[Raw Text Data] --> B[Tokenization]
     B --> C[Embedding Layer]
     C --> D[Transformer Block]
@@ -108,7 +107,7 @@ export const ML_TEMPLATES: Record<string, string> = {
     H[Experiment Tracker] -.-> E
     end`,
 
-  "Healthcare Risk Prediction": `sequenceDiagram
+  'Healthcare Risk Prediction': `sequenceDiagram
     participant EHR as Electronic Health Record
     participant DeID as De-identification
     participant Lake as Secure Data Lake
@@ -124,7 +123,7 @@ export const ML_TEMPLATES: Record<string, string> = {
     Lake->>Doc: Push High Risk Alert (Audit Logged)
     Note over Doc, Model: HIPAA Compliant Flow`,
 
-  "Fraud Detection (Real-time)": `flowchart TD
+  'Fraud Detection (Real-time)': `flowchart TD
     Tx[Transaction Event] --> Kafka{Message Queue}
     Kafka -->|Stream| Flink[Feature Extraction]
     Flink --> Redis[(Feature Store)]
@@ -132,8 +131,8 @@ export const ML_TEMPLATES: Record<string, string> = {
     Model -->|Score > 0.8| Block[Block Transaction]
     Model -->|Score < 0.8| Approve[Approve Transaction]
     Block --> Alert[Notify Ops]`,
-    
-  "RAG Pipeline": `graph TD
+
+  'RAG Pipeline': `graph TD
     User(User Query) --> Embed[Embedding Model]
     Embed --> VectorDB[(Vector Database)]
     VectorDB -->|Top K Chunks| LLM[LLM Context Window]
@@ -143,11 +142,11 @@ export const ML_TEMPLATES: Record<string, string> = {
     subgraph Data_Ingestion
     Docs[Documents] --> Splitter[Text Splitter]
     Splitter --> Embed
-    end`
+    end`,
 };
 
 export const TEMPLATES: Record<string, string> = {
-  "Cloud Architecture": `graph TB
+  'Cloud Architecture': `graph TB
     Users((<icon:fa/users> Users))
     LB[<icon:aws/elastic-load-balancing> Load Balancer]
     
@@ -167,7 +166,7 @@ export const TEMPLATES: Record<string, string> = {
     App1 & App2 -->|Read/Write| DB
     App1 & App2 -->|Read| Cache`,
 
-  "Architecture (Beta)": `architecture-beta
+  'Architecture (Beta)': `architecture-beta
     group api(cloud)[API]
 
     service db(database)[Database] in api
@@ -177,7 +176,7 @@ export const TEMPLATES: Record<string, string> = {
     db:L -- R:server
     disk:T -- B:server`,
 
-  "User Journey": `journey
+  'User Journey': `journey
     title My working day
     section Go to work
       Wake up: 1: Me, Cat
@@ -187,25 +186,88 @@ export const TEMPLATES: Record<string, string> = {
       Start working: 5: Me
       Go for a walk: 3: Me
       Finish working: 5: Me`,
-      
-  "State Machine": `stateDiagram-v2
+
+  'State Machine': `stateDiagram-v2
     [*] --> Still
     Still --> Moving
     Moving --> Still
     Moving --> Crash
-    Crash --> [*]`
+    Crash --> [*]`,
+};
+
+// C4 Model Templates (Context, Container, Component, Code)
+export const C4_TEMPLATES: Record<string, string> = {
+  'C4 Context': `flowchart TB
+    subgraph External["External Systems"]
+        direction TB
+        User((User))
+        Email[Email Service]
+        Payment[Payment Gateway]
+    end
+
+    subgraph System["Software System"]
+        direction TB
+        App[Web Application]
+    end
+
+    User -->|"Uses"| App
+    App -->|"Sends emails"| Email
+    App -->|"Processes payments"| Payment`,
+
+  'C4 Container': `flowchart TB
+    subgraph System["Software System"]
+        direction TB
+        Web[Web Application]
+        API[API Server]
+        DB[(Database)]
+    end
+
+    Web -->|"REST/HTTPS"| API
+    API -->|"SQL"| DB`,
+
+  'C4 Component': `flowchart TB
+    subgraph API["API Server"]
+        direction TB
+        Controller[Controller]
+        Service[Service Layer]
+        Repository[Repository]
+    end
+
+    Controller -->|"Calls"| Service
+    Service -->|"Uses"| Repository`,
+
+  'C4 Code (UML)': `classDiagram
+    class Order {
+        +id: string
+        +status: OrderStatus
+        +create()
+        +updateStatus()
+    }
+    class OrderItem {
+        +productId: string
+        +quantity: number
+        +price: number
+    }
+    class Payment {
+        +process()
+        +refund()
+    }
+    Order "1" --> "*" OrderItem : contains
+    Order --> Payment : uses`,
 };
 
 export const COMMUNITY_DATA = [
   {
-    id: "c1",
-    title: "Microservices Payment System",
-    author: "SarahEng",
-    description: "A comprehensive flow of a microservices-based payment gateway including fraud detection and ledger updates.",
+    id: 'c1',
+    title: 'Microservices Payment System',
+    author: 'SarahEng',
+    description:
+      'A comprehensive flow of a microservices-based payment gateway including fraud detection and ledger updates.',
     likes: 1240,
     views: 8500,
-    tags: ["System Design", "FinTech", "Flowchart"],
-    createdAt: "2d ago",
+    tags: ['System Design', 'FinTech', 'Flowchart'],
+    createdAt: '2d ago',
+    createdAtTimestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
     code: `graph TB
     Client[Client App]
     API[API Gateway]
@@ -244,25 +306,29 @@ export const COMMUNITY_DATA = [
     
     style Orchestrator fill:#4f46e5,stroke:#312e81,color:#fff
     style Fraud fill:#ef4444,stroke:#7f1d1d,color:#fff
-    style Ledger fill:#10b981,stroke:#064e3b,color:#fff`
-  }
+    style Ledger fill:#10b981,stroke:#064e3b,color:#fff`,
+  },
 ];
 
 export const FAQ_DATA = [
-    {
-        question: "What is ArchiGram.ai?",
-        answer: "ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly."
-    },
-    {
-        question: "How does the System Design Copilot work?",
-        answer: "The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you."
-    },
-    {
-        question: "Is ArchiGram free to use?",
-        answer: "Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment."
-    },
-    {
-        question: "Can I export diagrams to other formats?",
-        answer: "Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion."
-    }
+  {
+    question: 'What is ArchiGram.ai?',
+    answer:
+      'ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly.',
+  },
+  {
+    question: 'How does the System Design Copilot work?',
+    answer:
+      "The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you.",
+  },
+  {
+    question: 'Is ArchiGram free to use?',
+    answer:
+      'Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment.',
+  },
+  {
+    question: 'Can I export diagrams to other formats?',
+    answer:
+      'Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion.',
+  },
 ];
