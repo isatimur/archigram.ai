@@ -19,6 +19,10 @@ export default [
         },
       },
       globals: {
+        process: 'readonly',
+        global: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
@@ -56,6 +60,8 @@ export default [
         btoa: 'readonly',
         AbortController: 'readonly',
         AbortSignal: 'readonly',
+        SVGElement: 'readonly',
+        XMLSerializer: 'readonly',
       },
     },
     plugins: {
@@ -111,7 +117,16 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '*.config.js',
+      '*.config.ts',
+      'coverage/**',
+      'rag/.venv/**',
+      'rag/**/*.js',
+      'rag/**/*.mjs',
+    ],
   },
   prettier,
 ];
