@@ -75,7 +75,11 @@ def verify_api_key(
     description="""
 Upload a document to be processed and stored in the vector database.
 
-**Supported file types:** PDF, Markdown (.md), Plain text (.txt)
+**Supported file types:**
+- Lightweight mode (default): PDF, Markdown (.md), Plain text (.txt)
+- Docling mode: PDF (with OCR/tables), DOCX, PPTX, XLSX, HTML, Markdown, Plain text
+
+Set `RAG_PARSER_MODE=docling` to enable rich multi-format parsing.
 
 **Document types:**
 - `glossary`: Company terminology and definitions (small chunks)
@@ -140,23 +144,40 @@ async def ingest_document(
         logger.warning("ingest_validation_failed", doc_id=doc_id, error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
+    settings = get_settings()
+
     try:
-        # Parse document
-        text = parse_document(content, file.filename, extension)
+        if settings.parser_mode == "docling":
+            # Docling path: rich multi-format parsing with layout-aware chunking
+            from chunking.docling_chunker import chunk_docling_document
+
+            from .docling_parser import parse_document_with_docling
+
+            docling_doc = parse_document_with_docling(content, file.filename, extension)
+            chunks = chunk_docling_document(
+                doc=docling_doc,
+                source=file.filename,
+                doc_type=doc_type,
+                company_id=company_id,
+                metadata={"doc_id": doc_id},
+                tokenizer_model=settings.embedding_model,
+            )
+        else:
+            # Lightweight path: existing pypdf + RecursiveSplitter
+            text = parse_document(content, file.filename, extension)
+            chunks = chunk_document(
+                text=text,
+                source=file.filename,
+                doc_type=doc_type,
+                company_id=company_id,
+                metadata={"doc_id": doc_id},
+            )
 
     except ParserError as e:
         logger.error("ingest_parse_failed", doc_id=doc_id, error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        # Chunk document
-        chunks = chunk_document(
-            text=text,
-            source=file.filename,
-            doc_type=doc_type,
-            company_id=company_id,
-            metadata={"doc_id": doc_id},
-        )
 
         if not chunks:
             raise HTTPException(
