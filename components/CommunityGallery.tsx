@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Search,
   GitFork,
@@ -13,23 +13,36 @@ import {
   Link as LinkIcon,
   Download,
   Loader2,
+  MessageCircle,
 } from 'lucide-react';
-import { AppView, CommunityDiagram } from '../types.ts';
+import { toast } from 'sonner';
+import { AppView, CommunityDiagram, User } from '../types.ts';
 import { COMMUNITY_DATA } from '../constants.ts';
 import DiagramPreview from './DiagramPreview.tsx';
 import { decodeCodeFromUrl } from '../utils/url.ts';
 import {
   fetchCommunityDiagrams,
+  fetchCommentCounts,
   updateDiagramLikes,
   incrementDiagramViews,
 } from '../services/supabaseClient.ts';
+import { analytics } from '../utils/analytics.ts';
+
+const CommentThread = lazy(() => import('./CommentThread.tsx'));
 
 interface CommunityGalleryProps {
   onNavigate: (view: AppView) => void;
   onFork: (diagram: CommunityDiagram) => void;
+  user?: User | null;
+  onOpenAuth?: () => void;
 }
 
-const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork }) => {
+const CommunityGallery: React.FC<CommunityGalleryProps> = ({
+  onNavigate,
+  onFork,
+  user,
+  onOpenAuth,
+}) => {
   const [filter, setFilter] = useState<'trending' | 'new' | 'top'>('trending');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -41,6 +54,10 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
   const [diagrams, setDiagrams] = useState<CommunityDiagram[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+
+  // Comment State
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [expandedCommentId, setExpandedCommentId] = useState<string | null>(null);
 
   // Load Likes from Local Storage
   useEffect(() => {
@@ -58,15 +75,21 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      // Use new pagination API, but fetch all for initial load (backward compatible)
       const result = await fetchCommunityDiagrams({ limit: 100 });
 
+      let loadedDiagrams: CommunityDiagram[];
       if (result.data && result.data.length > 0) {
-        setDiagrams(result.data);
+        loadedDiagrams = result.data;
       } else {
-        // Fallback to static data if DB is empty or fails (ensures app doesn't look broken)
-        setDiagrams(COMMUNITY_DATA);
+        loadedDiagrams = COMMUNITY_DATA;
       }
+      setDiagrams(loadedDiagrams);
+
+      // Load comment counts
+      const ids = loadedDiagrams.map((d) => d.id);
+      const counts = await fetchCommentCounts(ids);
+      setCommentCounts(counts);
+
       setIsLoading(false);
     };
     loadData();
@@ -113,11 +136,15 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
 
     setDiagrams((prev) => prev.map((d) => (d.id === id ? { ...d, likes: newLikes } : d)));
 
+    // Analytics
+    if (!isLiked) analytics.diagramLiked();
+
     // API Call
     const success = await updateDiagramLikes(id, newLikes);
 
     if (!success) {
       // Revert if API fails
+      toast.error('Failed to update like');
       setDiagrams((prev) => prev.map((d) => (d.id === id ? { ...d, likes: currentLikes } : d)));
       setLikedIds((prev) => {
         const reverted = new Set(prev);
@@ -181,8 +208,8 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
   return (
     <div className="h-screen w-screen bg-[#09090b] text-text flex flex-col font-sans overflow-hidden relative">
       {/* Navbar */}
-      <nav className="h-16 border-b border-border bg-surface/50 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-50">
-        <div className="flex items-center gap-4">
+      <nav className="h-14 md:h-16 border-b border-border bg-surface/50 backdrop-blur-xl flex items-center justify-between px-3 md:px-6 shrink-0 z-50 gap-2">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <button
             onClick={() => onNavigate('landing')}
             className="p-2 hover:bg-surface-hover rounded-lg text-text-muted hover:text-text transition-colors"
@@ -190,19 +217,21 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="h-6 w-px bg-border"></div>
+          <div className="h-6 w-px bg-border hidden md:block"></div>
           <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-accent" />
-            <span className="font-bold text-lg tracking-tight">Community Gallery</span>
+            <Globe className="w-5 h-5 text-accent hidden sm:block" />
+            <span className="font-bold text-sm md:text-lg tracking-tight hidden sm:inline">
+              Community Gallery
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0 max-w-md mx-2 md:mx-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0 max-w-md mx-1 md:mx-4">
           <div className="relative w-full group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
             <input
               type="text"
-              placeholder="Search diagrams, tags, authors..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-hover transition-all"
@@ -210,20 +239,22 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted hover:text-text border border-border hover:bg-surface rounded-lg transition-all"
+            className="flex items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-text-muted hover:text-text border border-border hover:bg-surface rounded-lg transition-all"
+            title="Import from URL"
           >
             <Download className="w-4 h-4" />
-            Import
+            <span className="hidden md:inline">Import</span>
           </button>
 
           <button
             onClick={() => onNavigate('app')}
-            className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 transition-all"
+            className="bg-primary hover:bg-primary-hover text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold shadow-lg shadow-primary/20 transition-all"
           >
-            My Workspace
+            <span className="hidden sm:inline">My Workspace</span>
+            <span className="sm:hidden">Studio</span>
           </button>
         </div>
       </nav>
@@ -232,15 +263,15 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
       <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-6 md:p-10">
         {/* Header / Stats */}
         <div className="max-w-7xl mx-auto mb-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Discover & Fork</h1>
-              <p className="text-text-muted max-w-xl">
-                Explore thousands of architecture diagrams built by engineers from top companies.
-                Fork any diagram to your workspace to start customizing instantly.
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">Discover & Fork</h1>
+              <p className="text-text-muted max-w-xl text-sm md:text-base">
+                Explore architecture diagrams built by engineers. Fork any diagram to start
+                customizing.
               </p>
             </div>
-            <div className="flex gap-2 bg-surface border border-border p-1 rounded-xl">
+            <div className="flex gap-1 md:gap-2 bg-surface border border-border p-1 rounded-xl shrink-0 self-start">
               <FilterButton
                 active={filter === 'trending'}
                 onClick={() => setFilter('trending')}
@@ -367,6 +398,18 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                           />
                           <span className="font-medium">{formatNumber(diagram.likes)}</span>
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedCommentId(
+                              expandedCommentId === diagram.id ? null : diagram.id
+                            );
+                          }}
+                          className="flex items-center gap-1.5 text-text-muted hover:text-primary transition-all"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span className="font-medium">{commentCounts[diagram.id] || 0}</span>
+                        </button>
                         <div className="flex items-center gap-1">
                           <Eye className="w-3.5 h-3.5" />
                           {formatNumber(diagram.views)}
@@ -374,6 +417,23 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({ onNavigate, onFork 
                       </div>
                     </div>
                   </div>
+
+                  {/* Expandable Comment Thread */}
+                  {expandedCommentId === diagram.id && (
+                    <Suspense
+                      fallback={
+                        <div className="px-5 py-4 border-t border-border/50 flex justify-center">
+                          <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
+                        </div>
+                      }
+                    >
+                      <CommentThread
+                        diagramId={diagram.id}
+                        user={user || null}
+                        onOpenAuth={onOpenAuth}
+                      />
+                    </Suspense>
+                  )}
                 </div>
               ))}
             </div>

@@ -1,0 +1,19 @@
+# Default owners for everything in the repo
+* @isatimur
+
+# Core application code
+/App.tsx @isatimur
+/components/ @isatimur
+/services/ @isatimur
+
+# Configuration and build
+/*.config.* @isatimur
+/package.json @isatimur
+/tsconfig.json @isatimur
+
+# CI/CD
+/.github/workflows/ @isatimur
+
+# Documentation
+/*.md @isatimur
+/docs/ @isatimur

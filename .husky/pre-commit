@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Run lint-staged for linting and formatting
+bunx lint-staged

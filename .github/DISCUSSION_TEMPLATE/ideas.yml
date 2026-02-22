@@ -1,0 +1,37 @@
+title: "[Idea]: "
+labels:
+  - "idea"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for ArchiGram.ai? We'd love to hear it!
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: Describe your idea in detail
+      placeholder: I think it would be great if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: What issue or limitation would this address?
+      placeholder: Currently, users have to...
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Are there alternatives?
+      description: Are there workarounds or alternatives that exist today?
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you contribute?
+      options:
+        - label: I would be interested in contributing to this idea

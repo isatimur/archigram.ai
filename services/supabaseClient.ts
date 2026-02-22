@@ -1,5 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { CommunityDiagram, User } from '../types.ts';
+import {
+  CommunityDiagram,
+  Comment,
+  User,
+  Collection,
+  PromptEntry,
+  PromptDomain,
+} from '../types.ts';
 
 /**
  * Supabase Configuration
@@ -96,8 +103,30 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
+export const sendWelcomeEmail = async (email: string, username: string) => {
+  try {
+    await fetch('/api/welcome-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username }),
+    });
+  } catch {
+    // Fire-and-forget — don't block auth flow
+  }
+};
+
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
   return supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user?.email) {
+      const welcomeKey = `archigram_welcome_sent_${session.user.id}`;
+      if (!localStorage.getItem(welcomeKey)) {
+        localStorage.setItem(welcomeKey, '1');
+        sendWelcomeEmail(
+          session.user.email,
+          session.user.user_metadata?.full_name || session.user.email.split('@')[0]
+        );
+      }
+    }
     if (session?.user) {
       const user = await getCurrentUser();
       callback(user);
@@ -350,6 +379,274 @@ export const incrementDiagramViews = async (id: string): Promise<boolean> => {
     return true;
   } catch (e) {
     logSupabaseError('Increment views exception', e);
+    return false;
+  }
+};
+
+// --- Comment CRUD ---
+
+export const fetchComments = async (diagramId: string): Promise<Comment[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('diagram_id', diagramId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      logSupabaseError('Fetch comments failed', error);
+      return [];
+    }
+
+    return (data || []) as Comment[];
+  } catch (e) {
+    logSupabaseError('Fetch comments exception', e);
+    return [];
+  }
+};
+
+export const fetchCommentCounts = async (diagramIds: string[]): Promise<Record<string, number>> => {
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('diagram_id')
+      .in('diagram_id', diagramIds);
+
+    if (error) {
+      logSupabaseError('Fetch comment counts failed', error);
+      return {};
+    }
+
+    const counts: Record<string, number> = {};
+    for (const row of data || []) {
+      counts[row.diagram_id] = (counts[row.diagram_id] || 0) + 1;
+    }
+    return counts;
+  } catch (e) {
+    logSupabaseError('Fetch comment counts exception', e);
+    return {};
+  }
+};
+
+export const addComment = async (
+  diagramId: string,
+  content: string,
+  author: string
+): Promise<Comment | null> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      logSupabaseError('Add comment', 'User not authenticated');
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        diagram_id: diagramId,
+        user_id: userData.user.id,
+        author,
+        content,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('Add comment failed', error);
+      return null;
+    }
+
+    return data as Comment;
+  } catch (e) {
+    logSupabaseError('Add comment exception', e);
+    return null;
+  }
+};
+
+export const deleteComment = async (commentId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+
+    if (error) {
+      logSupabaseError('Delete comment failed', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logSupabaseError('Delete comment exception', e);
+    return false;
+  }
+};
+
+// --- Collections CRUD ---
+
+export const fetchCollections = async (): Promise<Collection[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('collections')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logSupabaseError('Fetch collections failed', error);
+      return [];
+    }
+
+    return (data || []) as Collection[];
+  } catch (e) {
+    logSupabaseError('Fetch collections exception', e);
+    return [];
+  }
+};
+
+export const fetchCollectionBySlug = async (slug: string): Promise<Collection | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('collections')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error) {
+      logSupabaseError('Fetch collection by slug failed', error);
+      return null;
+    }
+
+    return data as Collection;
+  } catch (e) {
+    logSupabaseError('Fetch collection by slug exception', e);
+    return null;
+  }
+};
+
+export const fetchCollectionItems = async (collectionId: string): Promise<CommunityDiagram[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('collection_items')
+      .select('position, diagram_id, community_diagrams(*)')
+      .eq('collection_id', collectionId)
+      .order('position', { ascending: true });
+
+    if (error) {
+      logSupabaseError('Fetch collection items failed', error);
+      return [];
+    }
+
+    return (data || [])
+      .filter((item: any) => item.community_diagrams)
+      .map((item: any) => {
+        const d = item.community_diagrams;
+        return {
+          id: d.id,
+          title: d.title,
+          author: d.author || 'Anonymous',
+          description: d.description || '',
+          code: d.code,
+          likes: d.likes || 0,
+          views: d.views || 0,
+          tags: d.tags || [],
+          createdAt: new Date(d.created_at).toLocaleDateString(),
+          createdAtTimestamp: new Date(d.created_at).getTime(),
+        } as CommunityDiagram;
+      });
+  } catch (e) {
+    logSupabaseError('Fetch collection items exception', e);
+    return [];
+  }
+};
+
+// --- Prompts CRUD ---
+
+export const fetchPrompts = async (options?: {
+  domain?: PromptDomain;
+  sort?: 'new' | 'top' | 'trending';
+  limit?: number;
+}): Promise<PromptEntry[]> => {
+  const limit = options?.limit || 50;
+
+  try {
+    let query = supabase.from('prompts').select('*').limit(limit);
+
+    if (options?.domain && options.domain !== 'general') {
+      query = query.eq('domain', options.domain);
+    }
+
+    switch (options?.sort) {
+      case 'top':
+        query = query.order('likes', { ascending: false });
+        break;
+      case 'trending':
+        query = query.order('views', { ascending: false });
+        break;
+      case 'new':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logSupabaseError('Fetch prompts failed', error);
+      return [];
+    }
+
+    return (data || []) as PromptEntry[];
+  } catch (e) {
+    logSupabaseError('Fetch prompts exception', e);
+    return [];
+  }
+};
+
+export const publishPrompt = async (prompt: {
+  title: string;
+  author: string;
+  description: string;
+  prompt_text: string;
+  domain: PromptDomain;
+  tags: string[];
+  result_diagram_code?: string;
+}): Promise<boolean> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      logSupabaseError('Publish prompt', 'User not authenticated');
+      return false;
+    }
+
+    const { error } = await supabase.from('prompts').insert({
+      title: prompt.title,
+      author: prompt.author,
+      description: prompt.description,
+      prompt_text: prompt.prompt_text,
+      domain: prompt.domain,
+      tags: prompt.tags,
+      result_diagram_code: prompt.result_diagram_code,
+      user_id: userData.user.id,
+    });
+
+    if (error) {
+      logSupabaseError('Publish prompt failed', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logSupabaseError('Publish prompt exception', e);
+    return false;
+  }
+};
+
+export const updatePromptLikes = async (id: string, count: number): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from('prompts').update({ likes: count }).eq('id', id);
+
+    if (error) {
+      logSupabaseError('Prompt like update failed', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logSupabaseError('Prompt like exception', e);
     return false;
   }
 };

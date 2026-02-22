@@ -1,22 +1,15 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import {
-  ViewMode,
-  DiagramTheme,
-  AppView,
-  Project,
-  DiagramStyleConfig,
-  CommunityDiagram,
-  ProjectVersion,
-  User,
-} from './types.ts';
-import { INITIAL_CODE, STORAGE_KEY } from './constants.ts';
-import { encodeCodeToUrl, decodeCodeFromUrl } from './utils/url.ts';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { ViewMode, DiagramTheme, User } from './types.ts';
+import { encodeCodeToUrl } from './utils/url.ts';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.ts';
-import { CheckCircle2, PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
+import { useAppRouter } from './hooks/useAppRouter.ts';
+import { useProjects } from './hooks/useProjects.ts';
+import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
 import { publishDiagram, getCurrentUser, onAuthStateChange } from './services/supabaseClient.ts';
 import { auditDiagram, AuditReport } from './services/geminiService.ts';
 import { analytics } from './utils/analytics.ts';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { Toaster, toast } from 'sonner';
 
 // Dynamic Component Imports
 const Header = lazy(() => import('./components/Header.tsx'));
@@ -28,6 +21,7 @@ const Sidebar = lazy(() => import('./components/Sidebar.tsx'));
 const Documentation = lazy(() => import('./components/Documentation.tsx'));
 const CommunityGallery = lazy(() => import('./components/CommunityGallery.tsx'));
 const FAQPage = lazy(() => import('./components/FAQPage.tsx'));
+const DiscoverPage = lazy(() => import('./components/DiscoverPage.tsx'));
 const LegalPage = lazy(() => import('./components/LegalPage.tsx'));
 // New Studios
 const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
@@ -39,8 +33,8 @@ const AuditModal = lazy(() => import('./components/AuditModal.tsx'));
 const CommandPalette = lazy(() => import('./components/CommandPalette.tsx'));
 const AuthModal = lazy(() => import('./components/AuthModal.tsx'));
 const PublishModal = lazy(() => import('./components/PublishModal.tsx'));
-
-const PROJECTS_STORAGE_KEY = 'archigram_projects';
+const PromptMarketplace = lazy(() => import('./components/PromptMarketplace.tsx'));
+const PublishPromptModal = lazy(() => import('./components/PublishPromptModal.tsx'));
 
 // Loading Fallback
 const LoadingScreen = () => (
@@ -105,46 +99,27 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
 };
 
 function App() {
-  // --- 1. App Level State ---
-  const [currentView, setCurrentView] = useState<AppView>('landing');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
+  // --- Router ---
+  const { currentView, setCurrentView } = useAppRouter();
 
-  // Navigation State
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile toggle
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop mini-mode
-
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  // --- 2. Editor Level State ---
-  const [code, setCode] = useState<string>('');
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-
+  // --- UI State ---
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Split);
-  const [error, setError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<DiagramTheme>('dark');
-  const [showToast, setShowToast] = useState<{ message: string; visible: boolean }>({
-    message: '',
-    visible: false,
-  });
+  const [error, setError] = useState<string | null>(null);
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(
     null
   );
   const [isFixing, setIsFixing] = useState(false);
+  const [isAIChatExpanded, setIsAIChatExpanded] = useState(true);
 
-  // --- 3. Style State ---
-  const [customStyle, setCustomStyle] = useState<DiagramStyleConfig>({});
-
-  // --- 4. Modal States ---
+  // --- Modal States ---
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isImageImportModalOpen, setIsImageImportModalOpen] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
-
   const [publishData, setPublishData] = useState({
     title: '',
     author: '',
@@ -152,114 +127,19 @@ function App() {
     tags: '',
   });
   const [isPublishing, setIsPublishing] = useState(false);
-
-  // Command Palette & Keyboard Shortcuts
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isAIChatExpanded, setIsAIChatExpanded] = useState(true);
+  const [isPublishPromptModalOpen, setIsPublishPromptModalOpen] = useState(false);
+  const [pendingPromptText, setPendingPromptText] = useState('');
+  const [pendingPromptResultCode, setPendingPromptResultCode] = useState<string | undefined>();
 
-  // Authentication
+  // --- Authentication ---
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
 
-  // Ref for cleanup/persistence safety
-  const projectsRef = useRef(projects);
   useEffect(() => {
-    projectsRef.current = projects;
-  }, [projects]);
-
-  // --- 5. Initialization Logic ---
-
-  useEffect(() => {
-    const hasHash = window.location.hash.length > 1;
-    const hasProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-
-    if (hasHash || hasProjects) {
-      setCurrentView('app');
-    }
-
-    const loadProjects = () => {
-      try {
-        const rawProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-        const loadedProjects: Project[] = rawProjects ? JSON.parse(rawProjects) : [];
-
-        // Migration
-        const legacyCode = localStorage.getItem(STORAGE_KEY);
-        if (legacyCode && loadedProjects.length === 0) {
-          const legacyProject: Project = {
-            id: 'legacy-' + Date.now(),
-            name: 'My First Diagram',
-            code: legacyCode,
-            updatedAt: Date.now(),
-            versions: [],
-          };
-          loadedProjects.push(legacyProject);
-          localStorage.removeItem(STORAGE_KEY);
-        }
-
-        if (loadedProjects.length === 0) {
-          loadedProjects.push({
-            id: 'init-' + Date.now(),
-            name: 'Uber System Flow',
-            code: INITIAL_CODE,
-            updatedAt: Date.now(),
-            versions: [],
-          });
-        }
-
-        setProjects(loadedProjects);
-
-        if (loadedProjects.length > 0) {
-          const mostRecent = loadedProjects.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-          setActiveProjectId(mostRecent.id);
-          setCode(mostRecent.code);
-          setHistory([mostRecent.code]);
-          // Load saved style if exists
-          if (mostRecent.styleConfig) {
-            setCustomStyle(mostRecent.styleConfig);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load projects', e);
-        setProjects([
-          {
-            id: 'err',
-            name: 'New Diagram',
-            code: INITIAL_CODE,
-            updatedAt: Date.now(),
-            versions: [],
-          },
-        ]);
-        setActiveProjectId('err');
-        setCode(INITIAL_CODE);
-      }
-    };
-
-    loadProjects();
-
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-      const decoded = decodeCodeFromUrl(hash);
-      if (decoded) {
-        const sharedProject: Project = {
-          id: 'shared-' + Date.now(),
-          name: 'Shared Diagram',
-          code: decoded,
-          updatedAt: Date.now(),
-          versions: [],
-        };
-        setProjects((prev) => [sharedProject, ...prev]);
-        setActiveProjectId(sharedProject.id);
-        setCode(decoded);
-        setHistory([decoded]);
-        window.location.hash = '';
-      }
-    }
-
-    // Initialize auth state
     getCurrentUser().then(setUser);
 
-    // Listen for auth state changes
     const {
       data: { subscription },
     } = onAuthStateChange((user) => {
@@ -271,58 +151,38 @@ function App() {
     };
   }, []);
 
-  // --- 6. Persistence & Project Management ---
+  // --- Projects (extracted hook) ---
+  const {
+    projects,
+    activeProjectId,
+    code,
+    setCode,
+    customStyle,
+    setCustomStyle,
+    lastSaved,
+    saveStatus,
+    pendingDeleteId,
+    setPendingDeleteId,
+    canUndo,
+    canRedo,
+    activeProject,
+    undo,
+    redo,
+    handleCreateProject,
+    handleCreateFromTemplate,
+    handleFork,
+    handleSelectProject,
+    handleRenameProject,
+    handleDeleteProject,
+    confirmDeleteProject,
+    handleImageImport,
+    handleDuplicateDiagram,
+    handleAIUpdate,
+    handleManualSnapshot,
+    handleRestoreVersion,
+  } = useProjects({ setCurrentView, setIsSidebarOpen, setViewMode });
 
-  const isFirstRender = useRef(true);
-
-  // Debounced auto-save
-  useEffect(() => {
-    if (projects.length === 0) return;
-
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    setSaveStatus('saving');
-
-    const saveTimeout = setTimeout(() => {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
-      setLastSaved(new Date());
-      setSaveStatus('saved');
-    }, 1000); // 1s debounce
-
-    return () => clearTimeout(saveTimeout);
-  }, [projects]);
-
-  // Safety: Save on tab close
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (projectsRef.current.length > 0) {
-        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsRef.current));
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-
-  // Persist Style Changes to Project
-  useEffect(() => {
-    if (!activeProjectId) return;
-
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === activeProjectId) {
-          // Only update if code or style changed
-          if (p.code !== code || JSON.stringify(p.styleConfig) !== JSON.stringify(customStyle)) {
-            return { ...p, code, styleConfig: customStyle, updatedAt: Date.now() };
-          }
-        }
-        return p;
-      })
-    );
-  }, [code, customStyle, activeProjectId]);
-
+  // --- Responsive Layout ---
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
@@ -337,296 +197,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- 7. Undo/Redo Logic ---
-  useEffect(() => {
-    if (history.length > 0 && code === history[historyIndex]) return;
-
-    const timeout = setTimeout(() => {
-      setHistory((prev) => {
-        const upToCurrent = prev.slice(0, historyIndex + 1);
-        return [...upToCurrent, code];
-      });
-      setHistoryIndex((prev) => prev + 1);
-    }, 800);
-
-    return () => clearTimeout(timeout);
-  }, [code, historyIndex, history]);
-
-  const undo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setCode(history[newIndex]);
-    }
-  };
-
-  const redo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setCode(history[newIndex]);
-    }
-  };
-
-  const addVersionToProject = (
-    projectId: string,
-    newCode: string,
-    label: string,
-    source: 'ai' | 'manual'
-  ) => {
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          const newVersion: ProjectVersion = {
-            id: Date.now().toString(),
-            timestamp: Date.now(),
-            code: newCode,
-            label,
-            source,
-          };
-          // Keep only last 50 versions to prevent localStorage bloat
-          const updatedVersions = [newVersion, ...(p.versions || [])].slice(0, 50);
-          return { ...p, versions: updatedVersions };
-        }
-        return p;
-      })
-    );
-  };
-
-  const handleAIUpdate = (newCode: string) => {
-    analytics.diagramGenerated('mermaid');
-    // 1. Undo/Redo History
-    setHistory((prev) => {
-      const upToCurrent = prev.slice(0, historyIndex + 1);
-      return [...upToCurrent, newCode];
-    });
-    setHistoryIndex((prev) => prev + 1);
-    setCode(newCode);
-
-    // 2. Version History (Auto Snapshot)
-    if (activeProjectId) {
-      addVersionToProject(activeProjectId, newCode, 'AI Update', 'ai');
-    }
-  };
-
-  const handleManualSnapshot = (label: string = 'Manual Save') => {
-    if (activeProjectId) {
-      addVersionToProject(activeProjectId, code, label, 'manual');
-      setShowToast({ message: 'Version saved successfully', visible: true });
-      setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
-    }
-  };
-
-  const handleRestoreVersion = (version: ProjectVersion) => {
-    setCode(version.code);
-    // Also add to undo stack so user can undo the restore
-    setHistory((prev) => {
-      const upToCurrent = prev.slice(0, historyIndex + 1);
-      return [...upToCurrent, version.code];
-    });
-    setHistoryIndex((prev) => prev + 1);
-
-    setShowToast({ message: `Restored version: ${version.label}`, visible: true });
-    setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
-  };
-
-  // --- 8. Project Actions ---
-
-  const handleCreateProject = () => {
-    analytics.projectCreated();
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name: `Diagram ${projects.length + 1}`,
-      code: `graph TD\n    A[Start] --> B[Process]\n    B --> C[End]`,
-      updatedAt: Date.now(),
-      styleConfig: {},
-      versions: [],
-    };
-
-    const updatedProjects = [newProject, ...projects];
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects)); // Immediate save on create
-
-    setActiveProjectId(newProject.id);
-    setCode(newProject.code);
-    setCustomStyle({});
-    setHistory([newProject.code]);
-    setHistoryIndex(0);
-
-    if (window.innerWidth >= 768) {
-      setViewMode(ViewMode.Split);
-    }
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  const handleCreateFromTemplate = (templateName: string, templateCode: string) => {
-    analytics.templateUsed(templateName);
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name: templateName,
-      code: templateCode,
-      updatedAt: Date.now(),
-      styleConfig: {},
-      versions: [],
-    };
-
-    const updatedProjects = [newProject, ...projects];
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-    setActiveProjectId(newProject.id);
-    setCode(newProject.code);
-    setCustomStyle({});
-    setHistory([newProject.code]);
-    setHistoryIndex(0);
-
-    if (window.innerWidth >= 768) {
-      setViewMode(ViewMode.Split);
-    }
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  // FORK FUNCTIONALITY
-  const handleFork = (diagram: CommunityDiagram) => {
-    analytics.diagramForked();
-    const newProject: Project = {
-      id: `fork-${Date.now()}`,
-      name: `Fork: ${diagram.title}`,
-      code: diagram.code,
-      updatedAt: Date.now(),
-      styleConfig: {},
-      versions: [],
-    };
-
-    const updatedProjects = [newProject, ...projects];
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-    setActiveProjectId(newProject.id);
-    setCode(newProject.code);
-    setCustomStyle({});
-    setHistory([newProject.code]);
-    setHistoryIndex(0);
-
-    setCurrentView('app');
-    setShowToast({ message: 'Forked successfully to workspace', visible: true });
-    setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
-  };
-
-  const handleSelectProject = (id: string) => {
-    const project = projects.find((p) => p.id === id);
-    if (project) {
-      setActiveProjectId(id);
-      setCode(project.code);
-      setCustomStyle(project.styleConfig || {});
-      setHistory([project.code]);
-      setHistoryIndex(0);
-
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      }
-    }
-  };
-
-  const handleRenameProject = (id: string, newName: string) => {
-    if (!newName.trim()) return;
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          return { ...p, name: newName, updatedAt: Date.now() };
-        }
-        return p;
-      })
-    );
-  };
-
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (projects.length <= 1) return;
-
-    setPendingDeleteId(id);
-  };
-
-  const confirmDeleteProject = () => {
-    if (!pendingDeleteId) return;
-
-    const id = pendingDeleteId;
-    setProjects((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-
-      if (id === activeProjectId && next.length > 0) {
-        const nextProject = next[0];
-        setActiveProjectId(nextProject.id);
-        setCode(nextProject.code);
-        setCustomStyle(nextProject.styleConfig || {});
-        setHistory([nextProject.code]);
-        setHistoryIndex(0);
-      }
-
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-
-    setPendingDeleteId(null);
-  };
-
-  // Image Import Handler
-  const handleImageImport = (importedCode: string) => {
-    analytics.visionAiUsed();
-    const newProject: Project = {
-      id: 'imported-' + Date.now(),
-      name: 'Scanned Diagram',
-      code: importedCode,
-      updatedAt: Date.now(),
-      styleConfig: {},
-      versions: [],
-    };
-
-    const updatedProjects = [newProject, ...projects];
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-    setActiveProjectId(newProject.id);
-    setCode(newProject.code);
-    setCustomStyle({});
-    setHistory([newProject.code]);
-    setHistoryIndex(0);
-
-    if (window.innerWidth >= 768) {
-      setViewMode(ViewMode.Split);
-    }
-
-    setShowToast({ message: 'Diagram successfully scanned!', visible: true });
-    setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
-  };
-
-  // Audit Handler
-  const handleAudit = async () => {
-    analytics.auditRun();
-    setIsAuditModalOpen(true);
-    setIsAuditing(true);
-    setAuditReport(null); // Reset previous report
-
-    try {
-      const report = await auditDiagram(code);
-      setAuditReport(report);
-    } catch (e) {
-      console.error(e);
-      setShowToast({ message: 'Audit failed. Please try again.', visible: true });
-      setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
-      setIsAuditModalOpen(false);
-    } finally {
-      setIsAuditing(false);
-    }
-  };
-
-  // --- 9. Export/Share Handlers ---
+  // --- Export/Share Handlers ---
 
   const handleShare = () => {
     const hash = encodeCodeToUrl(code);
@@ -639,11 +210,11 @@ function App() {
     navigator.clipboard
       .writeText(fullUrl)
       .then(() => {
-        setShowToast({ message: 'Link copied to clipboard', visible: true });
-        setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+        toast.success('Link copied to clipboard');
       })
       .catch((e) => {
         console.error('Clipboard failed', e);
+        toast.error('Failed to copy link');
       });
   };
 
@@ -652,10 +223,8 @@ function App() {
     const svg = container?.querySelector('svg');
     if (!svg) return null;
 
-    // Clone to safely modify
     const clone = svg.cloneNode(true) as SVGElement;
 
-    // Get natural dimensions
     let width = 0,
       height = 0;
     const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
@@ -672,12 +241,10 @@ function App() {
       height = rect.height / currentScale;
     }
 
-    // Explicitly set width/height on clone for export consistency
     clone.setAttribute('width', width.toString());
     clone.setAttribute('height', height.toString());
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
-    // Apply Background Color
     const bgColor = customStyle.backgroundColor || (theme === 'neutral' ? '#ffffff' : '#131316');
     clone.style.backgroundColor = bgColor;
 
@@ -687,7 +254,7 @@ function App() {
   const handleExportSvg = () => {
     const data = getSvgData();
     if (!data) {
-      setShowToast({ message: 'Export failed: No diagram found', visible: true });
+      toast.error('Export failed: No diagram found');
       return;
     }
     const { clone } = data;
@@ -707,7 +274,7 @@ function App() {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('SVG Export failed:', e);
-      setShowToast({ message: 'SVG Export failed', visible: true });
+      toast.error('SVG Export failed');
     }
   };
 
@@ -726,18 +293,14 @@ function App() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // High resolution export
         const scale = 3;
         canvas.width = width * scale;
         canvas.height = height * scale;
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          // Draw background explicitly on canvas (safer than SVG background for PNG)
           ctx.fillStyle = bgColor;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          // Draw image
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
           const link = document.createElement('a');
@@ -749,17 +312,18 @@ function App() {
       };
       img.onerror = (e) => {
         console.error('Image load error for PNG export', e);
-        setShowToast({ message: 'PNG Generation failed', visible: true });
+        toast.error('PNG Generation failed');
         URL.revokeObjectURL(url);
       };
       img.src = url;
     } catch (e) {
       console.error('PNG Export failed:', e);
-      setShowToast({ message: 'PNG Export failed', visible: true });
+      toast.error('PNG Export failed');
     }
   };
 
-  // Publish Handlers
+  // --- Publish Handlers ---
+
   const openPublishModal = () => {
     const activeP = projects.find((p) => p.id === activeProjectId);
     setPublishData({
@@ -776,7 +340,6 @@ function App() {
 
     setIsPublishing(true);
 
-    // Save author for next time
     if (publishData.author) localStorage.setItem('archigram_author', publishData.author);
 
     const tagsArray = publishData.tags
@@ -797,15 +360,34 @@ function App() {
     if (success) {
       analytics.diagramPublished(tagsArray);
       setIsPublishModalOpen(false);
-      setShowToast({ message: 'Diagram successfully published to Gallery!', visible: true });
-      setTimeout(() => setShowToast({ message: '', visible: false }), 4000);
+      toast.success('Diagram successfully published to Gallery!');
     } else {
-      setShowToast({ message: 'Failed to publish. Try again.', visible: true });
-      setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+      toast.error('Failed to publish. Try again.');
     }
   };
 
-  // Syntax Fix Handler
+  // --- Audit Handler ---
+
+  const handleAudit = async () => {
+    analytics.auditRun();
+    setIsAuditModalOpen(true);
+    setIsAuditing(true);
+    setAuditReport(null);
+
+    try {
+      const report = await auditDiagram(code);
+      setAuditReport(report);
+    } catch (e) {
+      console.error(e);
+      toast.error('Audit failed. Please try again.');
+      setIsAuditModalOpen(false);
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  // --- Syntax Fix Handler ---
+
   const handleFixError = async () => {
     if (!code || !error) return;
 
@@ -815,51 +397,37 @@ function App() {
       const fixedCode = await fixDiagramSyntax(code, error);
       if (fixedCode) {
         setCode(fixedCode);
-        handleAIUpdate(fixedCode); // Save to history
-        setError(null); // Clear error immediately (re-render will verify)
-        setShowToast({ message: 'Syntax error auto-corrected', visible: true });
-        setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+        handleAIUpdate(fixedCode);
+        setError(null);
+        toast.success('Syntax error auto-corrected');
       }
     } catch (e) {
       console.error('Auto-fix failed:', e);
-      setShowToast({ message: 'Failed to fix code automatically.', visible: true });
-      setTimeout(() => setShowToast({ message: '', visible: false }), 3000);
+      toast.error('Failed to fix code automatically.');
     } finally {
       setIsFixing(false);
     }
   };
 
-  // Duplicate Diagram Handler
-  const handleDuplicateDiagram = () => {
-    if (!activeProjectId) return;
-    const project = projects.find((p) => p.id === activeProjectId);
-    if (!project) return;
+  // --- Prompt Handlers ---
 
-    analytics.projectDuplicated();
-    const duplicatedProject: Project = {
-      id: Date.now().toString(),
-      name: `${project.name} (Copy)`,
-      code: project.code,
-      updatedAt: Date.now(),
-      styleConfig: { ...project.styleConfig },
-      versions: [],
-    };
-
-    const updatedProjects = [duplicatedProject, ...projects];
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
-
-    setActiveProjectId(duplicatedProject.id);
-    setCode(duplicatedProject.code);
-    setCustomStyle(duplicatedProject.styleConfig || {});
-    setHistory([duplicatedProject.code]);
-    setHistoryIndex(0);
-
-    setShowToast({ message: 'Diagram duplicated', visible: true });
-    setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
+  const handleTryPrompt = (promptText: string, _domain: string, resultCode?: string) => {
+    // Navigate to app view and load the prompt text into AI chat
+    setCurrentView('app');
+    // Store the prompt to be picked up by AIChat
+    setPendingPromptText(promptText);
+    setPendingPromptResultCode(resultCode);
+    setIsAIChatExpanded(true);
   };
 
-  // Global Keyboard Shortcuts
+  const handleOpenPublishPrompt = (promptText: string, resultCode?: string) => {
+    setPendingPromptText(promptText);
+    setPendingPromptResultCode(resultCode);
+    setIsPublishPromptModalOpen(true);
+  };
+
+  // --- Keyboard Shortcuts ---
+
   useKeyboardShortcuts({
     currentView,
     isPublishModalOpen,
@@ -867,7 +435,6 @@ function App() {
     isAuditModalOpen,
     isCommandPaletteOpen,
     setCurrentView,
-    setShowToast,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
@@ -880,13 +447,10 @@ function App() {
     openPublishModal,
   });
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
-  const activeProject = projects.find((p) => p.id === activeProjectId);
-
-  // Inject Theme Variables
+  // --- Theme ---
   const appStyle = THEMES[theme] || THEMES.dark;
+
+  // --- Route-Based Views ---
 
   if (currentView === 'landing') {
     return (
@@ -907,7 +471,31 @@ function App() {
   if (currentView === 'gallery') {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <CommunityGallery onNavigate={setCurrentView} onFork={handleFork} />
+        <CommunityGallery
+          onNavigate={setCurrentView}
+          onFork={handleFork}
+          user={user}
+          onOpenAuth={() => {
+            setAuthModalMode('signin');
+            setIsAuthModalOpen(true);
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'discover') {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <DiscoverPage onNavigate={setCurrentView} onFork={handleFork} />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'prompts') {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PromptMarketplace onNavigate={setCurrentView} onTryPrompt={handleTryPrompt} />
       </Suspense>
     );
   }
@@ -1110,6 +698,7 @@ function App() {
                 onSaveVersion={handleManualSnapshot}
                 isExpanded={isAIChatExpanded}
                 onToggleExpanded={setIsAIChatExpanded}
+                onSharePrompt={handleOpenPublishPrompt}
               />
             </Suspense>
           </div>
@@ -1207,6 +796,19 @@ function App() {
         </Suspense>
       )}
 
+      {/* Publish Prompt Modal */}
+      {isPublishPromptModalOpen && (
+        <Suspense fallback={null}>
+          <PublishPromptModal
+            isOpen={isPublishPromptModalOpen}
+            onClose={() => setIsPublishPromptModalOpen(false)}
+            promptText={pendingPromptText}
+            resultCode={pendingPromptResultCode}
+            username={user?.username || ''}
+          />
+        </Suspense>
+      )}
+
       {/* Auth Modal */}
       {isAuthModalOpen && (
         <Suspense fallback={null}>
@@ -1222,12 +824,17 @@ function App() {
         </Suspense>
       )}
 
-      {showToast.visible && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-surface border border-primary/30 text-primary px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 z-50 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4" />
-          <span className="text-sm font-medium">{showToast.message}</span>
-        </div>
-      )}
+      <Toaster
+        theme="dark"
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'rgb(var(--surface))',
+            border: '1px solid rgba(var(--primary), 0.3)',
+            color: 'rgb(var(--text))',
+          },
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 import { analytics } from '../utils/analytics.ts';
 import { AppView } from '../types.ts';
 
@@ -9,7 +10,6 @@ interface UseKeyboardShortcutsOptions {
   isAuditModalOpen: boolean;
   isCommandPaletteOpen: boolean;
   setCurrentView: (view: AppView) => void;
-  setShowToast: (toast: { message: string; visible: boolean }) => void;
   setIsAIChatExpanded: (fn: (prev: boolean) => boolean) => void;
   setIsCommandPaletteOpen: (open: boolean) => void;
   setIsPublishModalOpen: (open: boolean) => void;
@@ -30,7 +30,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     isAuditModalOpen,
     isCommandPaletteOpen,
     setCurrentView,
-    setShowToast,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
@@ -63,8 +62,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
       if (modKey && e.key === 's') {
         e.preventDefault();
-        setShowToast({ message: 'Saved automatically', visible: true });
-        setTimeout(() => setShowToast({ message: '', visible: false }), 2000);
+        toast.success('Saved automatically');
         return;
       }
 
@@ -148,7 +146,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     isAuditModalOpen,
     isCommandPaletteOpen,
     setCurrentView,
-    setShowToast,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,

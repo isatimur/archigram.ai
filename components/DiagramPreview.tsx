@@ -304,6 +304,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
       isMounted = false;
       clearTimeout(renderTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     code,
     iconsLoaded,

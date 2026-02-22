@@ -1,0 +1,41 @@
+title: "[Question]: "
+labels:
+  - "question"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about ArchiGram.ai? Ask away!
+
+        Before asking, please:
+        - Check the [documentation](https://archigram-ai.vercel.app/#docs)
+        - Search existing [discussions](https://github.com/isatimur/archigram.ai/discussions)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Usage / How-to
+        - Setup / Installation
+        - Diagram types
+        - AI generation
+        - Self-hosting
+        - Integration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any additional information that might help answer your question

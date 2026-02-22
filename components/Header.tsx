@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Share2,
   Palette,
@@ -27,7 +27,9 @@ import {
   X,
   User,
   LogOut,
+  Mail,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   ViewMode,
   DiagramTheme,
@@ -36,6 +38,8 @@ import {
   AppView,
   User as UserType,
 } from '../types.ts';
+
+const ShareEmailModal = lazy(() => import('./ShareEmailModal.tsx'));
 
 interface HeaderProps {
   viewMode: ViewMode;
@@ -83,6 +87,7 @@ const Header: React.FC<HeaderProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
+  const [showShareEmailModal, setShowShareEmailModal] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
 
@@ -95,9 +100,11 @@ const Header: React.FC<HeaderProps> = ({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      toast.success('Link copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('Failed to copy link');
     }
   };
 
@@ -117,10 +124,17 @@ const Header: React.FC<HeaderProps> = ({
     try {
       await navigator.clipboard.writeText(embedCode);
       setEmbedCopied(true);
+      toast.success('Embed code copied to clipboard');
       setTimeout(() => setEmbedCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy embed code:', err);
+      toast.error('Failed to copy embed code');
     }
+  };
+
+  const handleShareEmail = () => {
+    setShowShareEmailModal(true);
+    setShowShareMenu(false);
   };
 
   // Sync title when active project changes
@@ -159,446 +173,490 @@ const Header: React.FC<HeaderProps> = ({
   const isDarkMode = currentTheme !== 'neutral';
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
-      {/* 1. Brand Identity & Project Title */}
-      <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
-        <div className="flex flex-col justify-center select-none shrink-0">
-          <h1
-            onClick={() => onNavigate('landing')}
-            className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Rocket className="w-3 h-3 text-white" />
-            </div>
-            <span className="hidden lg:inline">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
-                Archi
-              </span>
-              <span className="text-text font-bold">Gram</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
-                .ai
-              </span>
-            </span>
-          </h1>
-        </div>
-
-        <div className="h-6 w-px bg-border/50 hidden md:block"></div>
-
-        {/* Project Title (Editable) */}
-        <div className="flex items-center relative group min-w-0 flex-1">
-          {isEditingTitle ? (
-            <input
-              type="text"
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              onBlur={handleTitleSubmit}
-              onKeyDown={handleKeyDown}
-              autoFocus
-              maxLength={100}
-              aria-label="Project title"
-              className="bg-surface border border-primary/50 text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 w-full min-w-[120px]"
-            />
-          ) : (
-            <div
-              onClick={() => setIsEditingTitle(true)}
-              className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover rounded-md px-2 py-1 transition-colors text-sm font-medium text-text group truncate"
-              title="Click to rename"
+    <>
+      <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
+        {/* 1. Brand Identity & Project Title */}
+        <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
+          <div className="flex flex-col justify-center select-none shrink-0">
+            <h1
+              onClick={() => onNavigate('landing')}
+              className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
             >
-              <span className="truncate">{activeProject?.name || 'Untitled Diagram'}</span>
-              <Pencil className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          )}
+              <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <Rocket className="w-3 h-3 text-white" />
+              </div>
+              <span className="hidden lg:inline">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
+                  Archi
+                </span>
+                <span className="text-text font-bold">Gram</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
+                  .ai
+                </span>
+              </span>
+            </h1>
+          </div>
+
+          <div className="h-6 w-px bg-border/50 hidden md:block"></div>
+
+          {/* Project Title (Editable) */}
+          <div className="flex items-center relative group min-w-0 flex-1">
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                maxLength={100}
+                aria-label="Project title"
+                className="bg-surface border border-primary/50 text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 w-full min-w-[120px]"
+              />
+            ) : (
+              <div
+                onClick={() => setIsEditingTitle(true)}
+                className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover rounded-md px-2 py-1 transition-colors text-sm font-medium text-text group truncate"
+                title="Click to rename"
+              >
+                <span className="truncate">{activeProject?.name || 'Untitled Diagram'}</span>
+                <Pencil className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 2. Middle: View & Tools */}
-      <div className="flex items-center gap-2 md:gap-4">
-        {/* Tools Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowTools(!showTools)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
-          >
-            <Grid className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Tools</span>
-            <ChevronDown className="w-3 h-3 opacity-50" />
-          </button>
+        {/* 2. Middle: View & Tools */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Tools Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTools(!showTools)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Tools</span>
+              <ChevronDown className="w-3 h-3 opacity-50" />
+            </button>
 
-          {showTools && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
-              <div className="absolute top-full left-0 mt-2 w-56 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+            {showTools && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
+                <div className="absolute top-full left-0 mt-2 w-56 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <button
+                    onClick={() => {
+                      onNavigate('app');
+                      setShowTools(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  >
+                    <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
+                  </button>
+                  <button
+                    onClick={() => {
+                      onNavigate('plantuml');
+                      setShowTools(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  >
+                    <Binary className="w-4 h-4 text-emerald-500" />
+                    PlantUML Studio
+                  </button>
+                  <div className="h-px bg-border/50 my-1"></div>
+                  <button
+                    onClick={() => {
+                      onNavigate('discover');
+                      setShowTools(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  >
+                    <Grid className="w-4 h-4 text-amber-400" />
+                    Discover Collections
+                  </button>
+                  <button
+                    onClick={() => {
+                      onNavigate('prompts');
+                      setShowTools(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  >
+                    <Code className="w-4 h-4 text-pink-400" />
+                    Prompt Marketplace
+                  </button>
+                  <button
+                    onClick={() => {
+                      onAudit();
+                      setShowTools(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-orange-400" />
+                    Run Audit
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden md:block h-6 w-px bg-border/50"></div>
+
+          {/* View Switcher */}
+          <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
+            {[
+              { mode: ViewMode.Code, icon: Code2, label: 'Code' },
+              { mode: ViewMode.Split, icon: Columns, label: 'Split' },
+              { mode: ViewMode.Preview, icon: Eye, label: 'Preview' },
+            ].map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`p-2 rounded-md transition-all duration-200 flex items-center gap-2 ${
+                  viewMode === mode
+                    ? 'bg-background text-text shadow-sm ring-1 ring-border'
+                    : 'text-text-muted hover:text-text hover:bg-surface-hover'
+                }`}
+                title={label}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden md:block h-6 w-px bg-border/50"></div>
+
+          <div className="flex items-center gap-2">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => setTheme(isDarkMode ? 'neutral' : 'dark')}
+              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* Theme Dropdown */}
+            <div className="relative hidden sm:block">
+              <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
                 <button
-                  onClick={() => {
-                    onNavigate('app');
-                    setShowTools(false);
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
+                  onClick={() => setShowThemes(!showThemes)}
+                  className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
+                  title="Change Theme"
                 >
-                  <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
-                </button>
-                <button
-                  onClick={() => {
-                    onNavigate('plantuml');
-                    setShowTools(false);
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                >
-                  <Binary className="w-4 h-4 text-emerald-500" />
-                  PlantUML Studio
-                </button>
-                <div className="h-px bg-border/50 my-1"></div>
-                <button
-                  onClick={() => {
-                    onAudit();
-                    setShowTools(false);
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4 text-orange-400" />
-                  Run Audit
+                  <Palette className="w-3.5 h-3.5" />
+                  <span className="capitalize hidden lg:inline">{currentTheme}</span>
+                  <ChevronDown className="w-3 h-3 opacity-50" />
                 </button>
               </div>
-            </>
-          )}
+
+              {showThemes && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
+                  <div className="absolute top-full left-0 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">
+                      Theme Preset
+                    </div>
+                    {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          setTheme(t);
+                          setShowThemes(false);
+                        }}
+                        className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
+                            style={{ backgroundColor: themeColors[t] }}
+                          ></div>
+                          <span className="capitalize">{t}</span>
+                        </div>
+                        {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="hidden md:block h-6 w-px bg-border/50"></div>
+        {/* 3. Actions */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* User Menu */}
+          <div className="relative">
+            {user ? (
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">
+                  {user.username || user.email?.split('@')[0]}
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onOpenAuth?.('signin')}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Sign In</span>
+              </button>
+            )}
 
-        {/* View Switcher */}
-        <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
-          {[
-            { mode: ViewMode.Code, icon: Code2, label: 'Code' },
-            { mode: ViewMode.Split, icon: Columns, label: 'Split' },
-            { mode: ViewMode.Preview, icon: Eye, label: 'Preview' },
-          ].map(({ mode, icon: Icon, label }) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`p-2 rounded-md transition-all duration-200 flex items-center gap-2 ${
-                viewMode === mode
-                  ? 'bg-background text-text shadow-sm ring-1 ring-border'
-                  : 'text-text-muted hover:text-text hover:bg-surface-hover'
-              }`}
-              title={label}
-            >
-              <Icon className="w-4 h-4" />
-            </button>
-          ))}
-        </div>
+            {showUserMenu && user && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)}></div>
+                <div className="absolute top-full right-0 mt-2 w-48 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-2 border-b border-border">
+                    <div className="text-sm font-medium text-text">{user.username || 'User'}</div>
+                    <div className="text-xs text-text-muted truncate">{user.email}</div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const { signOut } = await import('../services/supabaseClient.ts');
+                      await signOut();
+                      setShowUserMenu(false);
+                      window.location.reload();
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <LogOut className="w-4 h-4 text-text-muted" />
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
-        <div className="hidden md:block h-6 w-px bg-border/50"></div>
-
-        <div className="flex items-center gap-2">
-          {/* Dark Mode Toggle */}
+          {/* Audit Button (Visible on MD+) */}
           <button
-            onClick={() => setTheme(isDarkMode ? 'neutral' : 'dark')}
-            className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
-            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            onClick={onAudit}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 rounded-lg transition-all"
+            title="Perform AI Security & Architecture Audit"
           >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Audit</span>
           </button>
 
-          {/* Theme Dropdown */}
-          <div className="relative hidden sm:block">
-            <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
-              <button
-                onClick={() => setShowThemes(!showThemes)}
-                className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
-                title="Change Theme"
-              >
-                <Palette className="w-3.5 h-3.5" />
-                <span className="capitalize hidden lg:inline">{currentTheme}</span>
-                <ChevronDown className="w-3 h-3 opacity-50" />
-              </button>
-            </div>
+          {/* Save Version Button */}
+          <button
+            onClick={() => onSaveVersion('Manual Save')}
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
+            title="Create a Checkpoint"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Save</span>
+          </button>
 
-            {showThemes && (
+          {/* Publish Button */}
+          <button
+            onClick={onPublish}
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+            title="Publish to Community Gallery (Cmd+Shift+P)"
+            aria-label="Publish diagram to community gallery"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Publish</span>
+          </button>
+
+          <button
+            onClick={onNewProject}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+            title="New Project (Cmd+N)"
+            aria-label="Create new project"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">New</span>
+          </button>
+
+          <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
+            <button
+              onClick={onExportSvg}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
+              title="Export as SVG (Cmd+Shift+E)"
+              aria-label="Export diagram as SVG"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">SVG</span>
+            </button>
+            <div className="w-px h-4 bg-border mx-1"></div>
+            <button
+              onClick={onExportPng}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
+              title="Export as PNG (Cmd+E)"
+              aria-label="Export diagram as PNG"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">PNG</span>
+            </button>
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
+              title="Share Diagram"
+              aria-label="Share diagram"
+              aria-expanded={showShareMenu}
+              aria-haspopup="menu"
+            >
+              <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
+            {showShareMenu && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
-                <div className="absolute top-full left-0 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)}></div>
+                <div className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
                   <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">
-                    Theme Preset
+                    Share Diagram
                   </div>
-                  {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        setTheme(t);
-                        setShowThemes(false);
-                      }}
-                      className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
-                          style={{ backgroundColor: themeColors[t] }}
-                        ></div>
-                        <span className="capitalize">{t}</span>
-                      </div>
-                      {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </button>
-                  ))}
+
+                  <button
+                    onClick={() => {
+                      onShare();
+                      setShowShareMenu(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Link2 className="w-4 h-4 text-primary" />
+                    Get Share Link
+                  </button>
+
+                  <button
+                    onClick={handleCopyLink}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-text-muted" />
+                    )}
+                    {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+
+                  <div className="h-px bg-border/50 my-1"></div>
+
+                  <button
+                    onClick={handleShareTwitter}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Twitter className="w-4 h-4 text-sky-500" />
+                    Share on Twitter
+                  </button>
+
+                  <button
+                    onClick={handleShareLinkedIn}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Linkedin className="w-4 h-4 text-blue-600" />
+                    Share on LinkedIn
+                  </button>
+
+                  <button
+                    onClick={handleShareEmail}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Mail className="w-4 h-4 text-emerald-500" />
+                    Share via Email
+                  </button>
+
+                  <div className="h-px bg-border/50 my-1"></div>
+
+                  <button
+                    onClick={() => {
+                      setShowEmbedModal(true);
+                      setShowShareMenu(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Code className="w-4 h-4 text-purple-500" />
+                    Embed Diagram
+                  </button>
+
+                  <div className="h-px bg-border/50 my-1"></div>
+
+                  <div className="px-4 py-2 text-[10px] text-text-muted">
+                    Made with <span className="text-primary font-semibold">ArchiGram.ai</span>
+                  </div>
                 </div>
               </>
             )}
           </div>
         </div>
-      </div>
 
-      {/* 3. Actions */}
-      <div className="flex items-center gap-2 md:gap-3">
-        {/* User Menu */}
-        <div className="relative">
-          {user ? (
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">{user.username || user.email?.split('@')[0]}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => onOpenAuth?.('signin')}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Sign In</span>
-            </button>
-          )}
-
-          {showUserMenu && user && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)}></div>
-              <div className="absolute top-full right-0 mt-2 w-48 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="px-4 py-2 border-b border-border">
-                  <div className="text-sm font-medium text-text">{user.username || 'User'}</div>
-                  <div className="text-xs text-text-muted truncate">{user.email}</div>
-                </div>
-                <button
-                  onClick={async () => {
-                    const { signOut } = await import('../services/supabaseClient.ts');
-                    await signOut();
-                    setShowUserMenu(false);
-                    window.location.reload();
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  <LogOut className="w-4 h-4 text-text-muted" />
-                  Sign Out
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Audit Button (Visible on MD+) */}
-        <button
-          onClick={onAudit}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 rounded-lg transition-all"
-          title="Perform AI Security & Architecture Audit"
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Audit</span>
-        </button>
-
-        {/* Save Version Button */}
-        <button
-          onClick={() => onSaveVersion('Manual Save')}
-          className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
-          title="Create a Checkpoint"
-        >
-          <Save className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Save</span>
-        </button>
-
-        {/* Publish Button */}
-        <button
-          onClick={onPublish}
-          className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
-          title="Publish to Community Gallery (Cmd+Shift+P)"
-          aria-label="Publish diagram to community gallery"
-        >
-          <UploadCloud className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">Publish</span>
-        </button>
-
-        <button
-          onClick={onNewProject}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
-          title="New Project (Cmd+N)"
-          aria-label="Create new project"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden xl:inline">New</span>
-        </button>
-
-        <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
-          <button
-            onClick={onExportSvg}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-            title="Export as SVG (Cmd+Shift+E)"
-            aria-label="Export diagram as SVG"
-          >
-            <FileCode className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">SVG</span>
-          </button>
-          <div className="w-px h-4 bg-border mx-1"></div>
-          <button
-            onClick={onExportPng}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-            title="Export as PNG (Cmd+E)"
-            aria-label="Export diagram as PNG"
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">PNG</span>
-          </button>
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setShowShareMenu(!showShareMenu)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
-            title="Share Diagram"
-            aria-label="Share diagram"
-            aria-expanded={showShareMenu}
-            aria-haspopup="menu"
-          >
-            <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
-            <span className="hidden sm:inline">Share</span>
-          </button>
-
-          {showShareMenu && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)}></div>
-              <div className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">
-                  Share Diagram
-                </div>
-
-                <button
-                  onClick={() => {
-                    onShare();
-                    setShowShareMenu(false);
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  <Link2 className="w-4 h-4 text-primary" />
-                  Get Share Link
-                </button>
-
-                <button
-                  onClick={handleCopyLink}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-text-muted" />
-                  )}
-                  {copied ? 'Copied!' : 'Copy Link'}
-                </button>
-
-                <div className="h-px bg-border/50 my-1"></div>
-
-                <button
-                  onClick={handleShareTwitter}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  <Twitter className="w-4 h-4 text-sky-500" />
-                  Share on Twitter
-                </button>
-
-                <button
-                  onClick={handleShareLinkedIn}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  <Linkedin className="w-4 h-4 text-blue-600" />
-                  Share on LinkedIn
-                </button>
-
-                <div className="h-px bg-border/50 my-1"></div>
-
-                <button
-                  onClick={() => {
-                    setShowEmbedModal(true);
-                    setShowShareMenu(false);
-                  }}
-                  className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
-                >
-                  <Code className="w-4 h-4 text-purple-500" />
-                  Embed Diagram
-                </button>
-
-                <div className="h-px bg-border/50 my-1"></div>
-
-                <div className="px-4 py-2 text-[10px] text-text-muted">
-                  Made with <span className="text-primary font-semibold">ArchiGram.ai</span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Embed Modal */}
-      {showEmbedModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowEmbedModal(false)}
-        >
+        {/* Embed Modal */}
+        {showEmbedModal && (
           <div
-            className="bg-surface border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowEmbedModal(false)}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <Code className="w-5 h-5 text-purple-500" />
+            <div
+              className="bg-surface border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Code className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-text">Embed Diagram</h3>
+                    <p className="text-xs text-text-muted">
+                      Add this diagram to your website or docs
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setShowEmbedModal(false)}
+                  className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                  aria-label="Close embed dialog"
+                >
+                  <X className="w-5 h-5 text-text-muted" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold text-text">Embed Diagram</h3>
-                  <p className="text-xs text-text-muted">
-                    Add this diagram to your website or docs
-                  </p>
+                  <label className="text-xs font-medium text-text-muted mb-2 block">
+                    Embed Code
+                  </label>
+                  <div className="relative">
+                    <pre className="bg-background border border-border rounded-lg p-3 text-xs text-text-muted overflow-x-auto font-mono">
+                      {embedCode}
+                    </pre>
+                  </div>
                 </div>
-              </div>
-              <button
-                onClick={() => setShowEmbedModal(false)}
-                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
-                aria-label="Close embed dialog"
-              >
-                <X className="w-5 h-5 text-text-muted" />
-              </button>
-            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-text-muted mb-2 block">Embed Code</label>
-                <div className="relative">
-                  <pre className="bg-background border border-border rounded-lg p-3 text-xs text-text-muted overflow-x-auto font-mono">
-                    {embedCode}
-                  </pre>
+                <button
+                  onClick={handleCopyEmbed}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-all"
+                >
+                  {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {embedCopied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
+                </button>
+
+                <div className="text-xs text-text-muted text-center">
+                  Powered by <span className="text-primary font-semibold">ArchiGram.ai</span>
                 </div>
-              </div>
-
-              <button
-                onClick={handleCopyEmbed}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-all"
-              >
-                {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {embedCopied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
-              </button>
-
-              <div className="text-xs text-text-muted text-center">
-                Powered by <span className="text-primary font-semibold">ArchiGram.ai</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </header>
+        )}
+      </header>
+
+      <Suspense fallback={null}>
+        <ShareEmailModal
+          isOpen={showShareEmailModal}
+          onClose={() => setShowShareEmailModal(false)}
+          diagramTitle={activeProject?.name || 'Untitled Diagram'}
+          diagramUrl={shareUrl}
+          senderName={user?.user_metadata?.full_name || user?.email || 'Someone'}
+        />
+      </Suspense>
+    </>
   );
 };
 

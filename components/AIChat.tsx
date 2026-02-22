@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Send,
   Archive,
+  Share2,
 } from 'lucide-react';
 import { generateDiagramCode } from '../services/geminiService.ts';
 import { ChatMessage, DiagramTheme, CopilotDomain, ProjectVersion } from '../types.ts';
@@ -31,6 +32,7 @@ interface AIChatProps {
   onSaveVersion: (label: string) => void;
   isExpanded?: boolean;
   onToggleExpanded?: (expanded: boolean) => void;
+  onSharePrompt?: (promptText: string, resultCode?: string) => void;
 }
 
 const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
@@ -52,6 +54,7 @@ const AIChat: React.FC<AIChatProps> = ({
   onSaveVersion,
   isExpanded: externalIsExpanded,
   onToggleExpanded,
+  onSharePrompt,
 }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -378,7 +381,7 @@ const AIChat: React.FC<AIChatProps> = ({
                     )}
                   </div>
 
-                  {/* Phase 1: Feedback Loop */}
+                  {/* Feedback & Share */}
                   {msg.role === 'model' && !msg.isError && (
                     <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -395,6 +398,23 @@ const AIChat: React.FC<AIChatProps> = ({
                       >
                         <ThumbsDown className="w-3 h-3" />
                       </button>
+                      {msg.codeSnapshot && onSharePrompt && (
+                        <button
+                          onClick={() => {
+                            const userMsg = messages
+                              .slice(0, messages.indexOf(msg))
+                              .reverse()
+                              .find((m) => m.role === 'user');
+                            if (userMsg) {
+                              onSharePrompt(userMsg.text, msg.codeSnapshot);
+                            }
+                          }}
+                          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-primary"
+                          title="Share this prompt"
+                        >
+                          <Share2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -321,8 +321,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-2 border-t border-border bg-surface-hover/30 flex items-center justify-between text-xs text-text-muted">
+        {/* Footer - hidden on mobile */}
+        <div className="hidden sm:flex px-4 py-2 border-t border-border bg-surface-hover/30 items-center justify-between text-xs text-text-muted">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 bg-background border border-border rounded text-[10px]">

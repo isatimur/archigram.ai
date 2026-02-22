@@ -10,6 +10,7 @@ import {
   BookOpen,
   CircleHelp,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export type CopyFormat =
   | 'raw'
@@ -95,10 +96,12 @@ const CopyDropdown: React.FC<CopyDropdownProps> = ({
       await navigator.clipboard.writeText(text);
       setCopiedId(option.id);
       onCopy?.(option.id);
+      toast.success(`Copied for ${option.id === 'raw' ? 'clipboard' : option.id}`);
       setTimeout(() => setCopiedId(null), 2000);
       setIsOpen(false);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('Failed to copy to clipboard');
     }
   };
 

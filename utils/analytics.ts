@@ -87,4 +87,35 @@ export const analytics = {
   shortcutUsed: (shortcut: string) => {
     trackEvent('Shortcut Used', { shortcut });
   },
+
+  // Comments
+  commentAdded: () => {
+    trackEvent('Comment Added');
+  },
+
+  commentDeleted: () => {
+    trackEvent('Comment Deleted');
+  },
+
+  // Prompts
+  promptPublished: () => {
+    trackEvent('Prompt Published');
+  },
+
+  promptTried: () => {
+    trackEvent('Prompt Tried');
+  },
+
+  promptLiked: () => {
+    trackEvent('Prompt Liked');
+  },
+
+  // Email
+  diagramSharedViaEmail: () => {
+    trackEvent('Diagram Shared Via Email');
+  },
+
+  newsletterSubscribed: () => {
+    trackEvent('Newsletter Subscribed');
+  },
 };

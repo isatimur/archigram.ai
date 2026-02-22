@@ -92,6 +92,7 @@ Rules:
 };
 
 export const STORAGE_KEY = 'archigram_diagram_v2';
+export const PROJECTS_STORAGE_KEY = 'archigram_projects';
 
 // Phase 1: One-Click Pipeline Templates
 export const ML_TEMPLATES: Record<string, string> = {
