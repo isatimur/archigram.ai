@@ -6,6 +6,7 @@ Docling is an optional dependency — import errors produce clear guidance.
 
 from __future__ import annotations
 
+from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
 from config import get_settings
@@ -102,7 +103,7 @@ def parse_document_with_docling(
             format_options=pipeline_options if pipeline_options else None,
         )
 
-        doc_stream = DocumentStream(name=filename, stream=content)
+        doc_stream = DocumentStream(name=filename, stream=BytesIO(content))
         result = converter.convert(doc_stream)
         doc = result.document
 

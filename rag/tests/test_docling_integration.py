@@ -225,29 +225,34 @@ class TestDoclingParser:
 
     def test_missing_docling_raises_clear_error(self):
         """When docling is not installed, we get a helpful error message."""
+        import importlib
         import sys
 
         from ingest.parser import ParserError
 
-        # Remove any cached docling modules
-        docling_modules = [k for k in sys.modules if k.startswith("docling")]
-        saved = {}
-        for k in docling_modules:
-            saved[k] = sys.modules.pop(k)
+        # Setting a sys.modules entry to None makes import raise ImportError
+        docling_keys = [k for k in sys.modules if k.startswith("docling")]
+        block = {k: None for k in docling_keys}
+        block.update({
+            "docling": None,
+            "docling.datamodel": None,
+            "docling.datamodel.base_models": None,
+            "docling.datamodel.document": None,
+            "docling.document_converter": None,
+            "docling.pipeline": None,
+            "docling.pipeline.standard_pdf_pipeline": None,
+            "docling_core": None,
+            "docling_core.transforms": None,
+            "docling_core.transforms.chunker": None,
+        })
 
-        try:
-            # Re-import to get fresh module without docling
-            import importlib
-
+        with patch.dict("sys.modules", block):
             from ingest import docling_parser
 
             importlib.reload(docling_parser)
 
             with pytest.raises(ParserError, match="Docling is not installed"):
                 docling_parser.parse_document_with_docling(b"%PDF-1.4", "test.pdf", "pdf")
-        finally:
-            # Restore any previously cached modules
-            sys.modules.update(saved)
 
 
 # ---------------------------------------------------------------------------
@@ -504,24 +509,31 @@ class TestFallbackBehavior:
 
     def test_parser_raises_import_error_message(self):
         """parse_document_with_docling raises ParserError with install instructions."""
+        import importlib
         import sys
 
         from ingest.parser import ParserError
 
-        # Remove any cached docling modules to simulate not-installed
-        docling_modules = [k for k in sys.modules if k.startswith("docling")]
-        saved = {}
-        for k in docling_modules:
-            saved[k] = sys.modules.pop(k)
+        # Setting a sys.modules entry to None makes import raise ImportError
+        docling_keys = [k for k in sys.modules if k.startswith("docling")]
+        block = {k: None for k in docling_keys}
+        block.update({
+            "docling": None,
+            "docling.datamodel": None,
+            "docling.datamodel.base_models": None,
+            "docling.datamodel.document": None,
+            "docling.document_converter": None,
+            "docling.pipeline": None,
+            "docling.pipeline.standard_pdf_pipeline": None,
+            "docling_core": None,
+            "docling_core.transforms": None,
+            "docling_core.transforms.chunker": None,
+        })
 
-        try:
-            import importlib
-
+        with patch.dict("sys.modules", block):
             from ingest import docling_parser
 
             importlib.reload(docling_parser)
 
             with pytest.raises(ParserError, match="pip install docling"):
                 docling_parser.parse_document_with_docling(b"%PDF-1.4", "test.pdf", "pdf")
-        finally:
-            sys.modules.update(saved)
