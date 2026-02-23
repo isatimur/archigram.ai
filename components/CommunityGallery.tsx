@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { trendingScore } from '../utils/trending.ts';
 import {
   Search,
   GitFork,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppView, CommunityDiagram, User } from '../types.ts';
-import { COMMUNITY_DATA } from '../constants.ts';
+import { COMMUNITY_DATA, LIKED_IDS_KEY } from '../constants.ts';
 import DiagramPreview from './DiagramPreview.tsx';
 import { decodeCodeFromUrl } from '../utils/url.ts';
 import {
@@ -61,7 +62,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
   // Load Likes from Local Storage
   useEffect(() => {
-    const saved = localStorage.getItem('archigram_liked_ids');
+    const saved = localStorage.getItem(LIKED_IDS_KEY);
     if (saved) {
       try {
         setLikedIds(new Set(JSON.parse(saved)));
@@ -105,9 +106,10 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
   const filteredData = [...filteredBySearch].sort((a, b) => {
     if (filter === 'trending') {
-      const scoreA = a.likes * 2 + a.views;
-      const scoreB = b.likes * 2 + b.views;
-      return scoreB - scoreA;
+      return (
+        trendingScore(b.likes, b.views, b.createdAtTimestamp ?? 0) -
+        trendingScore(a.likes, a.views, a.createdAtTimestamp ?? 0)
+      );
     }
     if (filter === 'top') {
       return b.likes - a.likes;
@@ -132,7 +134,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     else newLikedIds.add(id);
 
     setLikedIds(newLikedIds);
-    localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(newLikedIds)));
+    localStorage.setItem(LIKED_IDS_KEY, JSON.stringify(Array.from(newLikedIds)));
 
     setDiagrams((prev) => prev.map((d) => (d.id === id ? { ...d, likes: newLikes } : d)));
 
@@ -150,7 +152,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         const reverted = new Set(prev);
         if (isLiked) reverted.add(id);
         else reverted.delete(id);
-        localStorage.setItem('archigram_liked_ids', JSON.stringify(Array.from(reverted)));
+        localStorage.setItem(LIKED_IDS_KEY, JSON.stringify(Array.from(reverted)));
         return reverted;
       });
     }
@@ -515,7 +517,17 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   );
 };
 
-const FilterButton = ({ active, onClick, icon, children }: any) => (
+const FilterButton = ({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) => (
   <button
     onClick={onClick}
     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${

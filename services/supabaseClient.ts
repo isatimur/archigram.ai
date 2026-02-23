@@ -41,8 +41,8 @@ export const signUp = async (email: string, password: string, username?: string)
     });
     if (error) throw error;
     return { user: data.user, error: null };
-  } catch (error: any) {
-    return { user: null, error: error.message };
+  } catch (error: unknown) {
+    return { user: null, error: error instanceof Error ? error.message : String(error) };
   }
 };
 
@@ -54,8 +54,8 @@ export const signIn = async (email: string, password: string) => {
     });
     if (error) throw error;
     return { user: data.user, error: null };
-  } catch (error: any) {
-    return { user: null, error: error.message };
+  } catch (error: unknown) {
+    return { user: null, error: error instanceof Error ? error.message : String(error) };
   }
 };
 
@@ -64,8 +64,8 @@ export const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 };
 
@@ -79,8 +79,8 @@ export const signInWithOAuth = async (provider: 'github' | 'google') => {
     });
     if (error) throw error;
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 };
 
@@ -161,8 +161,8 @@ export interface PaginatedResult<T> {
 }
 
 // Helper to handle error objects cleanly in console
-const logSupabaseError = (context: string, error: any) => {
-  const msg = error?.message || JSON.stringify(error);
+const logSupabaseError = (context: string, error: unknown) => {
+  const msg = error instanceof Error ? error.message : JSON.stringify(error);
   console.warn(`[Supabase] ${context}: ${msg}`);
 };
 
@@ -307,25 +307,6 @@ export const updateDiagramLikes = async (id: string, count: number): Promise<boo
   }
 };
 
-/**
- * Increment diagram views atomically.
- *
- * Best Practice: Uses atomic SQL increment to avoid race conditions.
- * The read-then-write pattern can cause lost updates under concurrent load.
- *
- * Note: For even better performance, consider creating a Postgres RPC function:
- * CREATE OR REPLACE FUNCTION increment_diagram_views(diagram_id UUID)
- * RETURNS void AS $$
- * BEGIN
- *   UPDATE community_diagrams
- *   SET views = views + 1
- *   WHERE id = diagram_id;
- * END;
- * $$ LANGUAGE plpgsql;
- *
- * @param id Diagram ID
- * @returns Success status
- */
 /**
  * Increment diagram views atomically.
  *
@@ -533,9 +514,10 @@ export const fetchCollectionItems = async (collectionId: string): Promise<Commun
     }
 
     return (data || [])
-      .filter((item: any) => item.community_diagrams)
-      .map((item: any) => {
-        const d = item.community_diagrams;
+      .filter((item: Record<string, unknown>) => item.community_diagrams)
+      .map((item: Record<string, unknown>) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d = item.community_diagrams as any;
         return {
           id: d.id,
           title: d.title,

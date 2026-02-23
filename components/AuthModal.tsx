@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Lock, User, Github, Chrome, Loader2, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Mail,
+  Lock,
+  User,
+  Github,
+  Chrome,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { signUp, signIn, signInWithOAuth, getCurrentUser } from '../services/supabaseClient.ts';
 import { User as UserType } from '../types.ts';
 
@@ -95,14 +105,22 @@ const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-dialog-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+    >
       <div
         className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-surface-hover/30">
-          <h3 className="text-lg font-bold text-text">
+          <h3 id="auth-dialog-title" className="text-lg font-bold text-text">
             {mode === 'signin' ? 'Sign In' : 'Sign Up'}
           </h3>
           <button
@@ -124,7 +142,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {message && (
             <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 text-sm">
-              <AlertCircle className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" />
               <span>{message}</span>
             </div>
           )}

@@ -198,7 +198,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
       activeStyle.diagramLook === 'handDrawn' ? 'neutral' : theme === 'midnight' ? 'dark' : theme;
     const isHandDrawn = activeStyle.diagramLook === 'handDrawn';
 
-    const themeVariables: any = {
+    const themeVariables: Record<string, string | undefined> = {
       fontFamily: '"Inter", sans-serif',
       primaryColor: activeStyle.nodeColor,
       primaryBorderColor: activeStyle.lineColor,
@@ -221,25 +221,23 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
       gitBranchLabel1: activeStyle.textColor,
     };
 
-    const config: any = {
+    const look: 'classic' | 'handDrawn' = unsafeForHandDrawn
+      ? 'classic'
+      : isHandDrawn
+        ? 'handDrawn'
+        : 'classic';
+    const curve = isHandDrawn && !unsafeForHandDrawn ? ('linear' as const) : ('basis' as const);
+
+    const config = {
       startOnLoad: false,
       theme: mermaidTheme,
-      securityLevel: 'loose',
+      securityLevel: 'loose' as const,
       fontFamily: '"Inter", sans-serif',
       themeVariables: themeVariables,
       sequence: { showSequenceNumbers: false, actorMargin: 50, useMaxWidth: true },
+      look,
+      flowchart: { htmlLabels: true, curve },
     };
-
-    if (unsafeForHandDrawn) {
-      config.look = 'classic';
-      config.flowchart = { htmlLabels: true, curve: 'basis' };
-    } else if (isHandDrawn) {
-      config.look = 'handDrawn';
-      config.flowchart = { htmlLabels: true, curve: 'linear' };
-    } else {
-      config.look = 'classic';
-      config.flowchart = { htmlLabels: true, curve: 'basis' };
-    }
 
     try {
       mermaid.initialize(config);
@@ -412,7 +410,10 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
     return baseStyle;
   };
 
-  const updateStyle = (key: keyof DiagramStyleConfig, value: any) => {
+  const updateStyle = (
+    key: keyof DiagramStyleConfig,
+    value: DiagramStyleConfig[keyof DiagramStyleConfig]
+  ) => {
     if (onUpdateStyle) {
       onUpdateStyle({ ...activeStyle, [key]: value });
     }

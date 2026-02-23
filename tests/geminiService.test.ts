@@ -165,4 +165,72 @@ describe('geminiService', () => {
       );
     });
   });
+
+  describe('imageToDiagram', () => {
+    it('should return extracted mermaid code from a base64 image', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: '```mermaid\ngraph TD\n  A[Client] --> B[Server]\n```',
+      });
+
+      const { imageToDiagram } = await import('../services/geminiService');
+      const result = await imageToDiagram('aW1hZ2VkYXRh', 'image/png');
+
+      expect(result).toContain('graph TD');
+      expect(result).toContain('A[Client] --> B[Server]');
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gemini-2.5-flash-image',
+          contents: expect.objectContaining({
+            parts: expect.arrayContaining([
+              expect.objectContaining({
+                inlineData: { mimeType: 'image/png', data: 'aW1hZ2VkYXRh' },
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('should strip data:image header from base64 before sending', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: '```mermaid\nflowchart LR\n  X --> Y\n```',
+      });
+
+      const { imageToDiagram } = await import('../services/geminiService');
+      await imageToDiagram('data:image/png;base64,aW1hZ2VkYXRh', 'image/png');
+
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.objectContaining({
+            parts: expect.arrayContaining([
+              expect.objectContaining({
+                inlineData: { mimeType: 'image/png', data: 'aW1hZ2VkYXRh' },
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('should throw when API key is missing', async () => {
+      delete process.env.API_KEY;
+      vi.resetModules();
+
+      const { imageToDiagram } = await import('../services/geminiService');
+
+      await expect(imageToDiagram('aW1hZ2VkYXRh', 'image/png')).rejects.toThrow(
+        'API Key is missing'
+      );
+    });
+
+    it('should re-throw on API error', async () => {
+      mockGenerateContent.mockRejectedValueOnce(new Error('Vision API quota exceeded'));
+
+      const { imageToDiagram } = await import('../services/geminiService');
+
+      await expect(imageToDiagram('aW1hZ2VkYXRh', 'image/png')).rejects.toThrow(
+        'Vision API quota exceeded'
+      );
+    });
+  });
 });

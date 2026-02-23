@@ -93,6 +93,9 @@ Rules:
 
 export const STORAGE_KEY = 'archigram_diagram_v2';
 export const PROJECTS_STORAGE_KEY = 'archigram_projects';
+export const LIKED_IDS_KEY = 'archigram_liked_ids';
+export const LIKED_PROMPT_IDS_KEY = 'archigram_liked_prompt_ids';
+export const AUTHOR_KEY = 'archigram_author';
 
 // Phase 1: One-Click Pipeline Templates
 export const ML_TEMPLATES: Record<string, string> = {
@@ -257,79 +260,6 @@ export const C4_TEMPLATES: Record<string, string> = {
     Order --> Payment : uses`,
 };
 
-export const COMMUNITY_DATA = [
-  {
-    id: 'c1',
-    title: 'Microservices Payment System',
-    author: 'SarahEng',
-    description:
-      'A comprehensive flow of a microservices-based payment gateway including fraud detection and ledger updates.',
-    likes: 1240,
-    views: 8500,
-    tags: ['System Design', 'FinTech', 'Flowchart'],
-    createdAt: '2d ago',
-    createdAtTimestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-    code: `graph TB
-    Client[Client App]
-    API[API Gateway]
-    Auth[Auth Service]
-    
-    subgraph Payment_Core
-        Orchestrator[Payment Orchestrator]
-        Ledger[Ledger Service]
-        Wallet[Wallet Service]
-    end
-    
-    subgraph Risk_Engine
-        Fraud[Fraud Detection]
-        KYC[KYC Service]
-    end
-    
-    subgraph External_PSPs
-        Stripe[Stripe Adapter]
-        PayPal[PayPal Adapter]
-    end
-
-    Client -->|REST| API
-    API -->|gRPC| Auth
-    API -->|gRPC| Orchestrator
-    
-    Orchestrator -->|Async| Fraud
-    Orchestrator -->|Sync| Wallet
-    
-    Fraud -.->|Risk Score| Orchestrator
-    
-    Orchestrator -->|Route| Stripe
-    Orchestrator -->|Route| PayPal
-    
-    Stripe -->|Webhook| Ledger
-    PayPal -->|Webhook| Ledger
-    
-    style Orchestrator fill:#4f46e5,stroke:#312e81,color:#fff
-    style Fraud fill:#ef4444,stroke:#7f1d1d,color:#fff
-    style Ledger fill:#10b981,stroke:#064e3b,color:#fff`,
-  },
-];
-
-export const FAQ_DATA = [
-  {
-    question: 'What is ArchiGram.ai?',
-    answer:
-      'ArchiGram.ai is an open-source, AI-powered diagramming tool designed for software architects and engineers. It uses Gemini 3 Flash to convert natural language descriptions into valid Mermaid.js code, allowing you to visualize system designs, cloud architectures, and ML pipelines instantly.',
-  },
-  {
-    question: 'How does the System Design Copilot work?',
-    answer:
-      "The System Design Copilot utilizes a Large Language Model (Gemini 3) trained on thousands of architectural patterns. You simply describe your system (e.g., 'A microservices e-commerce app with Redis caching'), and the Copilot generates a syntactically correct, visually structured Mermaid diagram for you.",
-  },
-  {
-    question: 'Is ArchiGram free to use?',
-    answer:
-      'Yes, ArchiGram.ai is Open Source Software (OSS). The core diagramming studio is free for individuals. We offer an Enterprise tier for teams requiring SSO, RBAC, and private cloud deployment.',
-  },
-  {
-    question: 'Can I export diagrams to other formats?',
-    answer:
-      'Absolutely. You can export your architectures as high-fidelity SVG (Scalable Vector Graphics) for presentations or PNG images for quick sharing. You can also copy the raw Mermaid code to use in GitHub READMEs or Notion.',
-  },
-];
+// Re-export extracted data modules for backwards compatibility
+export { COMMUNITY_DATA } from './data/communityDiagrams.ts';
+export { FAQ_DATA } from './data/faq.ts';

@@ -107,6 +107,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         <div
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => window.scrollTo(0, 0)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              window.scrollTo(0, 0);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Scroll to top"
         >
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
             <Rocket className="w-5 h-5 text-white" />

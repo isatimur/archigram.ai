@@ -216,6 +216,14 @@ const Header: React.FC<HeaderProps> = ({
             ) : (
               <div
                 onClick={() => setIsEditingTitle(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsEditingTitle(true);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 className="flex items-center gap-2 cursor-pointer hover:bg-surface-hover rounded-md px-2 py-1 transition-colors text-sm font-medium text-text group truncate"
                 title="Click to rename"
               >

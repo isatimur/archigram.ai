@@ -33,6 +33,9 @@ interface AIChatProps {
   isExpanded?: boolean;
   onToggleExpanded?: (expanded: boolean) => void;
   onSharePrompt?: (promptText: string, resultCode?: string) => void;
+  externalPrompt?: string;
+  externalResultCode?: string;
+  onConsumeExternalPrompt?: () => void;
 }
 
 const DOMAINS: CopilotDomain[] = ['General', 'Healthcare', 'Finance', 'E-commerce'];
@@ -55,6 +58,9 @@ const AIChat: React.FC<AIChatProps> = ({
   isExpanded: externalIsExpanded,
   onToggleExpanded,
   onSharePrompt,
+  externalPrompt,
+  externalResultCode,
+  onConsumeExternalPrompt,
 }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +71,7 @@ const AIChat: React.FC<AIChatProps> = ({
   const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : internalIsExpanded;
   const setIsExpanded = onToggleExpanded || setInternalIsExpanded;
   const [justCopied, setJustCopied] = useState<string | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<CopilotDomain>('General');
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
 
@@ -99,6 +106,19 @@ const AIChat: React.FC<AIChatProps> = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isExpanded, activeTab, isLoading]);
+
+  // Consume external prompt from "Try It" in Prompt Marketplace
+  useEffect(() => {
+    if (!externalPrompt) return;
+    // If result code is provided, render it immediately
+    if (externalResultCode) {
+      onCodeUpdate(externalResultCode);
+    }
+    // Auto-submit the prompt text
+    handleSubmit(externalPrompt);
+    onConsumeExternalPrompt?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalPrompt]);
 
   const processAIRequest = async (userPrompt: string) => {
     setIsLoading(true);
@@ -181,9 +201,13 @@ const AIChat: React.FC<AIChatProps> = ({
   };
 
   const handleClearHistory = () => {
-    if (window.confirm('Clear all chat history for this project?')) {
+    if (confirmingClear) {
       setMessages([]);
       localStorage.removeItem(`archigram_chat_${projectId}`);
+      setConfirmingClear(false);
+    } else {
+      setConfirmingClear(true);
+      setTimeout(() => setConfirmingClear(false), 3000);
     }
   };
 
@@ -263,6 +287,7 @@ const AIChat: React.FC<AIChatProps> = ({
               onClick={() => setIsExpanded(false)}
               className="text-text-muted hover:text-text transition-colors p-1.5 hover:bg-surface-hover rounded-lg"
               title="Minimize (Cmd+/)"
+              aria-label="Minimize AI Copilot"
             >
               <X className="w-4 h-4" />
             </button>
@@ -383,11 +408,12 @@ const AIChat: React.FC<AIChatProps> = ({
 
                   {/* Feedback & Share */}
                   {msg.role === 'model' && !msg.isError && (
-                    <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleFeedback(msg.id, 'helpful')}
                         className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
                         title="Helpful"
+                        aria-label="Mark as helpful"
                       >
                         <ThumbsUp className="w-3 h-3" />
                       </button>
@@ -395,6 +421,7 @@ const AIChat: React.FC<AIChatProps> = ({
                         onClick={() => handleFeedback(msg.id, 'unhelpful')}
                         className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
                         title="Unhelpful"
+                        aria-label="Mark as unhelpful"
                       >
                         <ThumbsDown className="w-3 h-3" />
                       </button>
@@ -583,9 +610,9 @@ const AIChat: React.FC<AIChatProps> = ({
               {messages.length > 0 && (
                 <button
                   onClick={handleClearHistory}
-                  className="text-[9px] text-text-muted hover:text-red-500 transition-colors"
+                  className={`text-[9px] transition-colors ${confirmingClear ? 'text-red-500 font-semibold' : 'text-text-muted hover:text-red-500'}`}
                 >
-                  Clear Chat
+                  {confirmingClear ? 'Confirm Clear?' : 'Clear Chat'}
                 </button>
               )}
             </div>
