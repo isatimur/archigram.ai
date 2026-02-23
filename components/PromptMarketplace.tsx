@@ -16,7 +16,14 @@ import {
 import { toast } from 'sonner';
 import { AppView, PromptEntry, PromptDomain } from '../types.ts';
 import { fetchPrompts, updatePromptLikes } from '../services/supabaseClient.ts';
+import { SEED_PROMPTS } from '../constants.ts';
 import { analytics } from '../utils/analytics.ts';
+
+const trendingScore = (p: PromptEntry) => {
+  const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3600000;
+  const recencyBonus = Math.max(0, 1000 - ageHours * 2);
+  return p.likes * 10 + p.views * 0.5 + recencyBonus;
+};
 
 interface PromptMarketplaceProps {
   onNavigate: (view: AppView) => void;
@@ -69,7 +76,25 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
         sort: sortBy,
         limit: 100,
       });
-      setPrompts(data);
+      if (data.length > 0) {
+        setPrompts(data);
+      } else {
+        // Fall back to seed prompts with client-side filtering & sorting
+        const filtered =
+          domainFilter === 'all'
+            ? [...SEED_PROMPTS]
+            : SEED_PROMPTS.filter((p) => p.domain === domainFilter);
+
+        filtered.sort((a, b) => {
+          if (sortBy === 'trending') return trendingScore(b) - trendingScore(a);
+          if (sortBy === 'top') return b.likes - a.likes;
+          if (sortBy === 'new')
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return 0;
+        });
+
+        setPrompts(filtered);
+      }
       setIsLoading(false);
     };
     load();

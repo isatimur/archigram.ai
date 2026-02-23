@@ -105,8 +105,12 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
   const filteredData = [...filteredBySearch].sort((a, b) => {
     if (filter === 'trending') {
-      const scoreA = a.likes * 2 + a.views;
-      const scoreB = b.likes * 2 + b.views;
+      const ageA = (Date.now() - (a.createdAtTimestamp ?? 0)) / 3600000;
+      const ageB = (Date.now() - (b.createdAtTimestamp ?? 0)) / 3600000;
+      const recencyA = Math.max(0, 1000 - ageA * 2);
+      const recencyB = Math.max(0, 1000 - ageB * 2);
+      const scoreA = a.likes * 10 + a.views * 0.5 + recencyA;
+      const scoreB = b.likes * 10 + b.views * 0.5 + recencyB;
       return scoreB - scoreA;
     }
     if (filter === 'top') {
