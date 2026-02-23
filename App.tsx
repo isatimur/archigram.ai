@@ -10,6 +10,7 @@ import { auditDiagram, AuditReport } from './services/geminiService.ts';
 import { analytics } from './utils/analytics.ts';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { Toaster, toast } from 'sonner';
+import { AUTHOR_KEY } from './constants.ts';
 
 // Dynamic Component Imports
 const Header = lazy(() => import('./components/Header.tsx'));
@@ -25,8 +26,6 @@ const DiscoverPage = lazy(() => import('./components/DiscoverPage.tsx'));
 const LegalPage = lazy(() => import('./components/LegalPage.tsx'));
 // New Studios
 const PlantUMLStudio = lazy(() => import('./components/PlantUMLStudio.tsx'));
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const BPMNStudio = lazy(() => import('./components/BPMNStudio.tsx')); // Reserved for future use
 // Modals
 const ImageImportModal = lazy(() => import('./components/ImageImportModal.tsx'));
 const AuditModal = lazy(() => import('./components/AuditModal.tsx'));
@@ -47,7 +46,9 @@ const LoadingScreen = () => (
 );
 
 // Theme Configuration for CSS Variables (RGB Tuples)
-const THEMES: Record<DiagramTheme, React.CSSProperties> = {
+type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
+
+const THEMES: Record<DiagramTheme, ThemeVars> = {
   dark: {
     // Obsidian / Zinc (Professional Default)
     '--bg': '9 9 11', // zinc-950
@@ -59,7 +60,7 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--primary': '99 102 241', // indigo-500
     '--primary-hover': '79 70 229', // indigo-600
     '--accent': '168 85 247', // purple-500
-  } as any,
+  },
   midnight: {
     // Deep Space / Slate (Sci-Fi)
     '--bg': '2 6 23', // slate-950
@@ -71,7 +72,7 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--primary': '56 189 248', // sky-400
     '--primary-hover': '14 165 233', // sky-500
     '--accent': '236 72 153', // pink-500
-  } as any,
+  },
   forest: {
     // Matrix / Terminal (Hacker)
     '--bg': '2 10 5', // Deep green/black
@@ -83,7 +84,7 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--primary': '74 222 128', // green-400
     '--primary-hover': '34 197 94', // green-500
     '--accent': '250 204 21', // yellow-400
-  } as any,
+  },
   neutral: {
     // Paper / Print (Clean Light Mode)
     '--bg': '255 255 255', // white
@@ -95,7 +96,7 @@ const THEMES: Record<DiagramTheme, React.CSSProperties> = {
     '--primary': '37 99 235', // blue-600
     '--primary-hover': '29 78 216', // blue-700
     '--accent': '236 72 153', // pink-500
-  } as any,
+  },
 };
 
 function App() {
@@ -328,7 +329,7 @@ function App() {
     const activeP = projects.find((p) => p.id === activeProjectId);
     setPublishData({
       title: activeP?.name || '',
-      author: localStorage.getItem('archigram_author') || '',
+      author: localStorage.getItem(AUTHOR_KEY) || '',
       description: '',
       tags: '',
     });
@@ -340,7 +341,7 @@ function App() {
 
     setIsPublishing(true);
 
-    if (publishData.author) localStorage.setItem('archigram_author', publishData.author);
+    if (publishData.author) localStorage.setItem(AUTHOR_KEY, publishData.author);
 
     const tagsArray = publishData.tags
       .split(',')
@@ -699,6 +700,12 @@ function App() {
                 isExpanded={isAIChatExpanded}
                 onToggleExpanded={setIsAIChatExpanded}
                 onSharePrompt={handleOpenPublishPrompt}
+                externalPrompt={pendingPromptText || undefined}
+                externalResultCode={pendingPromptResultCode}
+                onConsumeExternalPrompt={() => {
+                  setPendingPromptText('');
+                  setPendingPromptResultCode(undefined);
+                }}
               />
             </Suspense>
           </div>
@@ -707,14 +714,24 @@ function App() {
 
       {/* Confirmation Modal for Deletion */}
       {pendingDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setPendingDeleteId(null);
+          }}
+        >
           <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all scale-100 animate-slide-up">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-text">Delete Project?</h3>
+                <h3 id="delete-dialog-title" className="text-lg font-bold text-text">
+                  Delete Project?
+                </h3>
                 <p className="text-sm text-text-muted mt-2">
                   Are you sure you want to delete this project? This action cannot be undone.
                 </p>
@@ -825,7 +842,7 @@ function App() {
       )}
 
       <Toaster
-        theme="dark"
+        theme={theme === 'neutral' ? 'light' : 'dark'}
         position="top-center"
         toastOptions={{
           style: {

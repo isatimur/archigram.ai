@@ -491,7 +491,17 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
   );
 };
 
-const SidebarLink = ({ children, active, onClick, icon }: any) => (
+const SidebarLink = ({
+  children,
+  active,
+  onClick,
+  icon,
+}: {
+  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+}) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-primary/10 text-primary' : 'text-text-muted hover:text-text hover:bg-surface-hover'}`}
@@ -501,7 +511,7 @@ const SidebarLink = ({ children, active, onClick, icon }: any) => (
   </button>
 );
 
-const ShortcutKey = ({ combo, desc }: any) => (
+const ShortcutKey = ({ combo, desc }: { combo: string[]; desc: string }) => (
   <div className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg">
     <span className="text-sm text-text-muted">{desc}</span>
     <div className="flex gap-1">

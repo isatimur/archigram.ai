@@ -18,6 +18,7 @@ import { AppView, PromptEntry, PromptDomain } from '../types.ts';
 import { fetchPrompts, updatePromptLikes } from '../services/supabaseClient.ts';
 import { SEED_PROMPTS } from '../constants.ts';
 import { analytics } from '../utils/analytics.ts';
+import { LIKED_PROMPT_IDS_KEY } from '../constants.ts';
 
 const trendingScore = (p: PromptEntry) => {
   const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3600000;
@@ -58,7 +59,7 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('archigram_liked_prompt_ids');
+    const saved = localStorage.getItem(LIKED_PROMPT_IDS_KEY);
     if (saved) {
       try {
         setLikedIds(new Set(JSON.parse(saved)));
@@ -125,7 +126,7 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
       analytics.promptLiked();
     }
     setLikedIds(newLiked);
-    localStorage.setItem('archigram_liked_prompt_ids', JSON.stringify([...newLiked]));
+    localStorage.setItem(LIKED_PROMPT_IDS_KEY, JSON.stringify([...newLiked]));
 
     const success = await updatePromptLikes(prompt.id, newCount);
     if (!success) {

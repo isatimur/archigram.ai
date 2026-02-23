@@ -343,6 +343,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
+            aria-label="Mermaid diagram source code"
             style={{
               fontFamily: '"JetBrains Mono", monospace',
               caretColor: 'rgb(var(--primary))',

@@ -3,6 +3,9 @@ import { DOMAIN_INSTRUCTIONS } from '../constants.ts';
 import { CopilotDomain } from '../types.ts';
 import { getRAGContext, isRAGEnabled } from './ragClient.ts';
 
+const GENERATION_MODEL = 'gemini-3-flash-preview';
+const VISION_MODEL = 'gemini-2.5-flash-image';
+
 let aiInstance: GoogleGenAI | null = null;
 
 const getAI = (): GoogleGenAI => {
@@ -55,7 +58,7 @@ export const generateDiagramCode = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: GENERATION_MODEL,
       contents: fullPrompt,
       config: {
         systemInstruction: instruction,
@@ -107,7 +110,7 @@ export const auditDiagram = async (code: string): Promise<AuditReport> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: GENERATION_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -145,7 +148,7 @@ export const imageToDiagram = async (base64Image: string, mimeType: string): Pro
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image', // Specialized for vision tasks
+      model: VISION_MODEL, // Specialized for vision tasks
       contents: {
         parts: [{ inlineData: { mimeType: mimeType, data: cleanBase64 } }, { text: prompt }],
       },
@@ -178,7 +181,7 @@ Rules:
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: GENERATION_MODEL,
       contents: prompt,
       config: {
         temperature: 0.1, // Very low temperature for precise fixes

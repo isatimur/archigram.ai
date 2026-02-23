@@ -13,12 +13,18 @@ export default defineConfig({
       VITE_RAG_URL: 'http://localhost:8000',
     },
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.git', '.cache'],
+    exclude: ['node_modules', 'dist', '.git', '.cache', '.opencode/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['services/**/*.ts', 'utils/**/*.ts', 'constants.ts'],
+      include: [
+        'services/**/*.ts',
+        'utils/**/*.ts',
+        'hooks/**/*.ts',
+        'constants.ts',
+        'data/**/*.ts',
+      ],
       exclude: [
         'node_modules/**',
         'dist/**',
