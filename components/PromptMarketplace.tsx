@@ -72,11 +72,14 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      const data = await fetchPrompts({
-        domain: domainFilter === 'all' ? undefined : domainFilter,
-        sort: sortBy,
-        limit: 100,
-      });
+      const data = await Promise.race([
+        fetchPrompts({
+          domain: domainFilter === 'all' ? undefined : domainFilter,
+          sort: sortBy,
+          limit: 100,
+        }),
+        new Promise<PromptEntry[]>((resolve) => setTimeout(() => resolve([]), 5000)),
+      ]);
       if (data.length > 0) {
         setPrompts(data);
       } else {
