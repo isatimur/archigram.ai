@@ -1,4 +1,5 @@
 import type { PromptEntry } from './types.ts';
+import { POPULAR_SEED_PROMPTS } from './data/popularSeedPrompts.ts';
 
 export const INITIAL_CODE = `sequenceDiagram
     autonumber
@@ -1827,4 +1828,6 @@ export const SEED_PROMPTS: PromptEntry[] = [
     views: 1800,
     created_at: new Date(now - 26 * day).toISOString(),
   },
+  // Popular community diagrams mapped to seed prompts
+  ...POPULAR_SEED_PROMPTS,
 ];
