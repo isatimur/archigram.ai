@@ -13,7 +13,7 @@ export default defineConfig({
       VITE_RAG_URL: 'http://localhost:8000',
     },
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.git', '.cache', '.opencode/**'],
+    exclude: ['node_modules', 'dist', '.git', '.cache', '.opencode/**', '.claude/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
