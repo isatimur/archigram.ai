@@ -5,8 +5,6 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { init as initPlausible } from '@plausible-analytics/tracker';
 
-console.log('Initializing ArchiGram AI...');
-
 // Initialize Sentry for error tracking
 Sentry.init({
   dsn:
@@ -40,7 +38,6 @@ try {
       <App />
     </ErrorBoundary>
   );
-  console.log('React mounted successfully.');
 } catch (error) {
   console.error('Failed to mount React app:', error);
 }

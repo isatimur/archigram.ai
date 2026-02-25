@@ -191,7 +191,6 @@ const AIChat: React.FC<AIChatProps> = ({
   const handleFeedback = (msgId: string, type: 'helpful' | 'unhelpful') => {
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, feedback: type } : m)));
     // In a real implementation, this would send an event to the backend analytics
-    console.log(`[Phase 1 Feedback Loop] User rated message ${msgId} as ${type}`);
   };
 
   const handleCopyCode = (code: string, id: string) => {
@@ -386,7 +385,7 @@ const AIChat: React.FC<AIChatProps> = ({
                             Pipeline Updated
                           </span>
                           <button
-                            onClick={() => handleCopyCode(msg.codeSnapshot!, msg.id)}
+                            onClick={() => handleCopyCode(msg.codeSnapshot ?? '', msg.id)}
                             className="p-1 hover:bg-surface-hover rounded text-text-muted hover:text-primary transition-colors"
                             title="Copy Code"
                           >
