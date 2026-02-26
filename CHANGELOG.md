@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-26
+
+### Added
+
+- User authentication — GitHub OAuth, Google OAuth, and email/password sign-up/sign-in
+- Cloud diagram sync — user diagrams persist in Supabase `user_diagrams` table, synced with localStorage on sign-in (local wins on conflict)
+- Profile page (`#profile`) — avatar, inline-editable username, stats bar, diagrams grid, danger zone
+- Auth-gating — publish to gallery, liking, and commenting require login; pending action replays after sign-in
+- `requireAuth` utility in App.tsx for gating any action behind login
+- `useDiagramSync` hook for localStorage ↔ Supabase merge logic
+- 52 popular Mermaid diagram templates in gallery and prompt marketplace
+- REST API endpoints (`POST /api/v1/generate`, `GET /api/v1/diagrams/:id`)
+- Dynamic OG image generation (`/api/og-image`)
+- `vercel.json` with SPA rewrites, security headers, and asset caching
+- Expanded FAQ from 4 to 14 questions
+
+### Fixed
+
+- Hash-based routing was broken — all `#route` URLs now navigate correctly
+- Documentation search was decorative — now fully functional with live filter and auto-scroll
+- Missing Custom Themes section added to documentation
+
+### Changed
+
+- `constants.ts` refactored — seed prompts and templates moved to `data/seedPrompts.ts` and `data/templates.ts`
+
 ### Added
 
 - Comprehensive test infrastructure with Vitest and React Testing Library

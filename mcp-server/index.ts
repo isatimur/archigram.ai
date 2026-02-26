@@ -76,7 +76,7 @@ async function getDiagramViaAPI(id: string): Promise<Record<string, unknown>> {
 
 const server = new McpServer({
   name: 'archigram',
-  version: '1.0.0',
+  version: '1.1.0',
 });
 
 server.registerTool(
