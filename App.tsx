@@ -4,6 +4,7 @@ import { encodeCodeToUrl } from './utils/url.ts';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.ts';
 import { useAppRouter } from './hooks/useAppRouter.ts';
 import { useProjects } from './hooks/useProjects.ts';
+import { useDiagramSync } from './hooks/useDiagramSync.ts';
 import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
 import { publishDiagram, getCurrentUser, onAuthStateChange } from './services/supabaseClient.ts';
 import { auditDiagram, AuditReport } from './services/geminiService.ts';
@@ -155,6 +156,7 @@ function App() {
   // --- Projects (extracted hook) ---
   const {
     projects,
+    setProjects,
     activeProjectId,
     code,
     setCode,
@@ -182,6 +184,8 @@ function App() {
     handleManualSnapshot,
     handleRestoreVersion,
   } = useProjects({ setCurrentView, setIsSidebarOpen, setViewMode });
+
+  useDiagramSync({ user, projects, setProjects });
 
   // --- Responsive Layout ---
   useEffect(() => {
