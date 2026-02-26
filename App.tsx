@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { ViewMode, DiagramTheme, User } from './types.ts';
 import { encodeCodeToUrl } from './utils/url.ts';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.ts';
@@ -138,6 +138,18 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+
+  const pendingAction = useRef<(() => void) | null>(null);
+
+  const requireAuth = (action: () => void) => {
+    if (user) {
+      action();
+    } else {
+      pendingAction.current = action;
+      setAuthModalMode('signin');
+      setIsAuthModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     getCurrentUser().then(setUser);
@@ -337,14 +349,16 @@ function App() {
   // --- Publish Handlers ---
 
   const openPublishModal = () => {
-    const activeP = projects.find((p) => p.id === activeProjectId);
-    setPublishData({
-      title: activeP?.name || '',
-      author: localStorage.getItem(AUTHOR_KEY) || '',
-      description: '',
-      tags: '',
+    requireAuth(() => {
+      const activeP = projects.find((p) => p.id === activeProjectId);
+      setPublishData({
+        title: activeP?.name || '',
+        author: localStorage.getItem(AUTHOR_KEY) || '',
+        description: '',
+        tags: '',
+      });
+      setIsPublishModalOpen(true);
     });
-    setIsPublishModalOpen(true);
   };
 
   const submitPublish = async () => {
@@ -491,6 +505,7 @@ function App() {
             setAuthModalMode('signin');
             setIsAuthModalOpen(true);
           }}
+          onRequireAuth={requireAuth}
         />
       </Suspense>
     );
@@ -507,7 +522,11 @@ function App() {
   if (currentView === 'prompts') {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <PromptMarketplace onNavigate={setCurrentView} onTryPrompt={handleTryPrompt} />
+        <PromptMarketplace
+          onNavigate={setCurrentView}
+          onTryPrompt={handleTryPrompt}
+          onRequireAuth={requireAuth}
+        />
       </Suspense>
     );
   }
@@ -846,6 +865,10 @@ function App() {
             onAuthSuccess={(user) => {
               setUser(user);
               setIsAuthModalOpen(false);
+              if (pendingAction.current) {
+                pendingAction.current();
+                pendingAction.current = null;
+              }
             }}
             initialMode={authModalMode}
           />

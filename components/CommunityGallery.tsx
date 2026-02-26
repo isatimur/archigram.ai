@@ -36,6 +36,7 @@ interface CommunityGalleryProps {
   onFork: (diagram: CommunityDiagram) => void;
   user?: User | null;
   onOpenAuth?: () => void;
+  onRequireAuth?: (action: () => void) => void;
 }
 
 const CommunityGallery: React.FC<CommunityGalleryProps> = ({
@@ -43,6 +44,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   onFork,
   user,
   onOpenAuth,
+  onRequireAuth,
 }) => {
   const [filter, setFilter] = useState<'trending' | 'new' | 'top'>('trending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,30 +124,22 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     return 0;
   });
 
-  const handleLike = async (e: React.MouseEvent, id: string, currentLikes: number) => {
-    e.stopPropagation();
-
+  const performLike = async (id: string, currentLikes: number) => {
     const isLiked = likedIds.has(id);
     const newLikes = isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
 
-    // Optimistic UI Update
     const newLikedIds = new Set(likedIds);
     if (isLiked) newLikedIds.delete(id);
     else newLikedIds.add(id);
 
     setLikedIds(newLikedIds);
     localStorage.setItem(LIKED_IDS_KEY, JSON.stringify(Array.from(newLikedIds)));
-
     setDiagrams((prev) => prev.map((d) => (d.id === id ? { ...d, likes: newLikes } : d)));
 
-    // Analytics
     if (!isLiked) analytics.diagramLiked();
 
-    // API Call
     const success = await updateDiagramLikes(id, newLikes);
-
     if (!success) {
-      // Revert if API fails
       toast.error('Failed to update like');
       setDiagrams((prev) => prev.map((d) => (d.id === id ? { ...d, likes: currentLikes } : d)));
       setLikedIds((prev) => {
@@ -155,6 +149,15 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         localStorage.setItem(LIKED_IDS_KEY, JSON.stringify(Array.from(reverted)));
         return reverted;
       });
+    }
+  };
+
+  const handleLike = (e: React.MouseEvent, id: string, currentLikes: number) => {
+    e.stopPropagation();
+    if (onRequireAuth) {
+      onRequireAuth(() => performLike(id, currentLikes));
+    } else {
+      performLike(id, currentLikes);
     }
   };
 

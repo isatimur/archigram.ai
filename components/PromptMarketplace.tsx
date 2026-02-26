@@ -24,6 +24,7 @@ import { LIKED_PROMPT_IDS_KEY } from '../constants.ts';
 interface PromptMarketplaceProps {
   onNavigate: (view: AppView) => void;
   onTryPrompt: (promptText: string, domain: string, resultCode?: string) => void;
+  onRequireAuth?: (action: () => void) => void;
 }
 
 const DOMAIN_LABELS: Record<PromptDomain, string> = {
@@ -44,7 +45,11 @@ const DOMAIN_COLORS: Record<PromptDomain, string> = {
   ml: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
 };
 
-const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTryPrompt }) => {
+const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
+  onNavigate,
+  onTryPrompt,
+  onRequireAuth,
+}) => {
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,7 +119,7 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
     );
   });
 
-  const handleLike = async (prompt: PromptEntry) => {
+  const performLike = async (prompt: PromptEntry) => {
     const isLiked = likedIds.has(prompt.id);
     const newCount = isLiked ? prompt.likes - 1 : prompt.likes + 1;
 
@@ -133,6 +138,14 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({ onNavigate, onTry
     const success = await updatePromptLikes(prompt.id, newCount);
     if (!success) {
       toast.error('Failed to update like');
+    }
+  };
+
+  const handleLike = (prompt: PromptEntry) => {
+    if (onRequireAuth) {
+      onRequireAuth(() => performLike(prompt));
+    } else {
+      performLike(prompt);
     }
   };
 
