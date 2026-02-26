@@ -41,6 +41,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage.tsx'));
 const PublishModal = lazy(() => import('./components/PublishModal.tsx'));
 const PromptMarketplace = lazy(() => import('./components/PromptMarketplace.tsx'));
 const PublishPromptModal = lazy(() => import('./components/PublishPromptModal.tsx'));
+const EmbedView = lazy(() => import('./components/EmbedView.tsx'));
 
 // Loading Fallback
 const LoadingScreen = () => (
@@ -471,6 +472,16 @@ function App() {
     handleDuplicateDiagram,
     openPublishModal,
   });
+
+  // --- Embed mode short-circuit (after all hooks) ---
+  const embedParams = new URLSearchParams(window.location.search);
+  if (embedParams.get('embed') === 'true') {
+    return (
+      <Suspense fallback={null}>
+        <EmbedView />
+      </Suspense>
+    );
+  }
 
   // --- Theme ---
   const appStyle = THEMES[theme] || THEMES.dark;
