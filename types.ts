@@ -135,3 +135,5 @@ export interface Comment {
   content: string;
   created_at: string;
 }
+
+export type EmbedMode = 'minimal' | 'toolbar' | 'interactive';
