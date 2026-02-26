@@ -81,7 +81,8 @@ export type AppView =
   | 'faq'
   | 'privacy'
   | 'terms'
-  | 'license';
+  | 'license'
+  | 'profile';
 
 export type PromptDomain = 'general' | 'healthcare' | 'finance' | 'ecommerce' | 'devops' | 'ml';
 

@@ -14,6 +14,7 @@ const VALID_VIEWS = new Set<AppView>([
   'privacy',
   'terms',
   'license',
+  'profile',
 ]);
 
 function hashToView(hash: string): AppView | null {
