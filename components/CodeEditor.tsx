@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Undo,
   Redo,
@@ -130,94 +130,97 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [onUndo, onRedo]);
 
   // Robust Tokenizer using Theme Variables for Consistency
-  const highlightCode = (text: string) => {
-    if (!text) return '';
+  const highlightCode = useCallback(
+    (text: string) => {
+      if (!text) return '';
 
-    const isLight = theme === 'neutral';
+      const isLight = theme === 'neutral';
 
-    const patterns = [
-      {
-        regex: /(%%.*)/,
-        className: isLight
-          ? 'text-slate-500 italic opacity-80'
-          : 'text-text-muted italic opacity-70',
-      }, // Comments
-      {
-        regex: /("[^"]*")/,
-        className: isLight ? 'text-emerald-600 font-medium' : 'text-emerald-400',
-      }, // Strings
-      {
-        regex:
-          /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/,
-        className: isLight ? 'text-purple-600 font-bold' : 'text-accent font-bold',
-      }, // Types -> Accent Color
-      {
-        regex:
-          /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/,
-        className: isLight ? 'text-blue-600 font-semibold' : 'text-primary font-semibold',
-      }, // Keywords -> Primary Color
-      {
-        regex: /(-->>|-->|---|->|->>|==>|==|-\.->|-\.-)/,
-        className: isLight ? 'text-cyan-600 font-bold' : 'text-cyan-400 font-bold',
-      }, // Arrows
-      {
-        regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/,
-        className: isLight ? 'text-orange-600' : 'text-orange-400',
-      }, // Directions
-      {
-        regex: /([[\](){}])/,
-        className: isLight ? 'text-yellow-600 font-bold' : 'text-yellow-400',
-      }, // Brackets & Shapes
-    ];
+      const patterns = [
+        {
+          regex: /(%%.*)/,
+          className: isLight
+            ? 'text-slate-500 italic opacity-80'
+            : 'text-text-muted italic opacity-70',
+        }, // Comments
+        {
+          regex: /("[^"]*")/,
+          className: isLight ? 'text-emerald-600 font-medium' : 'text-emerald-400',
+        }, // Strings
+        {
+          regex:
+            /\b(sequenceDiagram|classDiagram|graph|flowchart|gantt|erDiagram|pie|stateDiagram|stateDiagram-v2|gitGraph|journey|mindmap|timeline)\b/,
+          className: isLight ? 'text-purple-600 font-bold' : 'text-accent font-bold',
+        }, // Types -> Accent Color
+        {
+          regex:
+            /\b(participant|actor|class|subgraph|end|note|alt|opt|loop|else|rect|par|and|break|critical|autonumber|activate|deactivate|title|style|linkStyle|classDef)\b/,
+          className: isLight ? 'text-blue-600 font-semibold' : 'text-primary font-semibold',
+        }, // Keywords -> Primary Color
+        {
+          regex: /(-->>|-->|---|->|->>|==>|==|-\.->|-\.-)/,
+          className: isLight ? 'text-cyan-600 font-bold' : 'text-cyan-400 font-bold',
+        }, // Arrows
+        {
+          regex: /\b(left of|right of|over|TB|TD|BT|RL|LR)\b/,
+          className: isLight ? 'text-orange-600' : 'text-orange-400',
+        }, // Directions
+        {
+          regex: /([[\](){}])/,
+          className: isLight ? 'text-yellow-600 font-bold' : 'text-yellow-400',
+        }, // Brackets & Shapes
+      ];
 
-    const combinedSource = patterns.map((p) => p.regex.source).join('|');
-    const combinedRegex = new RegExp(combinedSource, 'g');
+      const combinedSource = patterns.map((p) => p.regex.source).join('|');
+      const combinedRegex = new RegExp(combinedSource, 'g');
 
-    let lastIndex = 0;
-    let html = '';
-    let match;
+      let lastIndex = 0;
+      let html = '';
+      let match;
 
-    while ((match = combinedRegex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
+      while ((match = combinedRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+          html += text
+            .slice(lastIndex, match.index)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        }
+
+        let matchedGroupIndex = -1;
+        for (let i = 1; i < match.length; i++) {
+          if (match[i]) {
+            matchedGroupIndex = i - 1;
+            break;
+          }
+        }
+
+        const content = match[0].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        if (matchedGroupIndex !== -1 && patterns[matchedGroupIndex]) {
+          html += `<span class="${patterns[matchedGroupIndex].className}">${content}</span>`;
+        } else {
+          html += content;
+        }
+
+        lastIndex = combinedRegex.lastIndex;
+      }
+
+      if (lastIndex < text.length) {
         html += text
-          .slice(lastIndex, match.index)
+          .slice(lastIndex)
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
       }
 
-      let matchedGroupIndex = -1;
-      for (let i = 1; i < match.length; i++) {
-        if (match[i]) {
-          matchedGroupIndex = i - 1;
-          break;
-        }
-      }
-
-      const content = match[0].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-      if (matchedGroupIndex !== -1 && patterns[matchedGroupIndex]) {
-        html += `<span class="${patterns[matchedGroupIndex].className}">${content}</span>`;
-      } else {
-        html += content;
-      }
-
-      lastIndex = combinedRegex.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-      html += text
-        .slice(lastIndex)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-
-    return html;
-  };
+      return html;
+    },
+    [theme]
+  );
 
   // Memoize highlighted code to avoid re-tokenizing on every render
-  const highlightedHtml = useMemo(() => highlightCode(code), [code, theme]);
+  const highlightedHtml = useMemo(() => highlightCode(code), [code, highlightCode]);
 
   const lineCount = code.split('\n').length;
 

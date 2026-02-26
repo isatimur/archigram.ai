@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Book,
   Code2,
@@ -7,13 +7,14 @@ import {
   LayoutTemplate,
   ArrowLeft,
   Search,
-  FileText,
   Share2,
   GitBranch,
   Database,
   Clock,
   Network,
   BrainCircuit,
+  Palette,
+  X,
 } from 'lucide-react';
 import { AppView } from '../types.ts';
 import LiveDiagramBlock from './LiveDiagramBlock.tsx';
@@ -22,14 +23,130 @@ interface DocumentationProps {
   onNavigate: (view: AppView) => void;
 }
 
+type DocSection = {
+  id: string;
+  label: string;
+  group: string;
+  keywords: string[];
+  icon: React.ReactNode;
+};
+
+const DOC_SECTIONS: DocSection[] = [
+  {
+    id: 'getting-started',
+    label: 'Getting Started',
+    group: 'Essentials',
+    keywords: ['start', 'quick', 'intro', 'begin', 'setup', 'install'],
+    icon: <Zap className="w-4 h-4" />,
+  },
+  {
+    id: 'ai-prompting',
+    label: 'AI Prompting',
+    group: 'Essentials',
+    keywords: ['prompt', 'ai', 'gemini', 'chat', 'copilot', 'generate'],
+    icon: <Code2 className="w-4 h-4" />,
+  },
+  {
+    id: 'shortcuts',
+    label: 'Shortcuts',
+    group: 'Essentials',
+    keywords: ['keyboard', 'shortcut', 'hotkey', 'keybinding', 'ctrl', 'cmd'],
+    icon: <Keyboard className="w-4 h-4" />,
+  },
+  {
+    id: 'sequence',
+    label: 'Sequence',
+    group: 'Diagram Syntax',
+    keywords: ['sequence', 'participant', 'actor', 'message', 'api', 'interaction'],
+    icon: <LayoutTemplate className="w-4 h-4" />,
+  },
+  {
+    id: 'flowchart',
+    label: 'Flowchart',
+    group: 'Diagram Syntax',
+    keywords: ['flow', 'graph', 'decision', 'process', 'logic', 'node', 'edge'],
+    icon: <Network className="w-4 h-4" />,
+  },
+  {
+    id: 'class',
+    label: 'Class',
+    group: 'Diagram Syntax',
+    keywords: ['class', 'uml', 'object', 'inheritance', 'oop', 'method', 'property'],
+    icon: <LayoutTemplate className="w-4 h-4" />,
+  },
+  {
+    id: 'state',
+    label: 'State',
+    group: 'Diagram Syntax',
+    keywords: ['state', 'transition', 'lifecycle', 'fsm', 'machine', 'status'],
+    icon: <LayoutTemplate className="w-4 h-4" />,
+  },
+  {
+    id: 'er',
+    label: 'ER Diagram',
+    group: 'Diagram Syntax',
+    keywords: ['er', 'entity', 'relationship', 'database', 'schema', 'table', 'sql'],
+    icon: <Database className="w-4 h-4" />,
+  },
+  {
+    id: 'gantt',
+    label: 'Gantt',
+    group: 'Diagram Syntax',
+    keywords: ['gantt', 'timeline', 'schedule', 'project', 'milestone', 'task', 'date'],
+    icon: <Clock className="w-4 h-4" />,
+  },
+  {
+    id: 'mindmap',
+    label: 'Mindmap',
+    group: 'Diagram Syntax',
+    keywords: ['mind', 'map', 'brainstorm', 'hierarchy', 'tree', 'idea'],
+    icon: <BrainCircuit className="w-4 h-4" />,
+  },
+  {
+    id: 'git',
+    label: 'Git Graph',
+    group: 'Diagram Syntax',
+    keywords: ['git', 'branch', 'commit', 'merge', 'version', 'repo'],
+    icon: <GitBranch className="w-4 h-4" />,
+  },
+  {
+    id: 'exporting',
+    label: 'Export & Share',
+    group: 'Guides',
+    keywords: ['export', 'share', 'svg', 'png', 'download', 'link', 'publish'],
+    icon: <Share2 className="w-4 h-4" />,
+  },
+  {
+    id: 'themes',
+    label: 'Custom Themes',
+    group: 'Guides',
+    keywords: ['theme', 'color', 'dark', 'light', 'style', 'css', 'variable', 'forest', 'midnight'],
+    icon: <Palette className="w-4 h-4" />,
+  },
+];
+
 const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
   const [activeSection, setActiveSection] = useState('getting-started');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const scrollTo = (id: string) => {
     setActiveSection(id);
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const filteredSections = useMemo(() => {
+    if (!searchQuery.trim()) return DOC_SECTIONS;
+    const q = searchQuery.toLowerCase();
+    return DOC_SECTIONS.filter(
+      (s) => s.label.toLowerCase().includes(q) || s.keywords.some((k) => k.includes(q))
+    );
+  }, [searchQuery]);
+
+  const visibleGroups = useMemo(() => {
+    const groups = new Set(filteredSections.map((s) => s.group));
+    return groups;
+  }, [filteredSections]);
 
   return (
     <div className="h-screen w-screen bg-[#09090b] text-text flex flex-col font-sans overflow-hidden">
@@ -55,9 +172,29 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                const q = e.target.value.trim().toLowerCase();
+                if (q) {
+                  const match = DOC_SECTIONS.find(
+                    (s) =>
+                      s.label.toLowerCase().includes(q) || s.keywords.some((k) => k.includes(q))
+                  );
+                  if (match) scrollTo(match.id);
+                }
+              }}
               placeholder="Search docs..."
-              className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-1.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full bg-surface border border-border rounded-lg pl-9 pr-8 py-1.5 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -72,121 +209,37 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         <aside className="w-64 border-r border-border bg-surface/30 hidden md:flex flex-col overflow-y-auto shrink-0">
-          <div className="p-4 space-y-8">
-            <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">
-                Essentials
-              </h3>
-              <div className="space-y-1">
-                <SidebarLink
-                  active={activeSection === 'getting-started'}
-                  onClick={() => scrollTo('getting-started')}
-                  icon={<Zap className="w-4 h-4" />}
-                >
-                  Getting Started
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'ai-prompting'}
-                  onClick={() => scrollTo('ai-prompting')}
-                  icon={<Code2 className="w-4 h-4" />}
-                >
-                  AI Prompting
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'shortcuts'}
-                  onClick={() => scrollTo('shortcuts')}
-                  icon={<Keyboard className="w-4 h-4" />}
-                >
-                  Shortcuts
-                </SidebarLink>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">
-                Diagram Syntax
-              </h3>
-              <div className="space-y-1">
-                <SidebarLink
-                  active={activeSection === 'sequence'}
-                  onClick={() => scrollTo('sequence')}
-                  icon={<LayoutTemplate className="w-4 h-4" />}
-                >
-                  Sequence
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'flowchart'}
-                  onClick={() => scrollTo('flowchart')}
-                  icon={<Network className="w-4 h-4" />}
-                >
-                  Flowchart
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'class'}
-                  onClick={() => scrollTo('class')}
-                  icon={<LayoutTemplate className="w-4 h-4" />}
-                >
-                  Class
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'state'}
-                  onClick={() => scrollTo('state')}
-                  icon={<LayoutTemplate className="w-4 h-4" />}
-                >
-                  State
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'er'}
-                  onClick={() => scrollTo('er')}
-                  icon={<Database className="w-4 h-4" />}
-                >
-                  ER Diagram
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'gantt'}
-                  onClick={() => scrollTo('gantt')}
-                  icon={<Clock className="w-4 h-4" />}
-                >
-                  Gantt
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'mindmap'}
-                  onClick={() => scrollTo('mindmap')}
-                  icon={<BrainCircuit className="w-4 h-4" />}
-                >
-                  Mindmap
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'git'}
-                  onClick={() => scrollTo('git')}
-                  icon={<GitBranch className="w-4 h-4" />}
-                >
-                  Git Graph
-                </SidebarLink>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">
-                Guides
-              </h3>
-              <div className="space-y-1">
-                <SidebarLink
-                  active={activeSection === 'exporting'}
-                  onClick={() => scrollTo('exporting')}
-                  icon={<Share2 className="w-4 h-4" />}
-                >
-                  Export & Share
-                </SidebarLink>
-                <SidebarLink
-                  active={activeSection === 'themes'}
-                  onClick={() => scrollTo('themes')}
-                  icon={<FileText className="w-4 h-4" />}
-                >
-                  Custom Themes
-                </SidebarLink>
-              </div>
-            </div>
+          <div className="p-4 space-y-6">
+            {filteredSections.length === 0 ? (
+              <p className="text-xs text-text-muted px-2 py-4 text-center">
+                No results for "{searchQuery}"
+              </p>
+            ) : (
+              (['Essentials', 'Diagram Syntax', 'Guides'] as const).map((group) => {
+                if (!visibleGroups.has(group)) return null;
+                const items = filteredSections.filter((s) => s.group === group);
+                return (
+                  <div key={group}>
+                    <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">
+                      {group}
+                    </h3>
+                    <div className="space-y-1">
+                      {items.map((s) => (
+                        <React.Fragment key={s.id}>
+                          <SidebarLink
+                            active={activeSection === s.id}
+                            onClick={() => scrollTo(s.id)}
+                            icon={s.icon}
+                          >
+                            {s.label}
+                          </SidebarLink>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </aside>
 
@@ -466,16 +519,101 @@ const Documentation: React.FC<DocumentationProps> = ({ onNavigate }) => {
             <div className="space-y-4 text-text-muted">
               <p>
                 <strong>SVG Export:</strong> Best for high-quality printing and editing in vector
-                tools like Illustrator.
+                tools like Illustrator. Preserves all colors and shapes at any resolution.
               </p>
               <p>
                 <strong>PNG Export:</strong> Best for slides, documents, and quick sharing. Renders
-                at 3x resolution for crispness.
+                at 3× resolution for crispness on retina displays.
               </p>
               <p>
                 <strong>Share Link:</strong> Generates a URL with the entire diagram code
-                compressed. No server storage required.
+                LZ-compressed into the hash — no server required. Anyone with the link sees the
+                exact same diagram instantly.
               </p>
+              <p>
+                <strong>Publish to Gallery:</strong> Saves the diagram to the public Community
+                Gallery with a title, description, and tags. Requires a free account.
+              </p>
+              <p>
+                <strong>Copy Code:</strong> Copies raw Mermaid syntax to clipboard — paste it
+                directly into GitHub READMEs, Confluence, or Notion.
+              </p>
+            </div>
+          </section>
+
+          <section id="themes" className="mb-16 scroll-mt-20">
+            <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-3">
+              <Palette className="w-7 h-7 text-primary" />
+              Custom Themes
+            </h2>
+            <p className="text-text-muted mb-6">
+              ArchiGram ships five built-in themes. Switch between them using the palette icon in
+              the header toolbar. Each theme updates the editor, preview, and all UI surfaces
+              simultaneously.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              {[
+                {
+                  name: 'Dark',
+                  desc: 'Default. Deep zinc background, indigo accents.',
+                  dot: 'bg-zinc-800 border-zinc-600',
+                },
+                {
+                  name: 'Midnight',
+                  desc: 'Pure black canvas with blue highlights.',
+                  dot: 'bg-black border-blue-700',
+                },
+                {
+                  name: 'Forest',
+                  desc: 'Deep green tones, calm and focused.',
+                  dot: 'bg-green-950 border-green-700',
+                },
+                {
+                  name: 'Light',
+                  desc: 'Bright white surface for daytime use.',
+                  dot: 'bg-white border-slate-300',
+                },
+                {
+                  name: 'Neutral',
+                  desc: 'Low-contrast slate, easy on the eyes.',
+                  dot: 'bg-slate-100 border-slate-400',
+                },
+              ].map((t) => (
+                <div
+                  key={t.name}
+                  className="flex items-start gap-3 p-4 bg-surface border border-border rounded-xl"
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 ${t.dot}`} />
+                  <div>
+                    <p className="text-sm font-semibold text-text">{t.name}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{t.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <h4 className="text-sm font-bold mb-3 text-text">CSS Variable Reference</h4>
+              <p className="text-xs text-text-muted mb-3">
+                All themes are driven by CSS custom properties. Override them in your own stylesheet
+                when self-hosting.
+              </p>
+              <div className="font-mono text-xs space-y-1 text-text-muted">
+                {[
+                  ['--bg', 'Page background'],
+                  ['--surface', 'Card / panel background'],
+                  ['--surface-hover', 'Hover state surface'],
+                  ['--border', 'Border color'],
+                  ['--text', 'Primary text'],
+                  ['--text-muted', 'Secondary / placeholder text'],
+                  ['--primary', 'Brand accent (buttons, links)'],
+                  ['--accent', 'Secondary highlight'],
+                ].map(([v, d]) => (
+                  <div key={v} className="flex gap-3">
+                    <span className="text-primary w-40 shrink-0">{v}</span>
+                    <span>{d}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 

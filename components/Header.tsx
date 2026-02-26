@@ -142,7 +142,7 @@ const Header: React.FC<HeaderProps> = ({
     if (activeProject) {
       setEditedTitle(activeProject.name);
     }
-  }, [activeProject?.id, activeProject?.name]);
+  }, [activeProject]);
 
   const handleTitleSubmit = () => {
     if (activeProject && editedTitle.trim()) {

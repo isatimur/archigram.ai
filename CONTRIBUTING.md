@@ -30,12 +30,14 @@ This project and everyone participating in it is governed by our [Code of Conduc
    Click the "Fork" button at the top right of this page.
 
 2. **Clone your fork**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/archigram.ai.git
    cd archigram.ai
    ```
 
 3. **Install dependencies**
+
    ```bash
    bun install
    # or
@@ -43,12 +45,14 @@ This project and everyone participating in it is governed by our [Code of Conduc
    ```
 
 4. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env and add your GEMINI_API_KEY
    ```
 
 5. **Start the development server**
+
    ```bash
    bun run dev
    # or
@@ -66,6 +70,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 Before creating bug reports, please check existing issues to avoid duplicates.
 
 **When reporting a bug, include:**
+
 - A clear, descriptive title
 - Steps to reproduce the behavior
 - Expected behavior
@@ -80,6 +85,7 @@ Use our [bug report template](.github/ISSUE_TEMPLATE/bug_report.md).
 We love feature suggestions! Please use our [feature request template](.github/ISSUE_TEMPLATE/feature_request.md).
 
 **Good feature requests include:**
+
 - A clear use case
 - Why existing features don't solve the problem
 - Potential implementation approach (optional)
@@ -87,6 +93,7 @@ We love feature suggestions! Please use our [feature request template](.github/I
 ### Your First Code Contribution
 
 Unsure where to begin? Look for issues labeled:
+
 - `good first issue` - Simple issues for newcomers
 - `help wanted` - Issues where we need community help
 - `documentation` - Help improve our docs
@@ -94,6 +101,7 @@ Unsure where to begin? Look for issues labeled:
 ### Pull Requests
 
 1. **Create a branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    # or
@@ -106,16 +114,19 @@ Unsure where to begin? Look for issues labeled:
    - Update documentation if needed
 
 3. **Test your changes**
+
    ```bash
    bun run build
    ```
 
 4. **Commit your changes**
+
    ```bash
    git commit -m "feat: add amazing feature"
    ```
 
 5. **Push to your fork**
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -236,6 +247,7 @@ refactor(sidebar): extract project list to separate component
    - Add yourself to CONTRIBUTORS.md (if it exists)
 
 2. **PR title format:**
+
    ```
    feat: add dark mode support
    fix: resolve memory leak in diagram renderer
@@ -259,6 +271,7 @@ refactor(sidebar): extract project list to separate component
 ## Recognition
 
 Contributors are recognized in:
+
 - GitHub contributors list
 - README acknowledgments
 - Release notes

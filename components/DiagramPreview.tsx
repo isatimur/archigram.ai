@@ -290,7 +290,8 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
             console.warn('Mermaid Render Error:', msg);
             onError('Rendering Engine Issue: Try simplifying the diagram or checking syntax.');
           } else {
-            const textMatch = (err as any)?.str || msg;
+            const mermaidErr = err as Record<string, unknown>;
+            const textMatch = typeof mermaidErr?.str === 'string' ? mermaidErr.str : msg;
             onError(textMatch);
           }
         }
