@@ -6,7 +6,12 @@ import { useAppRouter } from './hooks/useAppRouter.ts';
 import { useProjects } from './hooks/useProjects.ts';
 import { useDiagramSync } from './hooks/useDiagramSync.ts';
 import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
-import { publishDiagram, getCurrentUser, onAuthStateChange } from './services/supabaseClient.ts';
+import {
+  publishDiagram,
+  getCurrentUser,
+  onAuthStateChange,
+  signOut,
+} from './services/supabaseClient.ts';
 import { auditDiagram, AuditReport } from './services/geminiService.ts';
 import { analytics } from './utils/analytics.ts';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
@@ -32,6 +37,7 @@ const ImageImportModal = lazy(() => import('./components/ImageImportModal.tsx'))
 const AuditModal = lazy(() => import('./components/AuditModal.tsx'));
 const CommandPalette = lazy(() => import('./components/CommandPalette.tsx'));
 const AuthModal = lazy(() => import('./components/AuthModal.tsx'));
+const ProfilePage = lazy(() => import('./components/ProfilePage.tsx'));
 const PublishModal = lazy(() => import('./components/PublishModal.tsx'));
 const PromptMarketplace = lazy(() => import('./components/PromptMarketplace.tsx'));
 const PublishPromptModal = lazy(() => import('./components/PublishPromptModal.tsx'));
@@ -213,13 +219,6 @@ function App() {
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Temporary: redirect #profile until ProfilePage is built (Task 7)
-  useEffect(() => {
-    if (currentView === 'profile') {
-      setCurrentView(user ? 'app' : 'landing');
-    }
-  }, [currentView, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Export/Share Handlers ---
 
@@ -543,6 +542,31 @@ function App() {
     return (
       <Suspense fallback={<LoadingScreen />}>
         <LegalPage type={currentView} onNavigate={setCurrentView} />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'profile') {
+    if (!user) {
+      setCurrentView('landing');
+      return null;
+    }
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <ProfilePage
+          user={user}
+          projects={projects}
+          onSignOut={async () => {
+            await signOut();
+            setUser(null);
+            setCurrentView('landing');
+          }}
+          onOpenDiagram={(project) => {
+            handleSelectProject(project.id);
+            setCurrentView('app');
+          }}
+          onDeleteProject={handleDeleteProject}
+        />
       </Suspense>
     );
   }

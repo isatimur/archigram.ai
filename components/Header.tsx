@@ -422,6 +422,16 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="text-xs text-text-muted truncate">{user.email}</div>
                   </div>
                   <button
+                    onClick={() => {
+                      onNavigate('profile');
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <User className="w-4 h-4 text-text-muted" />
+                    My Profile
+                  </button>
+                  <button
                     onClick={async () => {
                       const { signOut } = await import('../services/supabaseClient.ts');
                       await signOut();
