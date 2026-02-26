@@ -10,3 +10,10 @@ __all__ = [
     "chunk_document",
     "get_chunking_strategy",
 ]
+
+try:
+    from .docling_chunker import chunk_docling_document, is_docling_available
+
+    __all__ += ["chunk_docling_document", "is_docling_available"]
+except ImportError:
+    pass

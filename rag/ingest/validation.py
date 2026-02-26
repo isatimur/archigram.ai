@@ -38,8 +38,9 @@ def validate_file_extension(filename: str) -> str:
     if not ext:
         raise ValidationError("File must have an extension")
 
-    if ext not in settings.allowed_extensions:
-        allowed = ", ".join(settings.allowed_extensions)
+    effective_extensions = settings.effective_allowed_extensions
+    if ext not in effective_extensions:
+        allowed = ", ".join(effective_extensions)
         raise ValidationError(f"File type '{ext}' not allowed. Allowed types: {allowed}")
 
     return ext
@@ -87,6 +88,20 @@ def validate_content(content: bytes, extension: str) -> str:
         if not content.startswith(b"%PDF"):
             raise ValidationError("Invalid PDF file: missing PDF header")
         return ""  # PDF text extraction handled by parser
+
+    # DOCX/PPTX/XLSX are ZIP-based Office Open XML formats
+    if extension in ("docx", "pptx", "xlsx"):
+        if not content.startswith(b"PK"):
+            raise ValidationError(f"Invalid {extension.upper()} file: not a valid ZIP/Office document")
+        return ""  # Text extraction handled by docling parser
+
+    # HTML validation
+    if extension == "html":
+        try:
+            content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValidationError("Invalid HTML file: not valid UTF-8") from exc
+        return ""  # Content extraction handled by docling parser
 
     # For text files, try to decode
     try:
