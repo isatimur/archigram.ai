@@ -1,11 +1,17 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { ViewMode, DiagramTheme, User } from './types.ts';
 import { encodeCodeToUrl } from './utils/url.ts';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.ts';
 import { useAppRouter } from './hooks/useAppRouter.ts';
 import { useProjects } from './hooks/useProjects.ts';
+import { useDiagramSync } from './hooks/useDiagramSync.ts';
 import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
-import { publishDiagram, getCurrentUser, onAuthStateChange } from './services/supabaseClient.ts';
+import {
+  publishDiagram,
+  getCurrentUser,
+  onAuthStateChange,
+  signOut,
+} from './services/supabaseClient.ts';
 import { auditDiagram, AuditReport } from './services/geminiService.ts';
 import { analytics } from './utils/analytics.ts';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
@@ -31,6 +37,7 @@ const ImageImportModal = lazy(() => import('./components/ImageImportModal.tsx'))
 const AuditModal = lazy(() => import('./components/AuditModal.tsx'));
 const CommandPalette = lazy(() => import('./components/CommandPalette.tsx'));
 const AuthModal = lazy(() => import('./components/AuthModal.tsx'));
+const ProfilePage = lazy(() => import('./components/ProfilePage.tsx'));
 const PublishModal = lazy(() => import('./components/PublishModal.tsx'));
 const PromptMarketplace = lazy(() => import('./components/PromptMarketplace.tsx'));
 const PublishPromptModal = lazy(() => import('./components/PublishPromptModal.tsx'));
@@ -138,6 +145,18 @@ function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
 
+  const pendingAction = useRef<(() => void) | null>(null);
+
+  const requireAuth = (action: () => void) => {
+    if (user) {
+      action();
+    } else {
+      pendingAction.current = action;
+      setAuthModalMode('signin');
+      setIsAuthModalOpen(true);
+    }
+  };
+
   useEffect(() => {
     getCurrentUser().then(setUser);
 
@@ -155,6 +174,7 @@ function App() {
   // --- Projects (extracted hook) ---
   const {
     projects,
+    setProjects,
     activeProjectId,
     code,
     setCode,
@@ -182,6 +202,8 @@ function App() {
     handleManualSnapshot,
     handleRestoreVersion,
   } = useProjects({ setCurrentView, setIsSidebarOpen, setViewMode });
+
+  useDiagramSync({ user, projects, setProjects });
 
   // --- Responsive Layout ---
   useEffect(() => {
@@ -326,14 +348,16 @@ function App() {
   // --- Publish Handlers ---
 
   const openPublishModal = () => {
-    const activeP = projects.find((p) => p.id === activeProjectId);
-    setPublishData({
-      title: activeP?.name || '',
-      author: localStorage.getItem(AUTHOR_KEY) || '',
-      description: '',
-      tags: '',
+    requireAuth(() => {
+      const activeP = projects.find((p) => p.id === activeProjectId);
+      setPublishData({
+        title: activeP?.name || '',
+        author: localStorage.getItem(AUTHOR_KEY) || '',
+        description: '',
+        tags: '',
+      });
+      setIsPublishModalOpen(true);
     });
-    setIsPublishModalOpen(true);
   };
 
   const submitPublish = async () => {
@@ -480,6 +504,7 @@ function App() {
             setAuthModalMode('signin');
             setIsAuthModalOpen(true);
           }}
+          onRequireAuth={requireAuth}
         />
       </Suspense>
     );
@@ -496,7 +521,11 @@ function App() {
   if (currentView === 'prompts') {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <PromptMarketplace onNavigate={setCurrentView} onTryPrompt={handleTryPrompt} />
+        <PromptMarketplace
+          onNavigate={setCurrentView}
+          onTryPrompt={handleTryPrompt}
+          onRequireAuth={requireAuth}
+        />
       </Suspense>
     );
   }
@@ -513,6 +542,31 @@ function App() {
     return (
       <Suspense fallback={<LoadingScreen />}>
         <LegalPage type={currentView} onNavigate={setCurrentView} />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'profile') {
+    if (!user) {
+      setCurrentView('landing');
+      return null;
+    }
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <ProfilePage
+          user={user}
+          projects={projects}
+          onSignOut={async () => {
+            await signOut();
+            setUser(null);
+            setCurrentView('landing');
+          }}
+          onOpenDiagram={(project) => {
+            handleSelectProject(project.id);
+            setCurrentView('app');
+          }}
+          onDeleteProject={handleDeleteProject}
+        />
       </Suspense>
     );
   }
@@ -835,6 +889,10 @@ function App() {
             onAuthSuccess={(user) => {
               setUser(user);
               setIsAuthModalOpen(false);
+              if (pendingAction.current) {
+                pendingAction.current();
+                pendingAction.current = null;
+              }
             }}
             initialMode={authModalMode}
           />

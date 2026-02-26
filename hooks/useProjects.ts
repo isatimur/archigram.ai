@@ -462,6 +462,7 @@ export function useProjects({ setCurrentView, setIsSidebarOpen, setViewMode }: U
 
   return {
     projects,
+    setProjects,
     activeProjectId,
     code,
     setCode,
