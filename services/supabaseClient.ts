@@ -6,6 +6,7 @@ import {
   Collection,
   PromptEntry,
   PromptDomain,
+  Project,
 } from '../types.ts';
 
 /**
@@ -629,6 +630,90 @@ export const updatePromptLikes = async (id: string, count: number): Promise<bool
     return true;
   } catch (e) {
     logSupabaseError('Prompt like exception', e);
+    return false;
+  }
+};
+
+// --- User Diagrams (cloud sync) ---
+
+export type UserDiagramRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  code: string;
+  diagram_type: string;
+  updated_at: string;
+};
+
+export const fetchUserDiagrams = async (userId: string): Promise<Project[]> => {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('user_diagrams')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      logSupabaseError('Fetch user diagrams failed', error);
+      return [];
+    }
+
+    return (data || []).map((d: UserDiagramRow) => ({
+      id: d.id,
+      name: d.title,
+      code: d.code,
+      updatedAt: new Date(d.updated_at).getTime(),
+      type: (d.diagram_type as 'mermaid' | 'plantuml') || 'mermaid',
+    }));
+  } catch (e) {
+    logSupabaseError('Fetch user diagrams exception', e);
+    return [];
+  }
+};
+
+export const upsertUserDiagram = async (
+  userId: string,
+  project: Pick<Project, 'id' | 'name' | 'code' | 'updatedAt'> & { type?: string }
+): Promise<boolean> => {
+  if (!userId || !project.id) return false;
+  try {
+    const { error } = await supabase.from('user_diagrams').upsert({
+      id: project.id,
+      user_id: userId,
+      title: project.name,
+      code: project.code,
+      diagram_type: project.type || 'mermaid',
+      updated_at: new Date(project.updatedAt).toISOString(),
+    });
+
+    if (error) {
+      logSupabaseError('Upsert user diagram failed', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logSupabaseError('Upsert user diagram exception', e);
+    return false;
+  }
+};
+
+export const deleteUserDiagram = async (userId: string, diagramId: string): Promise<boolean> => {
+  if (!userId || !diagramId) return false;
+  try {
+    const { error } = await supabase
+      .from('user_diagrams')
+      .delete()
+      .eq('id', diagramId)
+      .eq('user_id', userId);
+
+    if (error) {
+      logSupabaseError('Delete user diagram failed', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logSupabaseError('Delete user diagram exception', e);
     return false;
   }
 };
