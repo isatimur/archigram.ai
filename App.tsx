@@ -198,6 +198,13 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Temporary: redirect #profile until ProfilePage is built (Task 7)
+  useEffect(() => {
+    if (currentView === 'profile') {
+      setCurrentView(user ? 'app' : 'landing');
+    }
+  }, [currentView, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Export/Share Handlers ---
 
   const handleShare = () => {
