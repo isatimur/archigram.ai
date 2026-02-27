@@ -9,16 +9,19 @@ interface UseKeyboardShortcutsOptions {
   isImageImportModalOpen: boolean;
   isAuditModalOpen: boolean;
   isCommandPaletteOpen: boolean;
+  isShortcutsModalOpen: boolean;
   setCurrentView: (view: AppView) => void;
   setIsAIChatExpanded: (fn: (prev: boolean) => boolean) => void;
   setIsCommandPaletteOpen: (open: boolean) => void;
   setIsPublishModalOpen: (open: boolean) => void;
   setIsImageImportModalOpen: (open: boolean) => void;
   setIsAuditModalOpen: (open: boolean) => void;
+  setIsShortcutsModalOpen: (open: boolean) => void;
   handleCreateProject: () => void;
   handleExportPng: () => void;
   handleExportSvg: () => void;
   handleDuplicateDiagram: () => void;
+  handleShare: () => void;
   openPublishModal: () => void;
 }
 
@@ -29,16 +32,19 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     isImageImportModalOpen,
     isAuditModalOpen,
     isCommandPaletteOpen,
+    isShortcutsModalOpen,
     setCurrentView,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
     setIsImageImportModalOpen,
     setIsAuditModalOpen,
+    setIsShortcutsModalOpen,
     handleCreateProject,
     handleExportPng,
     handleExportSvg,
     handleDuplicateDiagram,
+    handleShare,
     openPublishModal,
   } = options;
 
@@ -60,9 +66,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
-      if (modKey && e.key === 's') {
+      if (modKey && e.key === 's' && !e.shiftKey) {
         e.preventDefault();
         toast.success('Saved automatically');
+        return;
+      }
+
+      if (modKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        handleShare();
         return;
       }
 
@@ -120,8 +132,17 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
         return;
       }
 
+      if (e.key === '?' && !modKey) {
+        e.preventDefault();
+        setIsShortcutsModalOpen(true);
+        return;
+      }
+
       if (e.key === 'Escape') {
-        if (isCommandPaletteOpen) {
+        if (isShortcutsModalOpen) {
+          setIsShortcutsModalOpen(false);
+          e.preventDefault();
+        } else if (isCommandPaletteOpen) {
           setIsCommandPaletteOpen(false);
           e.preventDefault();
         } else if (isPublishModalOpen) {
@@ -145,16 +166,19 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     isImageImportModalOpen,
     isAuditModalOpen,
     isCommandPaletteOpen,
+    isShortcutsModalOpen,
     setCurrentView,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
     setIsImageImportModalOpen,
     setIsAuditModalOpen,
+    setIsShortcutsModalOpen,
     handleCreateProject,
     handleExportPng,
     handleExportSvg,
     handleDuplicateDiagram,
+    handleShare,
     openPublishModal,
   ]);
 }

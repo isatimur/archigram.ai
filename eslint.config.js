@@ -49,6 +49,7 @@ export default [
         Event: 'readonly',
         MouseEvent: 'readonly',
         KeyboardEvent: 'readonly',
+        KeyboardEventInit: 'readonly',
         ClipboardEvent: 'readonly',
         DragEvent: 'readonly',
         ResizeObserver: 'readonly',
