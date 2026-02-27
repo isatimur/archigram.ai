@@ -884,12 +884,14 @@ function App() {
       )}
 
       {/* Keyboard Shortcuts Modal */}
-      <Suspense fallback={null}>
-        <KeyboardShortcutsModal
-          isOpen={isShortcutsModalOpen}
-          onClose={() => setIsShortcutsModalOpen(false)}
-        />
-      </Suspense>
+      {isShortcutsModalOpen && (
+        <Suspense fallback={null}>
+          <KeyboardShortcutsModal
+            isOpen={isShortcutsModalOpen}
+            onClose={() => setIsShortcutsModalOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Publish Prompt Modal */}
       {isPublishPromptModalOpen && (

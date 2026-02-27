@@ -51,10 +51,34 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // Escape handling — runs regardless of modal state so modals can be closed
+      if (e.key === 'Escape') {
+        if (isShortcutsModalOpen) {
+          e.preventDefault();
+          setIsShortcutsModalOpen(false);
+        } else if (isCommandPaletteOpen) {
+          e.preventDefault();
+          setIsCommandPaletteOpen(false);
+        } else if (isPublishModalOpen) {
+          e.preventDefault();
+          setIsPublishModalOpen(false);
+        } else if (isImageImportModalOpen) {
+          e.preventDefault();
+          setIsImageImportModalOpen(false);
+        } else if (isAuditModalOpen) {
+          e.preventDefault();
+          setIsAuditModalOpen(false);
+        }
+        return;
+      }
+
+      // Suppress all other shortcuts when any modal is open
       if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable ||
+        isShortcutsModalOpen ||
         isPublishModalOpen ||
         isImageImportModalOpen ||
         isAuditModalOpen ||
@@ -136,25 +160,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
         e.preventDefault();
         setIsShortcutsModalOpen(true);
         return;
-      }
-
-      if (e.key === 'Escape') {
-        if (isShortcutsModalOpen) {
-          e.preventDefault();
-          setIsShortcutsModalOpen(false);
-        } else if (isCommandPaletteOpen) {
-          e.preventDefault();
-          setIsCommandPaletteOpen(false);
-        } else if (isPublishModalOpen) {
-          e.preventDefault();
-          setIsPublishModalOpen(false);
-        } else if (isImageImportModalOpen) {
-          e.preventDefault();
-          setIsImageImportModalOpen(false);
-        } else if (isAuditModalOpen) {
-          e.preventDefault();
-          setIsAuditModalOpen(false);
-        }
       }
     };
 
