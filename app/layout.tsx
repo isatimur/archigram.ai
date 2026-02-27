@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { LegacyHashRouter } from './_components/LegacyHashRouter';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -49,10 +50,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {/* Redirect old hash-based bookmarks to clean URLs */}
-        <LegacyHashRouter />
-        {children}
-        <Toaster richColors position="bottom-right" />
+        <AuthProvider>
+          {/* Redirect old hash-based bookmarks to clean URLs */}
+          <LegacyHashRouter />
+          {children}
+          <Toaster richColors position="bottom-right" />
+        </AuthProvider>
       </body>
     </html>
   );
