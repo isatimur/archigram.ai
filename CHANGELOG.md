@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Keyboard shortcuts cheat sheet modal (`?` key) — lists all shortcuts grouped by category
+- `⌘⇧S` shortcut to copy share link
+- Shortcut hints shown in command palette (`⌘K`) next to relevant commands
 - Embed view (`?embed=true&mode=minimal|toolbar|interactive`) — clean iframe renderer for embedding diagrams in any website
 - Embed code generator upgraded: mode selector (minimal/toolbar/interactive), size picker (width/height), live-updating `<iframe>` snippet with `title` attribute
 - Social share URLs now include `?title=<diagram-name>` for richer OG image cards
