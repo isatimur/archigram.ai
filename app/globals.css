@@ -1,0 +1,86 @@
+@import 'tailwindcss';
+
+/* Custom theme using CSS variables (matches CDN Tailwind config from index.html) */
+@theme {
+  --font-family-sans: 'Inter', sans-serif;
+  --font-family-mono: 'JetBrains Mono', monospace;
+
+  --color-background: rgb(var(--bg) / <alpha-value>);
+  --color-surface: rgb(var(--surface) / <alpha-value>);
+  --color-surface-hover: rgb(var(--surface-hover) / <alpha-value>);
+  --color-border: rgb(var(--border) / <alpha-value>);
+  --color-text: rgb(var(--text) / <alpha-value>);
+  --color-text-muted: rgb(var(--text-muted) / <alpha-value>);
+  --color-primary: rgb(var(--primary) / <alpha-value>);
+  --color-primary-hover: rgb(var(--primary-hover) / <alpha-value>);
+  --color-accent: rgb(var(--accent) / <alpha-value>);
+
+  --animate-fade-in: fadeIn 0.4s ease-in-out;
+  --animate-slide-up: slideUp 0.5s ease-out;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    0% {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Default dark theme CSS variables */
+:root {
+  --bg: 9 9 11;
+  --surface: 24 24 27;
+  --surface-hover: 39 39 42;
+  --border: 63 63 70;
+  --text: 228 228 231;
+  --text-muted: 161 161 170;
+  --primary: 99 102 241;
+  --primary-hover: 79 70 229;
+  --accent: 168 85 247;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--border), 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--text-muted), 0.8);
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text));
+}
+
+/* Landing page grid background */
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
