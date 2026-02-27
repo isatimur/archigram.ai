@@ -140,20 +140,20 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
       if (e.key === 'Escape') {
         if (isShortcutsModalOpen) {
+          e.preventDefault();
           setIsShortcutsModalOpen(false);
-          e.preventDefault();
         } else if (isCommandPaletteOpen) {
+          e.preventDefault();
           setIsCommandPaletteOpen(false);
-          e.preventDefault();
         } else if (isPublishModalOpen) {
+          e.preventDefault();
           setIsPublishModalOpen(false);
-          e.preventDefault();
         } else if (isImageImportModalOpen) {
+          e.preventDefault();
           setIsImageImportModalOpen(false);
-          e.preventDefault();
         } else if (isAuditModalOpen) {
-          setIsAuditModalOpen(false);
           e.preventDefault();
+          setIsAuditModalOpen(false);
         }
       }
     };

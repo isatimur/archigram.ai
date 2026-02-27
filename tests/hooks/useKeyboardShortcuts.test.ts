@@ -54,6 +54,13 @@ describe('useKeyboardShortcuts', () => {
     expect(opts.setIsShortcutsModalOpen).toHaveBeenCalledWith(true);
   });
 
+  it('does not call setIsShortcutsModalOpen on Ctrl+?', () => {
+    const opts = makeOptions();
+    renderHook(() => useKeyboardShortcuts(opts));
+    fireKey('?', { ctrlKey: true });
+    expect(opts.setIsShortcutsModalOpen).not.toHaveBeenCalled();
+  });
+
   it('closes shortcuts modal on Escape when open', () => {
     const opts = makeOptions({ isShortcutsModalOpen: true });
     renderHook(() => useKeyboardShortcuts(opts));
