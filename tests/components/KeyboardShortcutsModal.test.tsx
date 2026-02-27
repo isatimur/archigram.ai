@@ -20,9 +20,9 @@ describe('KeyboardShortcutsModal', () => {
   it('calls onClose when backdrop is clicked', () => {
     const onClose = vi.fn();
     render(<KeyboardShortcutsModal isOpen={true} onClose={onClose} />);
-    // The backdrop is the outer fixed div — click it directly
-    const backdrop = document.querySelector('.fixed.inset-0') as HTMLElement;
-    fireEvent.click(backdrop);
+    const backdrop = document.querySelector('.fixed.inset-0');
+    expect(backdrop).not.toBeNull();
+    if (backdrop) fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledOnce();
   });
 

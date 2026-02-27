@@ -1,20 +1,20 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-interface KeyboardShortcutsModalProps {
+type KeyboardShortcutsModalProps = {
   isOpen: boolean;
   onClose: () => void;
-}
+};
 
-interface ShortcutRow {
+type ShortcutRow = {
   label: string;
   keys: string[];
-}
+};
 
-interface ShortcutGroup {
+type ShortcutGroup = {
   heading: string;
   rows: ShortcutRow[];
-}
+};
 
 const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
@@ -58,6 +58,12 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
     <div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shortcuts-dialog-title"
     >
       <div
         className="bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl p-6"
@@ -65,7 +71,9 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-semibold text-text">Keyboard Shortcuts</h3>
+          <h3 id="shortcuts-dialog-title" className="text-base font-semibold text-text">
+            Keyboard Shortcuts
+          </h3>
           <button
             onClick={onClose}
             aria-label="Close shortcuts"
@@ -87,10 +95,10 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
                   <div key={row.label} className="flex items-center justify-between py-0.5">
                     <span className="text-sm text-text">{row.label}</span>
                     <div className="flex items-center gap-1">
-                      {row.keys.map((key, i) => (
+                      {row.keys.map((key) => (
                         <kbd
-                          key={i}
-                          className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 bg-zinc-700 text-zinc-300 text-xs rounded font-mono border border-zinc-600"
+                          key={key}
+                          className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 bg-background border border-border rounded text-xs font-mono text-text-muted"
                         >
                           {key}
                         </kbd>
