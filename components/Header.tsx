@@ -37,6 +37,7 @@ import {
   DiagramStyleConfig,
   AppView,
   User as UserType,
+  EmbedMode,
 } from '../types.ts';
 
 const ShareEmailModal = lazy(() => import('./ShareEmailModal.tsx'));
@@ -90,11 +91,23 @@ const Header: React.FC<HeaderProps> = ({
   const [showShareEmailModal, setShowShareEmailModal] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [embedMode, setEmbedMode] = useState<EmbedMode>('toolbar');
+  const [embedHeight, setEmbedHeight] = useState<string>('500');
+  const [embedWidth, setEmbedWidth] = useState<string>('100%');
 
-  const shareText = `Check out this architecture diagram I created with ArchiGram.ai! ${activeProject?.name || 'Untitled Diagram'}`;
-  const shareUrl =
-    typeof window !== 'undefined' ? window.location.href : 'https://archigram-ai.vercel.app';
-  const embedCode = `<iframe src="${shareUrl}?embed=true" width="100%" height="500" frameborder="0" style="border-radius: 8px; border: 1px solid #333;"></iframe>`;
+  const base =
+    typeof window !== 'undefined'
+      ? window.location.href.split('#')[0].replace(/\/$/, '')
+      : 'https://archigram-ai.vercel.app';
+  const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+  const shareUrl = hash
+    ? `${base}?title=${encodeURIComponent(activeProject?.name || 'Architecture Diagram')}#${hash}`
+    : base;
+  const shareText = `I just built a "${activeProject?.name || 'Architecture Diagram'}" with @ArchiGram_ai — check it out:`;
+  const embedSrc = hash
+    ? `${base}?embed=true&mode=${embedMode}#${hash}`
+    : `${base}?embed=true&mode=${embedMode}`;
+  const embedCode = `<iframe\n  src="${embedSrc}"\n  width="${embedWidth}"\n  height="${embedHeight}"\n  frameborder="0"\n  style="border-radius: 8px; border: 1px solid #333;"\n  title="${activeProject?.name || 'Architecture Diagram'} — ArchiGram.ai"\n></iframe>`;
 
   const handleCopyLink = async () => {
     try {
@@ -607,59 +620,123 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Embed Modal */}
         {showEmbedModal && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowEmbedModal(false)}
-          >
-            <div
-              className="bg-surface border border-border rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Code className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-text">Embed Diagram</h3>
-                    <p className="text-xs text-text-muted">
-                      Add this diagram to your website or docs
-                    </p>
-                  </div>
-                </div>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <div className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-semibold text-text">Embed Diagram</h3>
                 <button
                   onClick={() => setShowEmbedModal(false)}
-                  className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
-                  aria-label="Close embed dialog"
+                  className="text-text-muted hover:text-text"
+                  aria-label="Close embed modal"
                 >
-                  <X className="w-5 h-5 text-text-muted" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-text-muted mb-2 block">
-                    Embed Code
+              {/* Mode selector */}
+              <div className="mb-4">
+                <label className="block text-xs text-text-muted mb-2 font-medium uppercase tracking-wide">
+                  Mode
+                </label>
+                <div className="flex gap-2">
+                  {(['minimal', 'toolbar', 'interactive'] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setEmbedMode(m)}
+                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                        embedMode === m
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : 'border-border text-text-muted hover:text-text hover:border-text-muted'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-text-muted mt-1.5">
+                  {embedMode === 'minimal' && 'Diagram only, no chrome.'}
+                  {embedMode === 'toolbar' && 'Diagram + zoom controls + ArchiGram badge.'}
+                  {embedMode === 'interactive' && 'Toolbar + "Fork this diagram" button.'}
+                </p>
+              </div>
+
+              {/* Size selector */}
+              <div className="mb-4 flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-xs text-text-muted mb-2 font-medium uppercase tracking-wide">
+                    Width
                   </label>
-                  <div className="relative">
-                    <pre className="bg-background border border-border rounded-lg p-3 text-xs text-text-muted overflow-x-auto font-mono">
-                      {embedCode}
-                    </pre>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEmbedWidth('100%')}
+                      className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                        embedWidth === '100%'
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : 'border-border text-text-muted hover:text-text'
+                      }`}
+                    >
+                      100%
+                    </button>
+                    <input
+                      type="number"
+                      placeholder="px"
+                      value={embedWidth.endsWith('px') ? embedWidth.slice(0, -2) : ''}
+                      onChange={(e) =>
+                        setEmbedWidth(e.target.value ? `${e.target.value}px` : '100%')
+                      }
+                      className="w-16 px-2 py-1.5 rounded-lg text-xs bg-background border border-border text-text placeholder-text-muted"
+                    />
                   </div>
                 </div>
-
-                <button
-                  onClick={handleCopyEmbed}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-lg transition-all"
-                >
-                  {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {embedCopied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
-                </button>
-
-                <div className="text-xs text-text-muted text-center">
-                  Powered by <span className="text-primary font-semibold">ArchiGram.ai</span>
+                <div className="flex-1">
+                  <label className="block text-xs text-text-muted mb-2 font-medium uppercase tracking-wide">
+                    Height
+                  </label>
+                  <div className="flex gap-2">
+                    {(['400', '500', '600'] as const).map((h) => (
+                      <button
+                        key={h}
+                        onClick={() => setEmbedHeight(h)}
+                        className={`px-2 py-1.5 rounded-lg text-xs border transition-colors ${
+                          embedHeight === h
+                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            : 'border-border text-text-muted hover:text-text'
+                        }`}
+                      >
+                        {h}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      placeholder="px"
+                      value={!['400', '500', '600'].includes(embedHeight) ? embedHeight : ''}
+                      onChange={(e) => setEmbedHeight(e.target.value || '500')}
+                      className="w-14 px-2 py-1.5 rounded-lg text-xs bg-background border border-border text-text placeholder-text-muted"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Generated embed code */}
+              <div className="mb-4">
+                <label className="block text-xs text-text-muted mb-2 font-medium uppercase tracking-wide">
+                  Embed Code
+                </label>
+                <textarea
+                  readOnly
+                  value={embedCode}
+                  rows={6}
+                  className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono text-text resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                onClick={handleCopyEmbed}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {embedCopied ? 'Copied!' : 'Copy Embed Code'}
+              </button>
             </div>
           </div>
         )}
