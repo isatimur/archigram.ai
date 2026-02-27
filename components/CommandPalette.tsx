@@ -23,6 +23,7 @@ interface Command {
   icon: React.ReactNode;
   action: () => void;
   keywords: string[];
+  shortcut?: string;
 }
 
 interface CommandPaletteProps {
@@ -72,6 +73,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['new', 'create', 'diagram', 'project'],
+      shortcut: '⌘N',
     },
     {
       id: 'duplicate',
@@ -83,6 +85,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['duplicate', 'copy', 'clone'],
+      shortcut: '⌘D',
     },
     {
       id: 'export-png',
@@ -94,6 +97,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['export', 'png', 'image', 'download', 'save'],
+      shortcut: '⌘E',
     },
     {
       id: 'export-svg',
@@ -105,6 +109,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['export', 'svg', 'vector', 'download'],
+      shortcut: '⌘⇧E',
     },
     {
       id: 'share',
@@ -116,6 +121,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['share', 'link', 'copy', 'url'],
+      shortcut: '⌘⇧S',
     },
     {
       id: 'publish',
@@ -127,6 +133,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['publish', 'gallery', 'community', 'share'],
+      shortcut: '⌘⇧P',
     },
     {
       id: 'gallery',
@@ -138,6 +145,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
       keywords: ['gallery', 'community', 'browse', 'explore'],
+      shortcut: '⌘G',
     },
     {
       id: 'docs',
@@ -315,7 +323,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                   <div className="font-medium text-sm">{cmd.label}</div>
                   <div className="text-xs text-text-muted truncate">{cmd.description}</div>
                 </div>
-                {index === selectedIndex && <ArrowRight className="w-4 h-4 text-primary" />}
+                <div className="flex items-center gap-2 shrink-0">
+                  {cmd.shortcut && (
+                    <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 bg-background border border-border text-text-muted text-[10px] rounded font-mono">
+                      {cmd.shortcut}
+                    </kbd>
+                  )}
+                  {index === selectedIndex && <ArrowRight className="w-4 h-4 text-primary" />}
+                </div>
               </button>
             ))
           )}
