@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Embed view (`?embed=true&mode=minimal|toolbar|interactive`) — clean iframe renderer for embedding diagrams in any website
+- Embed code generator upgraded: mode selector (minimal/toolbar/interactive), size picker (width/height), live-updating `<iframe>` snippet with `title` attribute
+- Social share URLs now include `?title=<diagram-name>` for richer OG image cards
+- Twitter share text updated to: `I just built a "<name>" with @ArchiGram_ai — check it out:`
+
 ## [1.1.0] - 2026-02-26
 
 ### Added
