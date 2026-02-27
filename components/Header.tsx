@@ -620,13 +620,19 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Embed Modal */}
         {showEmbedModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-            <div className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+            onClick={() => setShowEmbedModal(false)}
+          >
+            <div
+              className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-base font-semibold text-text">Embed Diagram</h3>
                 <button
                   onClick={() => setShowEmbedModal(false)}
-                  className="text-text-muted hover:text-text"
+                  className="p-2 text-text-muted hover:text-text rounded-lg transition-colors"
                   aria-label="Close embed modal"
                 >
                   <X className="w-4 h-4" />
@@ -643,6 +649,7 @@ const Header: React.FC<HeaderProps> = ({
                     <button
                       key={m}
                       onClick={() => setEmbedMode(m)}
+                      aria-pressed={embedMode === m}
                       className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
                         embedMode === m
                           ? 'bg-indigo-600 border-indigo-500 text-white'

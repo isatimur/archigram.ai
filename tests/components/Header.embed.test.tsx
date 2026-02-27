@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '../utils/test-utils.tsx';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '../utils/test-utils.tsx';
 import Header from '../../components/Header.tsx';
 import { ViewMode } from '../../types.ts';
 
@@ -25,36 +25,58 @@ const defaultProps = {
   activeProject: { id: '1', name: 'My API Flow', code: 'graph TD; A-->B', updatedAt: 0 },
 };
 
+const originalLocation = window.location;
+
 describe('Header embed code generation', () => {
-  it('generated embed code contains mode=toolbar by default', () => {
-    // Set window.location.hash so there's a hash to embed
+  beforeEach(() => {
     Object.defineProperty(window, 'location', {
       value: { search: '', hash: '#abc123', href: 'http://localhost/#abc123' },
       writable: true,
       configurable: true,
     });
+  });
 
+  afterEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it('generated embed code contains mode=toolbar by default', async () => {
     render(<Header {...defaultProps} />);
 
-    // Open share menu
     const shareBtn = screen.getByRole('button', { name: /share/i });
     fireEvent.click(shareBtn);
 
-    // Click embed option
     const embedOption = screen.getByText(/embed/i);
     fireEvent.click(embedOption);
 
-    // Check the textarea value
-    const textarea = screen.getByRole('textbox');
-    expect((textarea as HTMLTextAreaElement).value).toContain('mode=toolbar');
-    expect((textarea as HTMLTextAreaElement).value).toContain('<iframe');
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox');
+      expect((textarea as HTMLTextAreaElement).value).toContain('mode=toolbar');
+      expect((textarea as HTMLTextAreaElement).value).toContain('<iframe');
+    });
   });
 
-  it('Twitter share text includes the diagram name', () => {
-    const name = 'My API Flow';
-    const expectedText = `I just built a "${name}" with @ArchiGram_ai — check it out:`;
-    // This is testing the text formula directly
-    expect(expectedText).toContain('@ArchiGram_ai');
-    expect(expectedText).toContain(name);
+  it('Twitter share URL includes the diagram name as title param', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(<Header {...defaultProps} />);
+
+    const shareBtn = screen.getByRole('button', { name: /share/i });
+    fireEvent.click(shareBtn);
+
+    const twitterBtn = screen.getByText(/twitter/i);
+    fireEvent.click(twitterBtn);
+
+    expect(openSpy).toHaveBeenCalledOnce();
+    const calledUrl = openSpy.mock.calls[0][0] as string;
+    expect(calledUrl).toContain('twitter.com/intent/tweet');
+    expect(calledUrl).toContain(encodeURIComponent('@ArchiGram_ai'));
+    expect(calledUrl).toContain(encodeURIComponent('My API Flow'));
+
+    openSpy.mockRestore();
   });
 });
