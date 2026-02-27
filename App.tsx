@@ -41,6 +41,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage.tsx'));
 const PublishModal = lazy(() => import('./components/PublishModal.tsx'));
 const PromptMarketplace = lazy(() => import('./components/PromptMarketplace.tsx'));
 const PublishPromptModal = lazy(() => import('./components/PublishPromptModal.tsx'));
+const KeyboardShortcutsModal = lazy(() => import('./components/KeyboardShortcutsModal.tsx'));
 const EmbedView = lazy(() => import('./components/EmbedView.tsx'));
 
 // Loading Fallback
@@ -137,6 +138,7 @@ function App() {
   });
   const [isPublishing, setIsPublishing] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isPublishPromptModalOpen, setIsPublishPromptModalOpen] = useState(false);
   const [pendingPromptText, setPendingPromptText] = useState('');
   const [pendingPromptResultCode, setPendingPromptResultCode] = useState<string | undefined>();
@@ -460,16 +462,19 @@ function App() {
     isImageImportModalOpen,
     isAuditModalOpen,
     isCommandPaletteOpen,
+    isShortcutsModalOpen,
     setCurrentView,
     setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
     setIsImageImportModalOpen,
     setIsAuditModalOpen,
+    setIsShortcutsModalOpen,
     handleCreateProject,
     handleExportPng,
     handleExportSvg,
     handleDuplicateDiagram,
+    handleShare,
     openPublishModal,
   });
 
@@ -877,6 +882,14 @@ function App() {
           />
         </Suspense>
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <Suspense fallback={null}>
+        <KeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+        />
+      </Suspense>
 
       {/* Publish Prompt Modal */}
       {isPublishPromptModalOpen && (
