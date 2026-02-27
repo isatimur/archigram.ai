@@ -18,7 +18,8 @@ const EmbedView: React.FC = () => {
 
   const [scale, setScale] = useState(1);
 
-  const forkUrl = `https://archigram-ai.vercel.app/#${hash}`;
+  const appBase = window.location.href.split('?')[0].split('#')[0].replace(/\/$/, '');
+  const forkUrl = `${appBase}/#${hash}`;
 
   if (!code) {
     return (
@@ -87,7 +88,7 @@ const EmbedView: React.FC = () => {
 
           <div className="w-px h-4 bg-zinc-700 mx-1" />
           <a
-            href="https://archigram-ai.vercel.app"
+            href={appBase}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors whitespace-nowrap"
