@@ -11,7 +11,6 @@ import { VIEW_TO_PATH } from '@/app/_components/NavigationAdapter';
 import { ViewMode } from '@/types';
 import type { DiagramTheme, AppView } from '@/types';
 import { publishDiagram } from '@/lib/supabase/browser';
-import { auditDiagram } from '@/services/geminiService';
 import type { AuditReport } from '@/services/geminiService';
 import { encodeCodeToUrl } from '@/utils/url';
 import { analytics } from '@/utils/analytics';
@@ -337,7 +336,13 @@ export default function EditorShell() {
     setIsAuditing(true);
     setAuditReport(null);
     try {
-      const report = await auditDiagram(code);
+      const res = await fetch('/api/v1/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Audit failed');
+      const report: AuditReport = await res.json();
       setAuditReport(report);
     } catch (e) {
       console.error(e);
@@ -354,8 +359,13 @@ export default function EditorShell() {
     if (!code || !error) return;
     setIsFixing(true);
     try {
-      const { fixDiagramSyntax } = await import('@/services/geminiService');
-      const fixedCode = await fixDiagramSyntax(code, error);
+      const res = await fetch('/api/v1/fix-syntax', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, errorMessage: error }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Fix failed');
+      const { code: fixedCode } = await res.json();
       if (fixedCode) {
         setCode(fixedCode);
         handleAIUpdate(fixedCode);

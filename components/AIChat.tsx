@@ -19,7 +19,6 @@ import {
   Archive,
   Share2,
 } from 'lucide-react';
-import { generateDiagramCode } from '../services/geminiService.ts';
 import { ChatMessage, DiagramTheme, CopilotDomain, ProjectVersion } from '../types.ts';
 
 interface AIChatProps {
@@ -125,7 +124,13 @@ const AIChat: React.FC<AIChatProps> = ({
     setActiveTab('chat');
 
     try {
-      const newCode = await generateDiagramCode(userPrompt, currentCode, selectedDomain);
+      const res = await fetch('/api/v1/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userPrompt, currentCode, domain: selectedDomain }),
+      });
+      if (!res.ok) throw new Error((await res.json()).message ?? 'Generation failed');
+      const { code: newCode } = await res.json();
 
       const aiMsg: ChatMessage = {
         id: Date.now().toString(),

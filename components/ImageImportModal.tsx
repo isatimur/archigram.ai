@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, X, Loader2, ScanLine, FileWarning, ArrowRight } from 'lucide-react';
-import { imageToDiagram } from '../services/geminiService.ts';
 
 interface ImageImportModalProps {
   onClose: () => void;
@@ -71,7 +70,13 @@ const ImageImportModal: React.FC<ImageImportModalProps> = ({ onClose, onImport }
 
       const mimeType = matches[1];
 
-      const mermaidCode = await imageToDiagram(preview, mimeType);
+      const res = await fetch('/api/v1/image-to-diagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: preview, mimeType }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Conversion failed');
+      const { code: mermaidCode } = await res.json();
       onImport(mermaidCode);
       onClose();
     } catch (e) {
