@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Mermaid 11.x is pure ESM with internal dynamic imports. Without this,
+  // webpack splits it into chunks with path-based names that Next.js can't serve.
+  transpilePackages: ['mermaid'],
+
   // During Phase 1 migration, App.tsx and other Vite-era files may have type
   // errors. They'll be fixed in Phase 2. Don't block production builds.
   typescript: {
@@ -18,7 +22,25 @@ const nextConfig: NextConfig = {
   // Map Vite-style import.meta.env.VITE_* → NEXT_PUBLIC_* so existing components
   // continue to work in Next.js without modification during Phase 1 migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  webpack(config: any, { webpack }: { webpack: any }) {
+  webpack(config: any, { webpack, isServer }: { webpack: any; isServer: boolean }) {
+    // Bundle all mermaid sub-packages into a single chunk so path-based chunk
+    // names (which Next.js can't serve) are never generated.
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          mermaid: {
+            name: 'mermaid',
+            test: /[\\/]node_modules[\\/](mermaid|@mermaid-js)[\\/]/,
+            chunks: 'all',
+            priority: 20,
+            enforce: true,
+          },
+        },
+      };
+    }
+
     config.plugins.push(
       new webpack.DefinePlugin({
         'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(
@@ -34,6 +56,8 @@ const nextConfig: NextConfig = {
         'import.meta.env.VITE_RAG_ENABLED': JSON.stringify(
           process.env.NEXT_PUBLIC_RAG_ENABLED ?? 'false'
         ),
+        // geminiService.ts reads process.env.API_KEY (Google AI SDK convention)
+        'process.env.API_KEY': JSON.stringify(process.env.GEMINI_API_KEY ?? ''),
         // MODE is used by some Vite-dependent libraries
         'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV ?? 'production'),
         'import.meta.env.DEV': JSON.stringify(process.env.NODE_ENV === 'development'),
