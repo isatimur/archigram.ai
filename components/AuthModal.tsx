@@ -10,8 +10,8 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import { signUp, signIn, signInWithOAuth, getCurrentUser } from '../services/supabaseClient.ts';
-import { User as UserType } from '../types.ts';
+import { signUp, signIn, signInWithOAuth, getCurrentUser } from '@/lib/supabase/browser';
+import { User as UserType } from '@/types';
 
 interface AuthModalProps {
   isOpen: boolean;

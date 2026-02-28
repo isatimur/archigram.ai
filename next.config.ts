@@ -3,9 +3,9 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // Mermaid 11.x is pure ESM with internal dynamic imports. Without this,
-  // webpack splits it into chunks with path-based names that Next.js can't serve.
-  transpilePackages: ['mermaid'],
+  // mermaid 11.x and bpmn-js are pure ESM with internal dynamic imports. Without
+  // this, webpack splits them into chunks with path-based names Next.js can't serve.
+  transpilePackages: ['mermaid', 'bpmn-js'],
 
   // During Phase 1 migration, App.tsx and other Vite-era files may have type
   // errors. They'll be fixed in Phase 2. Don't block production builds.
@@ -33,6 +33,13 @@ const nextConfig: NextConfig = {
           mermaid: {
             name: 'mermaid',
             test: /[\\/]node_modules[\\/](mermaid|@mermaid-js)[\\/]/,
+            chunks: 'all',
+            priority: 20,
+            enforce: true,
+          },
+          bpmnjs: {
+            name: 'bpmn-js',
+            test: /[\\/]node_modules[\\/](bpmn-js|bpmn-moddle|moddle|diagram-js|min-dash|min-dom)[\\/]/,
             chunks: 'all',
             priority: 20,
             enforce: true,
