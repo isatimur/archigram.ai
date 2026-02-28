@@ -76,6 +76,10 @@ AI analyzes your diagrams for:
 - **PlantUML**: Enterprise-standard UML diagrams
 - **BPMN**: Business process modeling
 
+### Public Profiles
+
+Every user gets a shareable profile at `archigram-ai.vercel.app/u/username` — avatar, bio, social link, and a grid of published diagrams. Full OpenGraph metadata for social sharing.
+
 ### Community Gallery
 
 Browse, like, fork, and share diagrams with the community.
@@ -100,19 +104,19 @@ git clone https://github.com/isatimur/archigram.ai.git
 cd archigram.ai
 bun install
 cp .env.example .env
-# Add VITE_GEMINI_API_KEY only (see .env.example)
+# Add GEMINI_API_KEY only (see .env.example)
 bun run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Community gallery shows static fallback.
+Open [http://localhost:3000](http://localhost:3000). Community gallery shows static fallback.
 
 ### Option 3: Self-Host with Community
 
-Same as Option 2, but add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` to `.env` for live gallery. See [DEVELOPMENT.md](DEVELOPMENT.md).
+Same as Option 2, but add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY` to `.env` for live gallery. See [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ### Option 4: Deploy Your Own
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/isatimur/archigram.ai&env=VITE_GEMINI_API_KEY)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/isatimur/archigram.ai&env=GEMINI_API_KEY)
 
 ### Option 5: CLI (Generate from Terminal)
 
@@ -153,7 +157,7 @@ Uses hosted API by default; set `GEMINI_API_KEY` for local generation.
 | ------------- | ------------------ |
 | React 19      | UI Framework       |
 | TypeScript    | Type Safety        |
-| Vite          | Build Tool         |
+| Next.js 15    | Build Tool & SSR   |
 | Tailwind CSS  | Styling            |
 | Google Gemini | AI Generation      |
 | Mermaid.js    | Diagram Rendering  |
