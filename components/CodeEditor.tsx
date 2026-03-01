@@ -46,7 +46,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   isFixing = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const preRef = useRef<HTMLElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   // Default to closed unless there's an error
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);

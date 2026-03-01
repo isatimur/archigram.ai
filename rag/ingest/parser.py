@@ -50,10 +50,10 @@ def parse_pdf(content: bytes) -> str:
 
         return "\n\n".join(texts)
 
-    except ImportError:
-        raise ParserError("pypdf is not installed")
+    except ImportError as e:
+        raise ParserError("pypdf is not installed") from e
     except Exception as e:
-        raise ParserError(f"Failed to parse PDF: {str(e)}")
+        raise ParserError(f"Failed to parse PDF: {str(e)}") from e
 
 
 def parse_markdown(content: str) -> str:

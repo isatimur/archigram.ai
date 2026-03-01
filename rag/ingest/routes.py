@@ -15,7 +15,13 @@ from middleware.logging import get_logger
 from search.store import get_vector_store
 
 from .parser import ParserError, parse_document
-from .validation import ValidationError, validate_content, validate_doc_type, validate_file_extension, validate_file_size
+from .validation import (
+    ValidationError,
+    validate_content,
+    validate_doc_type,
+    validate_file_extension,
+    validate_file_size,
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -138,7 +144,7 @@ async def ingest_document(
 
     except ValidationError as e:
         logger.warning("ingest_validation_failed", doc_id=doc_id, error=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         # Parse document
@@ -146,7 +152,7 @@ async def ingest_document(
 
     except ParserError as e:
         logger.error("ingest_parse_failed", doc_id=doc_id, error=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         # Chunk document
@@ -195,4 +201,4 @@ async def ingest_document(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process document: {str(e)}",
-        )
+        ) from e

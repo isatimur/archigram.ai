@@ -94,8 +94,8 @@ def validate_content(content: bytes, extension: str) -> str:
     except UnicodeDecodeError:
         try:
             text = content.decode("latin-1")
-        except UnicodeDecodeError:
-            raise ValidationError("File is not valid UTF-8 or Latin-1 encoded text")
+        except UnicodeDecodeError as e:
+            raise ValidationError("File is not valid UTF-8 or Latin-1 encoded text") from e
 
     # Check for null bytes (binary content)
     if "\x00" in text:

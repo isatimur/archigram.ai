@@ -4,7 +4,6 @@ This provider is optional and only used when RAG_USE_CLOUD_EMBEDDINGS=true.
 Note: Query text is sent to Google's API when using cloud embeddings.
 """
 
-import asyncio
 
 import httpx
 

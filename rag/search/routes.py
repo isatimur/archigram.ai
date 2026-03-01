@@ -121,12 +121,12 @@ async def search(request: Request, search_request: SearchRequest) -> SearchRespo
                 embedding_provider.embed_query(search_request.query),
                 timeout=timeout_sec,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError as e:
             logger.error("search_embedding_timeout", timeout=timeout_sec)
             raise HTTPException(
                 status_code=503,
                 detail="Embedding service timed out",
-            )
+            ) from e
 
         # Search vector store with timeout
         vector_store = get_vector_store()
@@ -142,12 +142,12 @@ async def search(request: Request, search_request: SearchRequest) -> SearchRespo
                 ),
                 timeout=timeout_sec,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError as e:
             logger.error("search_qdrant_timeout", timeout=timeout_sec)
             raise HTTPException(
                 status_code=503,
                 detail="Vector search timed out",
-            )
+            ) from e
 
         # Format response
         chunks = [
@@ -176,7 +176,7 @@ async def search(request: Request, search_request: SearchRequest) -> SearchRespo
         raise HTTPException(
             status_code=503,
             detail="Knowledge base unavailable",
-        )
+        ) from e
 
     except HTTPException:
         # Re-raise HTTP exceptions
@@ -187,7 +187,7 @@ async def search(request: Request, search_request: SearchRequest) -> SearchRespo
         raise HTTPException(
             status_code=503,
             detail="Search service unavailable",
-        )
+        ) from e
 
 
 @router.get(
@@ -216,4 +216,4 @@ async def get_stats() -> dict[str, Any]:
         raise HTTPException(
             status_code=503,
             detail="Could not retrieve statistics",
-        )
+        ) from e
