@@ -253,7 +253,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
             <p className="text-sm text-text">
               {bio || <span className="text-text-muted italic">No bio yet.</span>}
             </p>
-            {socialLink && (
+            {socialLink && /^https?:\/\//i.test(socialLink) && (
               <a
                 href={socialLink}
                 target="_blank"
@@ -261,7 +261,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 <ExternalLink className="w-3 h-3" />
-                {socialLink.replace(/^https?:\/\//, '')}
+                {socialLink.replace(/^https?:\/\//i, '')}
               </a>
             )}
           </div>
