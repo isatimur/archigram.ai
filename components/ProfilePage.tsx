@@ -45,6 +45,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [showDangerZone, setShowDangerZone] = useState(false);
 
+  // Sanitize social link: only allow http/https to prevent javascript: XSS
+  const safeSocialHref = React.useMemo(() => {
+    if (!socialLink) return null;
+    try {
+      const url = new URL(socialLink);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? socialLink : null;
+    } catch {
+      return null;
+    }
+  }, [socialLink]);
+
   useEffect(() => {
     fetchUserDiagrams(user.id).then(setCloudDiagrams);
 
@@ -253,15 +264,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
             <p className="text-sm text-text">
               {bio || <span className="text-text-muted italic">No bio yet.</span>}
             </p>
-            {socialLink && /^https?:\/\//i.test(socialLink) && (
+            {safeSocialHref && (
               <a
-                href={socialLink}
+                href={safeSocialHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 <ExternalLink className="w-3 h-3" />
-                {socialLink.replace(/^https?:\/\//i, '')}
+                {safeSocialHref.replace(/^https?:\/\//i, '')}
               </a>
             )}
           </div>
