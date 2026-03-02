@@ -1,12 +1,10 @@
 """Qdrant vector store client with retry logic and collection management."""
 
 import uuid
-from functools import lru_cache
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
 from chunking import Chunk
 from config import get_settings
@@ -101,7 +99,7 @@ class QdrantVectorStore:
 
         except Exception as e:
             logger.error("qdrant_collection_setup_failed", error=str(e))
-            raise VectorStoreError(f"Failed to setup Qdrant collection: {e}")
+            raise VectorStoreError(f"Failed to setup Qdrant collection: {e}") from e
 
     async def health_check(self) -> bool:
         """Check if Qdrant is healthy and accessible.
@@ -118,7 +116,7 @@ class QdrantVectorStore:
             await client.get_collection(self._settings.qdrant_collection)
             return True
         except Exception as e:
-            raise VectorStoreError(f"Qdrant health check failed: {e}")
+            raise VectorStoreError(f"Qdrant health check failed: {e}") from e
 
     async def upsert_chunks(
         self,
@@ -151,7 +149,7 @@ class QdrantVectorStore:
                 vector=embedding,
                 payload=chunk.to_dict(),
             )
-            for chunk, embedding in zip(chunks, embeddings)
+            for chunk, embedding in zip(chunks, embeddings, strict=False)
         ]
 
         try:
@@ -173,7 +171,7 @@ class QdrantVectorStore:
 
         except Exception as e:
             logger.error("qdrant_upsert_failed", error=str(e))
-            raise VectorStoreError(f"Failed to upsert chunks: {e}")
+            raise VectorStoreError(f"Failed to upsert chunks: {e}") from e
 
     async def search(
         self,
@@ -246,7 +244,7 @@ class QdrantVectorStore:
 
         except Exception as e:
             logger.error("qdrant_search_failed", error=str(e))
-            raise VectorStoreError(f"Search failed: {e}")
+            raise VectorStoreError(f"Search failed: {e}") from e
 
     async def delete_by_source(self, source: str, company_id: str | None = None) -> int:
         """Delete all chunks from a specific source.
@@ -292,7 +290,7 @@ class QdrantVectorStore:
 
         except Exception as e:
             logger.error("qdrant_delete_failed", error=str(e))
-            raise VectorStoreError(f"Delete failed: {e}")
+            raise VectorStoreError(f"Delete failed: {e}") from e
 
     async def close(self) -> None:
         """Close the Qdrant client."""

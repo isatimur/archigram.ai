@@ -1,13 +1,11 @@
 """Tests for the ingest module."""
 
-import io
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from ingest.parser import ParserError, parse_document, parse_markdown, parse_pdf, parse_text
+from ingest.parser import ParserError, parse_document, parse_markdown, parse_text
 from ingest.validation import (
     ValidationError,
     validate_content,

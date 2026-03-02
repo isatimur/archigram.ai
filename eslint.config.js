@@ -134,6 +134,9 @@ export default [
       'rag/.venv/**',
       'rag/**/*.js',
       'rag/**/*.mjs',
+      // Next.js auto-generated files
+      'next-env.d.ts',
+      '.next/**',
     ],
   },
   prettier,

@@ -11,8 +11,14 @@ import {
   AlertTriangle,
   ExternalLink,
 } from 'lucide-react';
-import { User as UserType, Project } from '../types.ts';
-import { supabase, fetchUserDiagrams, deleteUserDiagram } from '../services/supabaseClient.ts';
+import Link from 'next/link';
+import { User as UserType, Project } from '@/types';
+import {
+  createClient,
+  fetchUserDiagrams,
+  deleteUserDiagram,
+  updateProfile,
+} from '@/lib/supabase/browser';
 import { toast } from 'sonner';
 
 interface ProfilePageProps {
@@ -32,23 +38,67 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
 }) => {
   const [username, setUsername] = useState(user.username || '');
   const [editingUsername, setEditingUsername] = useState(false);
+  const [bio, setBio] = useState('');
+  const [socialLink, setSocialLink] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
   const [cloudDiagrams, setCloudDiagrams] = useState<Project[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [showDangerZone, setShowDangerZone] = useState(false);
 
+  // Sanitize social link: only allow http/https to prevent javascript: XSS
+  const safeSocialHref = React.useMemo(() => {
+    if (!socialLink) return null;
+    try {
+      const url = new URL(socialLink);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? socialLink : null;
+    } catch {
+      return null;
+    }
+  }, [socialLink]);
+
   useEffect(() => {
     fetchUserDiagrams(user.id).then(setCloudDiagrams);
-  }, [user.id]);
+
+    // Load bio/social_link from profiles table, upsert row for pre-trigger users
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('bio, social_link')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setBio(data.bio ?? '');
+          setSocialLink(data.social_link ?? '');
+        } else {
+          supabase.from('profiles').upsert({
+            id: user.id,
+            username: user.username ?? null,
+            avatar_url: user.avatar_url ?? null,
+          });
+        }
+      });
+  }, [user.id, user.username, user.avatar_url]);
 
   const saveUsername = async () => {
     const trimmed = username.trim();
     if (!trimmed) return;
-    const { error } = await supabase.auth.updateUser({ data: { username: trimmed } });
-    if (error) {
+    const ok = await updateProfile({ username: trimmed });
+    if (!ok) {
       toast.error('Failed to update username');
     } else {
       toast.success('Username updated');
       setEditingUsername(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    const ok = await updateProfile({ bio: bio.trim(), social_link: socialLink.trim() });
+    if (!ok) {
+      toast.error('Failed to save profile');
+    } else {
+      toast.success('Profile saved');
+      setEditingProfile(false);
     }
   };
 
@@ -141,6 +191,92 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
           <LogOut className="w-4 h-4" />
           Sign out
         </button>
+      </div>
+
+      {/* Bio & Social Link */}
+      <div className="bg-surface border border-border rounded-xl p-4 mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+            Profile Details
+          </h2>
+          <div className="flex items-center gap-2">
+            {user.username && (
+              <Link
+                href={`/u/${user.username}`}
+                target="_blank"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                View public profile
+              </Link>
+            )}
+            {!editingProfile && (
+              <button
+                onClick={() => setEditingProfile(true)}
+                className="text-text-muted hover:text-primary transition-colors"
+                aria-label="Edit profile details"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+        {editingProfile ? (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-text-muted mb-1 block">Bio</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={2}
+                maxLength={160}
+                placeholder="Tell people about yourself..."
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block">Website / Social link</label>
+              <input
+                value={socialLink}
+                onChange={(e) => setSocialLink(e.target.value)}
+                placeholder="https://github.com/you"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={saveProfile}
+                className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Save
+              </button>
+              <button
+                onClick={() => setEditingProfile(false)}
+                className="px-3 py-1.5 text-xs text-text-muted hover:text-text border border-border rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-sm text-text">
+              {bio || <span className="text-text-muted italic">No bio yet.</span>}
+            </p>
+            {safeSocialHref && (
+              <a
+                href={safeSocialHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                {safeSocialHref.replace(/^https?:\/\//i, '')}
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats */}

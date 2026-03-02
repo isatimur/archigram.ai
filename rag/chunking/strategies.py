@@ -8,7 +8,6 @@ Different document types benefit from different chunking parameters:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
 
 from .splitter import Chunk, RecursiveSplitter
 

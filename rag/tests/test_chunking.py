@@ -1,10 +1,8 @@
 """Tests for the chunking module."""
 
-import pytest
 
 from chunking.splitter import Chunk, RecursiveSplitter
 from chunking.strategies import (
-    ChunkingStrategy,
     DocType,
     chunk_document,
     create_splitter_for_doc_type,

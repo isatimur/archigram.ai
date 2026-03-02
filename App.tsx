@@ -581,7 +581,7 @@ function App() {
             handleSelectProject(project.id);
             setCurrentView('app');
           }}
-          onDeleteProject={handleDeleteProject}
+          onDeleteProject={(id) => handleDeleteProject(id, {} as React.MouseEvent)}
         />
       </Suspense>
     );
@@ -643,7 +643,7 @@ function App() {
                 onSelectProject={handleSelectProject}
                 onCreateProject={handleCreateProject}
                 onCreateFromTemplate={handleCreateFromTemplate}
-                onDeleteProject={handleDeleteProject}
+                onDeleteProject={(id) => handleDeleteProject(id, {} as React.MouseEvent)}
                 onClose={() => setIsSidebarOpen(false)}
                 lastSaved={lastSaved}
                 saveStatus={saveStatus}
@@ -677,7 +677,7 @@ function App() {
                     handleCreateFromTemplate(name, code);
                     setIsSidebarOpen(false);
                   }}
-                  onDeleteProject={handleDeleteProject}
+                  onDeleteProject={(id) => handleDeleteProject(id, {} as React.MouseEvent)}
                   onClose={() => setIsSidebarOpen(false)}
                   lastSaved={lastSaved}
                   saveStatus={saveStatus}

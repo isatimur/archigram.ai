@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Project, User } from '../types.ts';
-import { fetchUserDiagrams, upsertUserDiagram } from '../services/supabaseClient.ts';
+import { Project, User } from '@/types';
+import { fetchUserDiagrams, upsertUserDiagram } from '@/lib/supabase/browser';
 
 /**
  * Merge local and cloud project arrays.

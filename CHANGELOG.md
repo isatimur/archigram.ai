@@ -7,15 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-02-28
+
 ### Added
 
-- Keyboard shortcuts cheat sheet modal (`?` key) — lists all shortcuts grouped by category
+- **Next.js 15 App Router migration** — replaced Vite SPA with Next.js; clean URL routing replaces hash-based navigation (`/editor`, `/gallery`, `/docs`, etc.)
+- **Public profile pages** at `/u/[username]` — shareable profile with avatar, bio, social link, stats (diagram count, total likes, join date), and published diagram grid; full OG metadata for social sharing
+- **Profile editing** — bio and social link fields added to the private profile page; changes persist to Supabase `profiles` table
+- **Server Components** for SEO-critical pages (landing, gallery, docs, public profiles) with proper `generateMetadata` for each route
+- **Next.js Route Handlers** replace Vercel serverless functions for all API endpoints (`/api/v1/generate`, `/api/og-image`, `/api/share-diagram`, email routes)
+- **Supabase SSR client** (`@supabase/ssr`) with browser/server split — auth session refreshed via Next.js middleware on every request
+- **Legacy hash redirects** — old bookmark URLs like `/#gallery` transparently redirect to `/gallery`
+- **Keyboard shortcuts cheat sheet** modal (`?` key) — lists all shortcuts grouped by category
 - `⌘⇧S` shortcut to copy share link
 - Shortcut hints shown in command palette (`⌘K`) next to relevant commands
-- Embed view (`?embed=true&mode=minimal|toolbar|interactive`) — clean iframe renderer for embedding diagrams in any website
-- Embed code generator upgraded: mode selector (minimal/toolbar/interactive), size picker (width/height), live-updating `<iframe>` snippet with `title` attribute
-- Social share URLs now include `?title=<diagram-name>` for richer OG image cards
-- Twitter share text updated to: `I just built a "<name>" with @ArchiGram_ai — check it out:`
+- Embed view (`/embed`) — clean iframe renderer for embedding diagrams in any website
+- Embed code generator: mode selector (minimal/toolbar/interactive), size picker, live-updating `<iframe>` snippet
+- Social share URLs include `?title=<diagram-name>` for richer OG image cards
+
+### Changed
+
+- Build tool switched from Vite to Next.js (`bun run dev` now starts on port 3000)
+- Environment variables renamed: `VITE_SUPABASE_URL` → `NEXT_PUBLIC_SUPABASE_URL`, `VITE_SUPABASE_KEY` → `NEXT_PUBLIC_SUPABASE_KEY`, `VITE_GEMINI_API_KEY` → `GEMINI_API_KEY` (server-only)
+- Editor moved to `/editor` route (was root `/` with hash routing)
+
+### Technical
+
+- React Context API replaces monolithic `App.tsx` state (3 slices: `AuthContext`, `UIContext`, `EditorContext`)
+- Mermaid and bpmn-js bundled into single chunks to prevent Next.js/webpack chunk-name conflicts
+- `profiles` Supabase table added with RLS; auto-created on sign-up via database trigger
 
 ## [1.1.0] - 2026-02-26
 
@@ -109,5 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OAuth integration
 - Export and sharing features
 
-[Unreleased]: https://github.com/isatimur/archigram.ai/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/isatimur/archigram.ai/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/isatimur/archigram.ai/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/isatimur/archigram.ai/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/isatimur/archigram.ai/releases/tag/v1.0.0

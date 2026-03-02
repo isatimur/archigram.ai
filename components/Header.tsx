@@ -755,7 +755,12 @@ const Header: React.FC<HeaderProps> = ({
           onClose={() => setShowShareEmailModal(false)}
           diagramTitle={activeProject?.name || 'Untitled Diagram'}
           diagramUrl={shareUrl}
-          senderName={user?.user_metadata?.full_name || user?.email || 'Someone'}
+          senderName={
+            (user as unknown as { user_metadata?: { full_name?: string } })?.user_metadata
+              ?.full_name ||
+            user?.email ||
+            'Someone'
+          }
         />
       </Suspense>
     </>

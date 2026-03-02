@@ -1,7 +1,8 @@
 """Tests for the embeddings module."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from embeddings.base import EmbeddingProvider
 from embeddings.local import LocalEmbeddingProvider

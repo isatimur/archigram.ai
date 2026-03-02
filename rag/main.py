@@ -1,8 +1,9 @@
 """ArchiGram.ai RAG Service - FastAPI Application."""
 
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +11,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from config import Settings, get_settings
+from config import get_settings
+from ingest.routes import router as ingest_router
 from middleware import RequestIDMiddleware, setup_logging
 from middleware.logging import get_logger
+from search.routes import router as search_router
 
 # Initialize settings and logging
 settings = get_settings()
@@ -160,9 +163,6 @@ async def readiness_check() -> dict[str, Any]:
 # ======================
 # Include Routers
 # ======================
-
-from ingest.routes import router as ingest_router
-from search.routes import router as search_router
 
 app.include_router(ingest_router, prefix="/api/v1/rag", tags=["Ingest"])
 app.include_router(search_router, prefix="/api/v1/rag", tags=["Search"])
