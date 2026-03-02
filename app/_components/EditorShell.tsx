@@ -36,14 +36,17 @@ type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
 const THEMES: Record<DiagramTheme, ThemeVars> = {
   dark: {
-    '--bg': '9 9 11',
-    '--surface': '24 24 27',
-    '--surface-hover': '39 39 42',
-    '--border': '63 63 70',
+    '--bg': '13 13 15',
+    '--surface': '20 20 22',
+    '--surface-hover': '28 28 31',
+    '--surface-elevated': '36 36 40',
+    '--border': '42 42 46',
     '--text': '228 228 231',
-    '--text-muted': '161 161 170',
+    '--text-muted': '113 113 122',
+    '--text-dim': '63 63 70',
     '--primary': '99 102 241',
     '--primary-hover': '79 70 229',
+    '--primary-bg': '30 30 63',
     '--accent': '168 85 247',
   },
   midnight: {
