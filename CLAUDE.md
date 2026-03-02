@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ArchiGram.ai is an AI-powered architecture diagramming SPA that transforms natural language into diagrams (Mermaid, PlantUML, BPMN) using Google Gemini. Built with React 19 + TypeScript + Vite, backed by Supabase for community features.
+ArchiGram.ai is an AI-powered architecture diagramming app that transforms natural language into diagrams (Mermaid, PlantUML, BPMN) using Google Gemini. Built with **Next.js 15 + React 19 + TypeScript**, backed by Supabase for auth and community features.
 
 ## Commands
 
 ```bash
 bun run dev              # Dev server (port 3000)
-bun run build            # Production build → dist/
+bun run build            # Production build → .next/
+bun run start            # Start production server
 bun run type-check       # TypeScript check (tsc --noEmit)
 bun run lint             # ESLint (zero warnings allowed)
 bun run lint:fix         # ESLint with auto-fix
@@ -26,19 +27,29 @@ Run a single test file: `bunx vitest run tests/services/geminiService.test.ts`
 
 ## Architecture
 
-**Single-page app with hash-based routing** — no router library. Routes (`#app`, `#gallery`, `#embed`, `#docs`, `#landing`) are handled in `App.tsx`.
+**Next.js 15 App Router** — file-system routing under `app/`. The legacy Vite SPA entry (`App.tsx`) is still present for backward compatibility but all new routes are Next.js pages.
 
-**App.tsx is the central state manager** (~1200 lines). It owns 30+ useState hooks for projects, editor state, UI modals, and theme. All major state flows through here.
+**State is split into three React Contexts** (`lib/contexts/`):
+
+- `AuthContext` — user, auth modal, `requireAuth`, `handleSignOut`
+- `UIContext` — `viewMode`, `theme`, `activePanel`, all modal booleans
+- `EditorContext` — wraps `useProjects` + `useDiagramSync` hooks
 
 **Key layers:**
 
-- `components/` — React functional components, all lazy-loaded from App.tsx
+- `app/` — Next.js App Router pages and layouts
+  - `app/_components/` — shared client components: `EditorShell`, `ActivityBar`, `Providers`, `NavigationAdapter`, `LegacyHashRouter`
+  - `app/editor/` — editor page (client component backed by contexts)
+  - `app/u/[username]/` — public profile pages (Server Components)
+  - `app/api/` — Route Handlers (newsletter, og-image, share-diagram, v1/generate, etc.)
+- `components/` — React functional components (UI building blocks, framework-agnostic)
+- `lib/contexts/` — `AuthContext.tsx`, `UIContext.tsx`, `EditorContext.tsx`
+- `lib/supabase/` — `browser.ts` (client-side), `server.ts` (RSC/Route Handlers), `admin.ts` (service role)
 - `services/` — External API clients:
-  - `geminiService.ts` — Gemini AI (`gemini-3-flash-preview` for generation, `gemini-2.5-flash-image` for vision). Includes domain-specific prompts (Healthcare/HIPAA, Finance/PCI-DSS, E-commerce) and optional RAG context injection
-  - `supabaseClient.ts` — Auth (GitHub/Google OAuth, email/password) and community diagrams CRUD with cursor-based pagination
+  - `geminiService.ts` — Gemini AI (`gemini-2.5-flash-preview` for generation, `gemini-2.5-flash-image` for vision)
   - `ragClient.ts` — Optional enterprise RAG backend with graceful degradation (5s timeout)
+- `hooks/` — Custom React hooks (`useProjects`, `useDiagramSync`, `useKeyboardShortcuts`)
 - `utils/` — Helpers (Plausible analytics, LZ-string URL compression)
-- `hooks/` — Custom React hooks (keyboard shortcuts)
 - `types.ts` — Shared TypeScript types
 - `constants.ts` — Domain constants, templates, static community data fallback
 
@@ -55,7 +66,7 @@ Run a single test file: `bunx vitest run tests/services/geminiService.test.ts`
 - Framework: Vitest with jsdom environment, globals enabled
 - Setup: `tests/setup.ts` mocks ResizeObserver, IntersectionObserver, clipboard, URL APIs
 - Custom render: `tests/utils/test-utils.tsx` wraps testing-library
-- Coverage: v8 provider, thresholds at 70% (branches 69%), covers `services/`, `utils/`, `constants.ts`
+- Coverage: v8 provider, thresholds at 70% (branches 65%), covers `services/`, `utils/`, `hooks/`, `constants.ts`
 - Tests live in `tests/` directory mirroring source structure
 
 ## Code Style
@@ -70,8 +81,8 @@ Run a single test file: `bunx vitest run tests/services/geminiService.test.ts`
 
 ## Environment Variables
 
-Only `VITE_GEMINI_API_KEY` is required. Without Supabase keys, community gallery falls back to static data in `constants.ts`. See `.env.example` for all options.
+`GEMINI_API_KEY` is required for AI generation (server-side). `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_KEY` enable community gallery and auth. The build also accepts legacy `VITE_*` names via webpack `DefinePlugin` shims in `next.config.ts`. See `.env.example` for all options.
 
 ## Deployment
 
-Vercel SPA — `vite build` output to `dist/`. CI runs type-check, lint, format-check, tests, coverage upload (Codecov), CodeQL security analysis, and RAG service tests.
+Vercel Next.js app — `next build` output served by Vercel. CI runs type-check, lint, format-check, tests, coverage upload (Codecov), CodeQL security analysis, and RAG service tests.
