@@ -19,8 +19,18 @@ import type {
   Project,
 } from '@/types';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '';
+// Read config via import.meta.env shim (populated by DefinePlugin in next.config.ts
+// from either NEXT_PUBLIC_SUPABASE_URL or the legacy VITE_SUPABASE_URL env var).
+// process.env.NEXT_PUBLIC_* is replaced by Next.js at build time before DefinePlugin
+// runs, so it becomes undefined when only VITE_* names exist in Vercel.
+const SUPABASE_URL =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
+  (process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined) ||
+  '';
+const SUPABASE_KEY =
+  (import.meta.env.VITE_SUPABASE_KEY as string | undefined) ||
+  (process.env.NEXT_PUBLIC_SUPABASE_KEY as string | undefined) ||
+  '';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('[Supabase/browser] Missing configuration. Community features may not work.');
