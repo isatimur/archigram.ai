@@ -3,7 +3,7 @@ import { DOMAIN_INSTRUCTIONS } from '../constants.ts';
 import { CopilotDomain } from '../types.ts';
 import { getRAGContext, isRAGEnabled } from './ragClient.ts';
 
-const GENERATION_MODEL = 'gemini-3-flash-preview';
+const GENERATION_MODEL = 'gemini-3.1-pro-preview';
 const VISION_MODEL = 'gemini-2.5-flash-image';
 
 let aiInstance: GoogleGenAI | null = null;
