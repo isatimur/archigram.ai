@@ -2,7 +2,9 @@
 
 import React, { useState, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
-import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
+import ActivityBar from '@/app/_components/ActivityBar';
+import type { ActivePanel } from '@/lib/contexts/UIContext';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -110,10 +112,8 @@ export default function EditorShell() {
   const {
     viewMode,
     setViewMode,
-    isSidebarOpen,
-    setIsSidebarOpen,
-    isSidebarCollapsed,
-    setIsSidebarCollapsed,
+    activePanel,
+    setActivePanel,
     theme,
     setTheme,
     isPublishModalOpen,
@@ -181,6 +181,10 @@ export default function EditorShell() {
 
   // Navigation helper
   const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
+
+  const handlePanelToggle = (panel: Exclude<ActivePanel, null>) => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
 
   // --- Export/Share Handlers ---
 
@@ -455,16 +459,23 @@ export default function EditorShell() {
       </Suspense>
 
       <main className="flex-1 flex overflow-hidden relative">
-        {isSidebarOpen && (
-          <div
-            className={`
-              hidden md:block h-full relative z-10 transition-[width] duration-300 ease-in-out
-              ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
-            `}
-          >
-            <Suspense
-              fallback={<div className="w-full h-full bg-surface/80 border-r border-border" />}
-            >
+        {/* Activity Bar — always visible */}
+        <ActivityBar
+          activePanel={activePanel}
+          onPanelToggle={handlePanelToggle}
+          onOpenCopilot={() => setIsAIChatExpanded(true)}
+        />
+
+        {/* Side Panel — slides open when activePanel is set */}
+        <div
+          className={`
+            hidden md:flex h-full transition-[width] duration-150 ease-out overflow-hidden shrink-0
+            border-r border-border bg-surface
+            ${activePanel !== null ? 'w-60' : 'w-0'}
+          `}
+        >
+          <div className="w-60 h-full overflow-hidden">
+            <Suspense fallback={<div className="w-full h-full bg-surface" />}>
               <Sidebar
                 projects={projects}
                 activeProjectId={activeProjectId}
@@ -472,41 +483,41 @@ export default function EditorShell() {
                 onCreateProject={handleCreateProject}
                 onCreateFromTemplate={handleCreateFromTemplate}
                 onDeleteProject={handleDeleteProject}
-                onClose={() => setIsSidebarOpen(false)}
+                onClose={() => setActivePanel(null)}
                 lastSaved={lastSaved}
                 saveStatus={saveStatus}
                 onRenameProject={handleRenameProject}
-                isCollapsed={isSidebarCollapsed}
-                toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                isCollapsed={false}
+                toggleCollapse={() => {}}
                 onOpenGallery={() => setCurrentView('gallery')}
                 onScanImage={() => setIsImageImportModalOpen(true)}
               />
             </Suspense>
           </div>
-        )}
+        </div>
 
-        {/* Mobile Sidebar Overlay */}
-        {isSidebarOpen && (
+        {/* Mobile Side Panel Overlay */}
+        {activePanel !== null && (
           <div className="md:hidden absolute inset-0 z-40 flex">
-            <div className="w-72 h-full shadow-2xl relative z-50">
+            <div className="w-60 h-full shadow-2xl relative z-50 bg-surface">
               <Suspense fallback={<div className="w-full h-full bg-surface" />}>
                 <Sidebar
                   projects={projects}
                   activeProjectId={activeProjectId}
                   onSelectProject={(id) => {
                     handleSelectProject(id);
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onCreateProject={() => {
                     handleCreateProject();
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onCreateFromTemplate={(name, code) => {
                     handleCreateFromTemplate(name, code);
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onDeleteProject={handleDeleteProject}
-                  onClose={() => setIsSidebarOpen(false)}
+                  onClose={() => setActivePanel(null)}
                   lastSaved={lastSaved}
                   saveStatus={saveStatus}
                   onRenameProject={handleRenameProject}
@@ -514,7 +525,7 @@ export default function EditorShell() {
                   toggleCollapse={() => {}}
                   onOpenGallery={() => {
                     setCurrentView('gallery');
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onScanImage={() => setIsImageImportModalOpen(true)}
                 />
@@ -522,19 +533,9 @@ export default function EditorShell() {
             </div>
             <div
               className="flex-1 bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => setActivePanel(null)}
             />
           </div>
-        )}
-
-        {!isSidebarOpen && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-20 p-2 bg-surface hover:bg-surface-hover rounded-md text-text-muted hover:text-text border border-border shadow-lg transition-all"
-            title="Open Projects"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
         )}
 
         {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
