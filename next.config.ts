@@ -110,7 +110,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://plausible.io",
+              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://plausible.io https://esm.sh",
               "frame-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",
