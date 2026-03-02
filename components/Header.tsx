@@ -399,28 +399,6 @@ const Header: React.FC<HeaderProps> = ({
             <span className="hidden xl:inline">Publish</span>
           </button>
 
-          <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
-            <button
-              onClick={onExportSvg}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-              title="Export as SVG (Cmd+Shift+E)"
-              aria-label="Export diagram as SVG"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">SVG</span>
-            </button>
-            <div className="w-px h-4 bg-border mx-1"></div>
-            <button
-              onClick={onExportPng}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-              title="Export as PNG (Cmd+E)"
-              aria-label="Export diagram as PNG"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">PNG</span>
-            </button>
-          </div>
-
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
