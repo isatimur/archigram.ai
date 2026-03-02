@@ -3,11 +3,11 @@
 import { FolderOpen, LayoutTemplate, Globe, Sparkles } from 'lucide-react';
 import type { ActivePanel } from '@/lib/contexts/UIContext';
 
-interface ActivityBarProps {
+type ActivityBarProps = {
   activePanel: ActivePanel;
   onPanelToggle: (panel: Exclude<ActivePanel, null>) => void;
   onOpenCopilot: () => void;
-}
+};
 
 const TOP_ITEMS = [
   { id: 'projects' as const, icon: FolderOpen, label: 'Projects' },
