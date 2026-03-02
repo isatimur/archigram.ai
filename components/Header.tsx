@@ -16,9 +16,7 @@ import {
   Sun,
   Moon,
   Save,
-  Grid,
   ShieldCheck,
-  Binary,
   Twitter,
   Linkedin,
   Link2,
@@ -28,21 +26,14 @@ import {
   User,
   LogOut,
   Mail,
+  MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  ViewMode,
-  DiagramTheme,
-  Project,
-  DiagramStyleConfig,
-  AppView,
-  User as UserType,
-  EmbedMode,
-} from '../types.ts';
+import { ViewMode, DiagramTheme, Project, AppView, User as UserType, EmbedMode } from '../types.ts';
 
 const ShareEmailModal = lazy(() => import('./ShareEmailModal.tsx'));
 
-interface HeaderProps {
+type HeaderProps = {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   onExportPng: () => void;
@@ -53,15 +44,13 @@ interface HeaderProps {
   onNewProject: () => void;
   activeProject?: Project;
   onRenameProject: (id: string, name: string) => void;
-  customStyle?: DiagramStyleConfig;
-  onUpdateStyle: (style: DiagramStyleConfig) => void;
   onPublish: () => void;
   onNavigate: (view: AppView) => void;
   onSaveVersion: (label: string) => void;
   onAudit: () => void;
   user?: UserType | null;
   onOpenAuth?: (mode: 'signin' | 'signup') => void;
-}
+};
 
 const Header: React.FC<HeaderProps> = ({
   viewMode,
@@ -82,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
 }) => {
   const [showThemes, setShowThemes] = useState(false);
-  const [showTools, setShowTools] = useState(false);
+  const [showOverflow, setShowOverflow] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -187,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
+      <header className="h-11 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 sticky top-0 z-50 shadow-sm transition-colors duration-500">
         {/* 1. Brand Identity & Project Title */}
         <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
           <div className="flex flex-col justify-center select-none shrink-0">
@@ -249,78 +238,6 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* 2. Middle: View & Tools */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Tools Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowTools(!showTools)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors border border-transparent hover:border-border"
-            >
-              <Grid className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Tools</span>
-              <ChevronDown className="w-3 h-3 opacity-50" />
-            </button>
-
-            {showTools && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowTools(false)}></div>
-                <div className="absolute top-full left-0 mt-2 w-56 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
-                  <button
-                    onClick={() => {
-                      onNavigate('app');
-                      setShowTools(false);
-                    }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                  >
-                    <Rocket className="w-4 h-4 text-primary" /> Mermaid Studio
-                  </button>
-                  <button
-                    onClick={() => {
-                      onNavigate('plantuml');
-                      setShowTools(false);
-                    }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                  >
-                    <Binary className="w-4 h-4 text-emerald-500" />
-                    PlantUML Studio
-                  </button>
-                  <div className="h-px bg-border/50 my-1"></div>
-                  <button
-                    onClick={() => {
-                      onNavigate('discover');
-                      setShowTools(false);
-                    }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                  >
-                    <Grid className="w-4 h-4 text-amber-400" />
-                    Discover Collections
-                  </button>
-                  <button
-                    onClick={() => {
-                      onNavigate('prompts');
-                      setShowTools(false);
-                    }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                  >
-                    <Code className="w-4 h-4 text-pink-400" />
-                    Prompt Marketplace
-                  </button>
-                  <button
-                    onClick={() => {
-                      onAudit();
-                      setShowTools(false);
-                    }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-2"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-orange-400" />
-                    Run Audit
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="hidden md:block h-6 w-px bg-border/50"></div>
-
           {/* View Switcher */}
           <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
             {[
@@ -461,30 +378,10 @@ const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Audit Button (Visible on MD+) */}
-          <button
-            onClick={onAudit}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 rounded-lg transition-all"
-            title="Perform AI Security & Architecture Audit"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">Audit</span>
-          </button>
-
-          {/* Save Version Button */}
-          <button
-            onClick={() => onSaveVersion('Manual Save')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-all"
-            title="Create a Checkpoint"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">Save</span>
-          </button>
-
           {/* Publish Button */}
           <button
             onClick={onPublish}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 transition-all"
             title="Publish to Community Gallery (Cmd+Shift+P)"
             aria-label="Publish diagram to community gallery"
           >
@@ -492,48 +389,16 @@ const Header: React.FC<HeaderProps> = ({
             <span className="hidden xl:inline">Publish</span>
           </button>
 
-          <button
-            onClick={onNewProject}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
-            title="New Project (Cmd+N)"
-            aria-label="Create new project"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">New</span>
-          </button>
-
-          <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
-            <button
-              onClick={onExportSvg}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-              title="Export as SVG (Cmd+Shift+E)"
-              aria-label="Export diagram as SVG"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">SVG</span>
-            </button>
-            <div className="w-px h-4 bg-border mx-1"></div>
-            <button
-              onClick={onExportPng}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-all duration-200"
-              title="Export as PNG (Cmd+E)"
-              aria-label="Export diagram as PNG"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">PNG</span>
-            </button>
-          </div>
-
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-lg shadow-primary/20 border border-primary/20 transition-all hover:scale-105 active:scale-95 group"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
               title="Share Diagram"
               aria-label="Share diagram"
               aria-expanded={showShareMenu}
               aria-haspopup="menu"
             >
-              <Share2 className="w-3.5 h-3.5 group-hover:animate-pulse" />
+              <Share2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Share</span>
             </button>
 
@@ -612,6 +477,91 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="px-4 py-2 text-[10px] text-text-muted">
                     Made with <span className="text-primary font-semibold">ArchiGram.ai</span>
                   </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ··· Overflow Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowOverflow(!showOverflow)}
+              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              title="More options"
+              aria-label="More options"
+              aria-expanded={showOverflow}
+              aria-haspopup="menu"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {showOverflow && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowOverflow(false)} />
+                <div
+                  role="menu"
+                  aria-label="More options"
+                  className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2"
+                >
+                  <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-text-dim font-semibold border-b border-border/50">
+                    Actions
+                  </div>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onNewProject();
+                      setShowOverflow(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Plus className="w-4 h-4 text-text-muted" />
+                    New Project
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onSaveVersion('Manual Save');
+                      setShowOverflow(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <Save className="w-4 h-4 text-text-muted" />
+                    Save Checkpoint
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onAudit();
+                      setShowOverflow(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-text-muted" />
+                    Run Audit
+                  </button>
+                  <div className="h-px bg-border/50 my-1" />
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onExportSvg();
+                      setShowOverflow(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <FileCode className="w-4 h-4 text-text-muted" />
+                    Export SVG
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onExportPng();
+                      setShowOverflow(false);
+                    }}
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                  >
+                    <ImageIcon className="w-4 h-4 text-text-muted" />
+                    Export PNG
+                  </button>
                 </div>
               </>
             )}

@@ -612,8 +612,6 @@ function App() {
           onNewProject={handleCreateProject}
           activeProject={activeProject}
           onRenameProject={handleRenameProject}
-          customStyle={customStyle}
-          onUpdateStyle={setCustomStyle}
           onPublish={openPublishModal}
           onNavigate={setCurrentView}
           onSaveVersion={handleManualSnapshot}

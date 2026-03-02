@@ -8,11 +8,14 @@
   --color-background: rgb(var(--bg) / <alpha-value>);
   --color-surface: rgb(var(--surface) / <alpha-value>);
   --color-surface-hover: rgb(var(--surface-hover) / <alpha-value>);
+  --color-surface-elevated: rgb(var(--surface-elevated) / <alpha-value>);
   --color-border: rgb(var(--border) / <alpha-value>);
   --color-text: rgb(var(--text) / <alpha-value>);
   --color-text-muted: rgb(var(--text-muted) / <alpha-value>);
+  --color-text-dim: rgb(var(--text-dim) / <alpha-value>);
   --color-primary: rgb(var(--primary) / <alpha-value>);
   --color-primary-hover: rgb(var(--primary-hover) / <alpha-value>);
+  --color-primary-bg: rgb(var(--primary-bg) / <alpha-value>);
   --color-accent: rgb(var(--accent) / <alpha-value>);
 
   --animate-fade-in: fadeIn 0.4s ease-in-out;
@@ -42,14 +45,17 @@
 
 /* Default dark theme CSS variables */
 :root {
-  --bg: 9 9 11;
-  --surface: 24 24 27;
-  --surface-hover: 39 39 42;
-  --border: 63 63 70;
+  --bg: 13 13 15;
+  --surface: 20 20 22;
+  --surface-hover: 28 28 31;
+  --surface-elevated: 36 36 40;
+  --border: 42 42 46;
   --text: 228 228 231;
-  --text-muted: 161 161 170;
+  --text-muted: 113 113 122;
+  --text-dim: 63 63 70;
   --primary: 99 102 241;
   --primary-hover: 79 70 229;
+  --primary-bg: 30 30 63;
   --accent: 168 85 247;
 }
 

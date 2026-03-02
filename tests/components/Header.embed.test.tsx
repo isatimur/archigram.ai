@@ -17,7 +17,6 @@ const defaultProps = {
   onShare: vi.fn(),
   onNewProject: vi.fn(),
   onRenameProject: vi.fn(),
-  onUpdateStyle: vi.fn(),
   onPublish: vi.fn(),
   onNavigate: vi.fn(),
   onSaveVersion: vi.fn(),

@@ -1,8 +1,13 @@
 'use client';
+// Next.js editor shell — replaces App.tsx (the legacy Vite entry).
+// App.tsx's sidebar state and layout are intentionally NOT updated here;
+// App.tsx will be removed in Phase 2 of the migration.
 
 import React, { useState, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
-import { PanelLeftOpen, Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
+import ActivityBar from '@/app/_components/ActivityBar';
+import type { ActivePanel } from '@/lib/contexts/UIContext';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -36,47 +41,59 @@ type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
 const THEMES: Record<DiagramTheme, ThemeVars> = {
   dark: {
-    '--bg': '9 9 11',
-    '--surface': '24 24 27',
-    '--surface-hover': '39 39 42',
-    '--border': '63 63 70',
+    '--bg': '13 13 15',
+    '--surface': '20 20 22',
+    '--surface-hover': '28 28 31',
+    '--surface-elevated': '36 36 40',
+    '--border': '42 42 46',
     '--text': '228 228 231',
-    '--text-muted': '161 161 170',
+    '--text-muted': '113 113 122',
+    '--text-dim': '63 63 70',
     '--primary': '99 102 241',
     '--primary-hover': '79 70 229',
+    '--primary-bg': '30 30 63',
     '--accent': '168 85 247',
   },
   midnight: {
     '--bg': '2 6 23',
     '--surface': '15 23 42',
     '--surface-hover': '30 41 59',
+    '--surface-elevated': '44 55 74',
     '--border': '51 65 85',
     '--text': '241 245 249',
     '--text-muted': '148 163 184',
+    '--text-dim': '71 85 105',
     '--primary': '56 189 248',
     '--primary-hover': '14 165 233',
+    '--primary-bg': '12 30 62',
     '--accent': '236 72 153',
   },
   forest: {
     '--bg': '2 10 5',
     '--surface': '5 25 15',
     '--surface-hover': '10 40 25',
+    '--surface-elevated': '15 55 30',
     '--border': '20 60 40',
     '--text': '236 253 245',
     '--text-muted': '52 211 153',
+    '--text-dim': '22 70 42',
     '--primary': '74 222 128',
     '--primary-hover': '34 197 94',
+    '--primary-bg': '5 46 22',
     '--accent': '250 204 21',
   },
   neutral: {
     '--bg': '255 255 255',
     '--surface': '241 245 249',
     '--surface-hover': '226 232 240',
+    '--surface-elevated': '210 220 235',
     '--border': '203 213 225',
     '--text': '15 23 42',
     '--text-muted': '100 116 139',
+    '--text-dim': '148 163 184',
     '--primary': '37 99 235',
     '--primary-hover': '29 78 216',
+    '--primary-bg': '219 234 254',
     '--accent': '236 72 153',
   },
 };
@@ -98,10 +115,8 @@ export default function EditorShell() {
   const {
     viewMode,
     setViewMode,
-    isSidebarOpen,
-    setIsSidebarOpen,
-    isSidebarCollapsed,
-    setIsSidebarCollapsed,
+    activePanel,
+    setActivePanel,
     theme,
     setTheme,
     isPublishModalOpen,
@@ -169,6 +184,10 @@ export default function EditorShell() {
 
   // Navigation helper
   const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
+
+  const handlePanelToggle = (panel: Exclude<ActivePanel, null>) => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
 
   // --- Export/Share Handlers ---
 
@@ -431,8 +450,6 @@ export default function EditorShell() {
           onNewProject={handleCreateProject}
           activeProject={activeProject}
           onRenameProject={handleRenameProject}
-          customStyle={customStyle}
-          onUpdateStyle={setCustomStyle}
           onPublish={openPublishModal}
           onNavigate={setCurrentView}
           onSaveVersion={handleManualSnapshot}
@@ -443,16 +460,23 @@ export default function EditorShell() {
       </Suspense>
 
       <main className="flex-1 flex overflow-hidden relative">
-        {isSidebarOpen && (
-          <div
-            className={`
-              hidden md:block h-full relative z-10 transition-[width] duration-300 ease-in-out
-              ${isSidebarCollapsed ? 'w-[70px]' : 'w-72'}
-            `}
-          >
-            <Suspense
-              fallback={<div className="w-full h-full bg-surface/80 border-r border-border" />}
-            >
+        {/* Activity Bar — always visible */}
+        <ActivityBar
+          activePanel={activePanel}
+          onPanelToggle={handlePanelToggle}
+          onOpenCopilot={() => setIsAIChatExpanded(true)}
+        />
+
+        {/* Side Panel — slides open when activePanel is set */}
+        <div
+          className={`
+            hidden md:flex h-full transition-[width] duration-150 ease-out overflow-hidden shrink-0
+            border-r border-border bg-surface
+            ${activePanel !== null ? 'w-60' : 'w-0'}
+          `}
+        >
+          <div className="w-60 h-full overflow-hidden">
+            <Suspense fallback={<div className="w-full h-full bg-surface" />}>
               <Sidebar
                 projects={projects}
                 activeProjectId={activeProjectId}
@@ -460,49 +484,49 @@ export default function EditorShell() {
                 onCreateProject={handleCreateProject}
                 onCreateFromTemplate={handleCreateFromTemplate}
                 onDeleteProject={handleDeleteProject}
-                onClose={() => setIsSidebarOpen(false)}
+                onClose={() => setActivePanel(null)}
                 lastSaved={lastSaved}
                 saveStatus={saveStatus}
                 onRenameProject={handleRenameProject}
-                isCollapsed={isSidebarCollapsed}
-                toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                isCollapsed={false}
+                toggleCollapse={() => setActivePanel(null)}
                 onOpenGallery={() => setCurrentView('gallery')}
                 onScanImage={() => setIsImageImportModalOpen(true)}
               />
             </Suspense>
           </div>
-        )}
+        </div>
 
-        {/* Mobile Sidebar Overlay */}
-        {isSidebarOpen && (
+        {/* Mobile Side Panel Overlay */}
+        {activePanel !== null && (
           <div className="md:hidden absolute inset-0 z-40 flex">
-            <div className="w-72 h-full shadow-2xl relative z-50">
+            <div className="w-60 h-full shadow-2xl relative z-50 bg-surface">
               <Suspense fallback={<div className="w-full h-full bg-surface" />}>
                 <Sidebar
                   projects={projects}
                   activeProjectId={activeProjectId}
                   onSelectProject={(id) => {
                     handleSelectProject(id);
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onCreateProject={() => {
                     handleCreateProject();
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onCreateFromTemplate={(name, code) => {
                     handleCreateFromTemplate(name, code);
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onDeleteProject={handleDeleteProject}
-                  onClose={() => setIsSidebarOpen(false)}
+                  onClose={() => setActivePanel(null)}
                   lastSaved={lastSaved}
                   saveStatus={saveStatus}
                   onRenameProject={handleRenameProject}
                   isCollapsed={false}
-                  toggleCollapse={() => {}}
+                  toggleCollapse={() => setActivePanel(null)}
                   onOpenGallery={() => {
                     setCurrentView('gallery');
-                    setIsSidebarOpen(false);
+                    setActivePanel(null);
                   }}
                   onScanImage={() => setIsImageImportModalOpen(true)}
                 />
@@ -510,19 +534,9 @@ export default function EditorShell() {
             </div>
             <div
               className="flex-1 bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => setActivePanel(null)}
             />
           </div>
-        )}
-
-        {!isSidebarOpen && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-20 p-2 bg-surface hover:bg-surface-hover rounded-md text-text-muted hover:text-text border border-border shadow-lg transition-all"
-            title="Open Projects"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
         )}
 
         {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
