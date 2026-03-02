@@ -17,7 +17,15 @@ export default defineConfig({
       VITE_SUPABASE_KEY: 'placeholder-anon-key-for-tests',
     },
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.git', '.cache', '.opencode/**', '.claude/**'],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.git',
+      '.cache',
+      '.opencode/**',
+      '.claude/**',
+      '.worktrees/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
