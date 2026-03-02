@@ -125,6 +125,13 @@ export default [
     },
   },
   {
+    // CLI scripts are allowed to use console.log for output
+    files: ['scripts/**/*.ts', 'cli/**/*.ts', 'mcp-server/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: [
       'dist/**',
       'node_modules/**',

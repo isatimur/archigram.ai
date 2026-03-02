@@ -64,7 +64,6 @@ async function main() {
       process.exit(1);
     }
 
-    // eslint-disable-next-line no-console
     console.log(code);
   } catch (err) {
     console.error('Error:', err instanceof Error ? err.message : err);
