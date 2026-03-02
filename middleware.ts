@@ -5,8 +5,9 @@ import { createServerClient } from '@supabase/ssr';
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+  // Fall back to VITE_* names for Vercel projects that haven't renamed env vars yet
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY ?? process.env.VITE_SUPABASE_KEY;
 
   // Skip session refresh if Supabase is not configured
   if (!supabaseUrl || !supabaseKey) {

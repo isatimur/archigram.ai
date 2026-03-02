@@ -11,9 +11,10 @@ import { cookies } from 'next/headers';
 
 export async function createServerClient() {
   const cookieStore = await cookies();
+  // Fall back to VITE_* names for Vercel projects that haven't renamed env vars yet
   return _createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? process.env.VITE_SUPABASE_KEY ?? '',
     {
       cookies: {
         getAll() {

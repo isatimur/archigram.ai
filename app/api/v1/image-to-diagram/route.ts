@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { imageToDiagram } from '@/services/geminiService';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  const apiKey =
+    process.env.GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
   }
