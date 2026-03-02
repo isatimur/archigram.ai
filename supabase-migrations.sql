@@ -177,6 +177,19 @@ CREATE POLICY "Service role manages subscribers" ON email_subscribers FOR ALL US
 -- SELECT count(*) FROM pg_stat_activity;
 
 -- Check index usage:
--- SELECT schemaname, tablename, indexname, idx_scan 
--- FROM pg_stat_user_indexes 
+-- SELECT schemaname, tablename, indexname, idx_scan
+-- FROM pg_stat_user_indexes
 -- WHERE tablename = 'community_diagrams';
+
+-- ============================================================================
+-- GITHUB ENRICHMENT: source_url column for deduplication (auto-crawler)
+-- ============================================================================
+
+-- Track the GitHub source URL so the crawler can skip already-imported diagrams
+ALTER TABLE community_diagrams
+  ADD COLUMN IF NOT EXISTS source_url TEXT;
+
+-- Unique partial index: enforces one row per source URL, ignores rows without a URL
+CREATE UNIQUE INDEX IF NOT EXISTS community_diagrams_source_url_idx
+  ON community_diagrams(source_url)
+  WHERE source_url IS NOT NULL;
