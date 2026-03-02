@@ -29,19 +29,11 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  ViewMode,
-  DiagramTheme,
-  Project,
-  DiagramStyleConfig,
-  AppView,
-  User as UserType,
-  EmbedMode,
-} from '../types.ts';
+import { ViewMode, DiagramTheme, Project, AppView, User as UserType, EmbedMode } from '../types.ts';
 
 const ShareEmailModal = lazy(() => import('./ShareEmailModal.tsx'));
 
-interface HeaderProps {
+type HeaderProps = {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   onExportPng: () => void;
@@ -52,15 +44,13 @@ interface HeaderProps {
   onNewProject: () => void;
   activeProject?: Project;
   onRenameProject: (id: string, name: string) => void;
-  customStyle?: DiagramStyleConfig;
-  onUpdateStyle: (style: DiagramStyleConfig) => void;
   onPublish: () => void;
   onNavigate: (view: AppView) => void;
   onSaveVersion: (label: string) => void;
   onAudit: () => void;
   user?: UserType | null;
   onOpenAuth?: (mode: 'signin' | 'signup') => void;
-}
+};
 
 const Header: React.FC<HeaderProps> = ({
   viewMode,
@@ -508,11 +498,16 @@ const Header: React.FC<HeaderProps> = ({
             {showOverflow && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowOverflow(false)} />
-                <div className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div
+                  role="menu"
+                  aria-label="More options"
+                  className="absolute top-full right-0 mt-2 w-52 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2"
+                >
                   <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-text-dim font-semibold border-b border-border/50">
                     Actions
                   </div>
                   <button
+                    role="menuitem"
                     onClick={() => {
                       onNewProject();
                       setShowOverflow(false);
@@ -523,6 +518,7 @@ const Header: React.FC<HeaderProps> = ({
                     New Project
                   </button>
                   <button
+                    role="menuitem"
                     onClick={() => {
                       onSaveVersion('Manual Save');
                       setShowOverflow(false);
@@ -533,6 +529,7 @@ const Header: React.FC<HeaderProps> = ({
                     Save Checkpoint
                   </button>
                   <button
+                    role="menuitem"
                     onClick={() => {
                       onAudit();
                       setShowOverflow(false);
@@ -544,6 +541,7 @@ const Header: React.FC<HeaderProps> = ({
                   </button>
                   <div className="h-px bg-border/50 my-1" />
                   <button
+                    role="menuitem"
                     onClick={() => {
                       onExportSvg();
                       setShowOverflow(false);
@@ -554,6 +552,7 @@ const Header: React.FC<HeaderProps> = ({
                     Export SVG
                   </button>
                   <button
+                    role="menuitem"
                     onClick={() => {
                       onExportPng();
                       setShowOverflow(false);
