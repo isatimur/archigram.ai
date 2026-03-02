@@ -1,4 +1,7 @@
 'use client';
+// Next.js editor shell — replaces App.tsx (the legacy Vite entry).
+// App.tsx's sidebar state and layout are intentionally NOT updated here;
+// App.tsx will be removed in Phase 2 of the migration.
 
 import React, { useState, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
@@ -73,7 +76,7 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--border': '20 60 40',
     '--text': '236 253 245',
     '--text-muted': '52 211 153',
-    '--text-dim': '10 40 25',
+    '--text-dim': '22 70 42',
     '--primary': '74 222 128',
     '--primary-hover': '34 197 94',
     '--primary-bg': '5 46 22',
@@ -486,7 +489,7 @@ export default function EditorShell() {
                 saveStatus={saveStatus}
                 onRenameProject={handleRenameProject}
                 isCollapsed={false}
-                toggleCollapse={() => {}}
+                toggleCollapse={() => setActivePanel(null)}
                 onOpenGallery={() => setCurrentView('gallery')}
                 onScanImage={() => setIsImageImportModalOpen(true)}
               />
@@ -520,7 +523,7 @@ export default function EditorShell() {
                   saveStatus={saveStatus}
                   onRenameProject={handleRenameProject}
                   isCollapsed={false}
-                  toggleCollapse={() => {}}
+                  toggleCollapse={() => setActivePanel(null)}
                   onOpenGallery={() => {
                     setCurrentView('gallery');
                     setActivePanel(null);
