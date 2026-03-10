@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 os.environ["RAG_INGEST_API_KEY"] = "test-api-key"
 os.environ["RAG_QDRANT_URL"] = "http://localhost:6333"
 os.environ["RAG_LOG_LEVEL"] = "DEBUG"
+os.environ["RAG_PARSER_MODE"] = "lightweight"
 
 
 @pytest.fixture(scope="session")
