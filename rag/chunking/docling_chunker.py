@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 def is_docling_available() -> bool:
     """Check whether docling chunking dependencies are importable."""
     try:
-        from docling_core.transforms.chunker import HierarchicalChunker  # noqa: F401
+        from docling_core.transforms.chunker import HybridChunker  # noqa: F401
 
         return True
     except ImportError:
@@ -51,13 +51,13 @@ def chunk_docling_document(
     Raises:
         ImportError: If docling-core is not installed
     """
-    from docling_core.transforms.chunker import HierarchicalChunker
+    from docling_core.transforms.chunker import HybridChunker
 
     strategy = get_chunking_strategy(doc_type)
 
-    chunker = HierarchicalChunker(
+    chunker = HybridChunker(
+        tokenizer=tokenizer_model,
         max_tokens=strategy.chunk_size,
-        overlap=strategy.chunk_overlap,
     )
 
     logger.info(
@@ -74,8 +74,9 @@ def chunk_docling_document(
     base_metadata = dict(metadata) if metadata else {}
     base_metadata["chunker"] = "docling_hybrid"
 
-    for i, raw_chunk in enumerate(raw_chunks):
-        # Extract text — HierarchicalChunker chunks have a .text property
+    chunk_index = 0
+    for raw_chunk in raw_chunks:
+        # Extract text — HybridChunker chunks have a .text property
         text = raw_chunk.text if hasattr(raw_chunk, "text") else str(raw_chunk)
 
         if not text or not text.strip():
@@ -92,13 +93,14 @@ def chunk_docling_document(
         chunks.append(
             Chunk(
                 text=text,
-                index=i,
+                index=chunk_index,
                 source=source,
                 doc_type=doc_type,
                 company_id=company_id,
                 metadata=chunk_meta,
             )
         )
+        chunk_index += 1
 
     logger.info(
         "docling_chunking_complete",

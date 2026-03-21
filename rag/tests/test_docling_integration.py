@@ -285,7 +285,7 @@ class TestDoclingChunkerAdapter:
             "docling_core": MagicMock(),
             "docling_core.transforms": MagicMock(),
             "docling_core.transforms.chunker": MagicMock(
-                HierarchicalChunker=MagicMock(return_value=mock_chunker),
+                HybridChunker=MagicMock(return_value=mock_chunker),
             ),
         }):
             import importlib
@@ -320,7 +320,7 @@ class TestDoclingChunkerAdapter:
             "docling_core": MagicMock(),
             "docling_core.transforms": MagicMock(),
             "docling_core.transforms.chunker": MagicMock(
-                HierarchicalChunker=mock_chunker_cls,
+                HybridChunker=mock_chunker_cls,
             ),
         }):
             import importlib
@@ -336,10 +336,11 @@ class TestDoclingChunkerAdapter:
                 doc_type="glossary",
             )
 
-            # Glossary strategy uses chunk_size=100, chunk_overlap=20
+            # Glossary strategy uses chunk_size=100; tokenizer forwarded, no overlap param
             call_kwargs = mock_chunker_cls.call_args[1]
             assert call_kwargs["max_tokens"] == 100
-            assert call_kwargs["overlap"] == 20
+            assert "tokenizer" in call_kwargs
+            assert "overlap" not in call_kwargs
 
     def test_empty_chunks_filtered(self):
         mock_chunks = [
@@ -355,7 +356,7 @@ class TestDoclingChunkerAdapter:
             "docling_core": MagicMock(),
             "docling_core.transforms": MagicMock(),
             "docling_core.transforms.chunker": MagicMock(
-                HierarchicalChunker=MagicMock(return_value=mock_chunker),
+                HybridChunker=MagicMock(return_value=mock_chunker),
             ),
         }):
             import importlib
@@ -385,7 +386,7 @@ class TestDoclingChunkerAdapter:
             "docling_core": MagicMock(),
             "docling_core.transforms": MagicMock(),
             "docling_core.transforms.chunker": MagicMock(
-                HierarchicalChunker=MagicMock(return_value=mock_chunker),
+                HybridChunker=MagicMock(return_value=mock_chunker),
             ),
         }):
             import importlib
