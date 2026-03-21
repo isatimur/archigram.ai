@@ -21,9 +21,13 @@ COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Optional: install Docling for rich multi-format parsing
+ARG INSTALL_DOCLING=false
+
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    if [ "$INSTALL_DOCLING" = "true" ]; then pip install --no-cache-dir docling docling-core; fi
 
 # ======================
 # Stage 2: Production

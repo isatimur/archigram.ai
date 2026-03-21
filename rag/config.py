@@ -80,6 +80,20 @@ class Settings(BaseSettings):
         description="Default number of results to return",
     )
 
+    # Parser Configuration
+    parser_mode: Literal["lightweight", "docling"] = Field(
+        default="lightweight",
+        description="Parsing backend: 'lightweight' (pypdf) or 'docling' (rich multi-format)",
+    )
+    docling_ocr_enabled: bool = Field(
+        default=False,
+        description="Enable OCR for scanned PDFs (docling mode only)",
+    )
+    docling_table_structure: bool = Field(
+        default=True,
+        description="Enable table structure extraction (docling mode only)",
+    )
+
     # Chunking Configuration
     chunk_size: int = Field(
         default=500,
@@ -106,6 +120,14 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into list."""
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def effective_allowed_extensions(self) -> list[str]:
+        """Return allowed extensions, expanding for docling mode."""
+        if self.parser_mode == "docling":
+            docling_extras = {"docx", "pptx", "xlsx", "html"}
+            return list(dict.fromkeys(self.allowed_extensions + sorted(docling_extras - set(self.allowed_extensions))))
+        return self.allowed_extensions
 
     @property
     def max_file_size_bytes(self) -> int:
