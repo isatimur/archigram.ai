@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { trendingScore } from '../utils/trending.ts';
 import {
   Search,
@@ -10,7 +10,7 @@ import {
   Star,
   TrendingUp,
   Clock,
-  Zap,
+  Code2,
   Link as LinkIcon,
   Download,
   Loader2,
@@ -31,13 +31,15 @@ import { analytics } from '../utils/analytics.ts';
 
 const CommentThread = lazy(() => import('./CommentThread.tsx'));
 
-interface CommunityGalleryProps {
+type SortMode = 'trending' | 'new' | 'top';
+
+type CommunityGalleryProps = {
   onNavigate: (view: AppView) => void;
   onFork: (diagram: CommunityDiagram) => void;
   user?: User | null;
   onOpenAuth?: () => void;
   onRequireAuth?: (action: () => void) => void;
-}
+};
 
 const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   onNavigate,
@@ -46,23 +48,24 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   onOpenAuth,
   onRequireAuth,
 }) => {
-  const [filter, setFilter] = useState<'trending' | 'new' | 'top'>('trending');
+  const [sort, setSort] = useState<SortMode>('trending');
+  const [activeTag, setActiveTag] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState('');
 
-  // Data State
+  // Data state
   const [diagrams, setDiagrams] = useState<CommunityDiagram[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
-  // Comment State
+  // Comment state
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [expandedCommentId, setExpandedCommentId] = useState<string | null>(null);
 
-  // Load Likes from Local Storage
+  // Load likes from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(LIKED_IDS_KEY);
     if (saved) {
@@ -74,7 +77,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     }
   }, []);
 
-  // Fetch Data on Mount
+  // Fetch diagrams on mount
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -88,7 +91,6 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       }
       setDiagrams(loadedDiagrams);
 
-      // Load comment counts
       const ids = loadedDiagrams.map((d) => d.id);
       const counts = await fetchCommentCounts(ids);
       setCommentCounts(counts);
@@ -98,31 +100,48 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     loadData();
   }, []);
 
-  const filteredBySearch = diagrams.filter(
-    (d) =>
-      d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      d.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Derive all unique tags from loaded diagrams
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    diagrams.forEach((d) => d.tags.forEach((t) => tagSet.add(t)));
+    return ['All', ...Array.from(tagSet).sort()];
+  }, [diagrams]);
 
-  const filteredData = [...filteredBySearch].sort((a, b) => {
-    if (filter === 'trending') {
-      return (
-        trendingScore(b.likes, b.views, b.createdAtTimestamp ?? 0) -
-        trendingScore(a.likes, a.views, a.createdAtTimestamp ?? 0)
+  const filteredData = useMemo(() => {
+    let result = [...diagrams];
+
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.tags.some((t) => t.toLowerCase().includes(q)) ||
+          d.author.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q)
       );
     }
-    if (filter === 'top') {
-      return b.likes - a.likes;
+
+    // Tag filter
+    if (activeTag !== 'All') {
+      result = result.filter((d) => d.tags.includes(activeTag));
     }
-    if (filter === 'new') {
-      const tsA = a.createdAtTimestamp ?? 0;
-      const tsB = b.createdAtTimestamp ?? 0;
-      return tsB - tsA;
-    }
-    return 0;
-  });
+
+    // Sort
+    result.sort((a, b) => {
+      if (sort === 'trending') {
+        return (
+          trendingScore(b.likes, b.views, b.createdAtTimestamp ?? 0) -
+          trendingScore(a.likes, a.views, a.createdAtTimestamp ?? 0)
+        );
+      }
+      if (sort === 'top') return b.likes - a.likes;
+      if (sort === 'new') return (b.createdAtTimestamp ?? 0) - (a.createdAtTimestamp ?? 0);
+      return 0;
+    });
+
+    return result;
+  }, [diagrams, searchQuery, activeTag, sort]);
 
   const performLike = async (id: string, currentLikes: number) => {
     const isLiked = likedIds.has(id);
@@ -162,9 +181,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   };
 
   const handleForkWithStats = (diagram: CommunityDiagram) => {
-    // Fire and forget view increment for analytics
     incrementDiagramViews(diagram.id);
-    // Execute original fork behavior
     onFork(diagram);
   };
 
@@ -173,29 +190,25 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     if (!importUrl) return;
 
     try {
-      // 1. Extract hash
       let hash = '';
       if (importUrl.includes('#')) {
         hash = importUrl.split('#')[1];
       } else {
-        // assume the whole string might be the hash if no # present
         hash = importUrl;
       }
 
-      // 2. Decode
       const code = decodeCodeFromUrl(hash);
       if (!code) {
         setImportError('Invalid or corrupted link.');
         return;
       }
 
-      // 3. Create simulated diagram object
       const importedDiagram: CommunityDiagram = {
         id: `imported-${Date.now()}`,
         title: 'Imported Diagram',
         author: 'External User',
         description: 'Imported via shared link.',
-        code: code,
+        code,
         likes: 0,
         views: 0,
         tags: ['Imported'],
@@ -222,7 +235,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="h-6 w-px bg-border hidden md:block"></div>
+          <div className="h-6 w-px bg-border hidden md:block" />
           <div className="flex items-center gap-2">
             <Globe className="w-5 h-5 text-accent hidden sm:block" />
             <span className="font-bold text-sm md:text-lg tracking-tight hidden sm:inline">
@@ -231,27 +244,26 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0 max-w-md mx-1 md:mx-4">
-          <div className="relative w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-hover transition-all"
-            />
-          </div>
+        {/* Search */}
+        <div className="relative flex-1 min-w-0 max-w-sm mx-2 md:mx-4 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search diagrams..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface-hover transition-all"
+          />
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-text-muted hover:text-text border border-border hover:bg-surface rounded-lg transition-all"
             title="Import from URL"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden md:inline">Import</span>
+            <span className="hidden md:inline">Import URL</span>
           </button>
 
           <button
@@ -264,209 +276,110 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-6 md:p-10">
-        {/* Header / Stats */}
-        <div className="max-w-7xl mx-auto mb-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-8">
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">Discover & Fork</h1>
-              <p className="text-text-muted max-w-xl text-sm md:text-base">
-                Explore architecture diagrams built by engineers. Fork any diagram to start
-                customizing.
-              </p>
-            </div>
-            <div className="flex gap-1 md:gap-2 bg-surface border border-border p-1 rounded-xl shrink-0 self-start">
-              <FilterButton
-                active={filter === 'trending'}
-                onClick={() => setFilter('trending')}
-                icon={<TrendingUp className="w-4 h-4" />}
-              >
-                Trending
-              </FilterButton>
-              <FilterButton
-                active={filter === 'new'}
-                onClick={() => setFilter('new')}
-                icon={<Clock className="w-4 h-4" />}
-              >
-                Newest
-              </FilterButton>
-              <FilterButton
-                active={filter === 'top'}
-                onClick={() => setFilter('top')}
-                icon={<Star className="w-4 h-4" />}
-              >
-                Top Rated
-              </FilterButton>
-            </div>
+      {/* Sticky Tag + Sort Strip */}
+      <div className="sticky top-0 z-40 border-b border-border bg-[#09090b]/95 backdrop-blur-xl px-4 md:px-8 py-2.5 shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          {/* Tag pills — horizontally scrollable */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
+            {isLoading
+              ? Array.from({ length: 7 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-6 rounded-full bg-surface animate-pulse shrink-0"
+                    style={{ width: `${44 + i * 14}px` }}
+                  />
+                ))
+              : allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(tag)}
+                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                      activeTag === tag
+                        ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                        : 'bg-surface text-text-muted hover:text-text hover:bg-surface-hover border border-border/50'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
           </div>
 
-          {/* Loading State */}
+          {/* Sort — right-aligned, never wraps */}
+          <div className="flex items-center gap-1 shrink-0 border-l border-border/50 pl-3">
+            <SortButton
+              active={sort === 'trending'}
+              onClick={() => setSort('trending')}
+              icon={<TrendingUp className="w-3.5 h-3.5" />}
+            >
+              Trending
+            </SortButton>
+            <SortButton
+              active={sort === 'new'}
+              onClick={() => setSort('new')}
+              icon={<Clock className="w-3.5 h-3.5" />}
+            >
+              New
+            </SortButton>
+            <SortButton
+              active={sort === 'top'}
+              onClick={() => setSort('top')}
+              icon={<Star className="w-3.5 h-3.5" />}
+            >
+              Top
+            </SortButton>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border px-4 md:px-8 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-2">
+              Community Diagrams
+            </h1>
+            <p className="text-text-muted text-sm md:text-base">
+              {isLoading ? (
+                <span className="inline-block w-48 h-4 bg-surface animate-pulse rounded" />
+              ) : (
+                <>{diagrams.length} diagrams from the community</>
+              )}
+            </p>
+          </div>
+
+          {/* Grid */}
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64 gap-4">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              <p className="text-text-muted">Loading community diagrams...</p>
-            </div>
+            <SkeletonGrid />
+          ) : filteredData.length === 0 ? (
+            <EmptyState
+              activeTag={activeTag}
+              searchQuery={searchQuery}
+              onResetTag={() => setActiveTag('All')}
+              onResetSearch={() => setSearchQuery('')}
+            />
           ) : (
-            /* Masonry Grid */
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-              {filteredData.map((diagram) => (
-                <div
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-5 space-y-5">
+              {filteredData.map((diagram, i) => (
+                <DiagramCard
                   key={diagram.id}
-                  className="group bg-surface border border-border hover:border-primary/50 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1 break-inside-avoid"
+                  diagram={diagram}
+                  index={i}
+                  isHovered={hoveredId === diagram.id}
+                  isLiked={likedIds.has(diagram.id)}
+                  commentCount={commentCounts[diagram.id] || 0}
+                  isExpanded={expandedCommentId === diagram.id}
+                  user={user}
+                  onOpenAuth={onOpenAuth}
                   onMouseEnter={() => setHoveredId(diagram.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                >
-                  {/* Preview Area - Aspect Ratio Variable */}
-                  <div
-                    className="relative bg-[#131316] border-b border-border/50 overflow-hidden cursor-pointer"
-                    onClick={() => handleForkWithStats(diagram)}
-                  >
-                    <div className="p-2 min-h-[150px] max-h-[300px] flex items-center justify-center overflow-hidden">
-                      <div className="pointer-events-none transform scale-[0.8] origin-center w-full h-full flex items-center justify-center">
-                        <DiagramPreview
-                          code={diagram.code}
-                          onError={() => {}}
-                          theme="midnight"
-                          showControls={false}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Overlay Fork Button */}
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${hoveredId === diagram.id ? 'opacity-100' : 'opacity-0'}`}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleForkWithStats(diagram);
-                        }}
-                        className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl transform scale-90 group-hover:scale-100 transition-all"
-                      >
-                        <GitFork className="w-5 h-5" />
-                        Fork Diagram
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Info Area */}
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-lg text-text group-hover:text-primary transition-colors line-clamp-1">
-                        {diagram.title}
-                      </h3>
-                      <span className="text-[10px] bg-surface-hover border border-border text-text-muted px-2 py-0.5 rounded-full whitespace-nowrap">
-                        {diagram.createdAt}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-text-muted line-clamp-3 mb-4">
-                      {diagram.description}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {diagram.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-1 rounded-md"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
-                          {diagram.author.substring(0, 2).toUpperCase()}
-                        </div>
-                        <span className="text-xs text-text-muted font-medium hover:text-text cursor-pointer">
-                          @{diagram.author}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-text-muted">
-                        <button
-                          onClick={(e) => handleLike(e, diagram.id, diagram.likes)}
-                          className={`flex items-center gap-1.5 transition-all group/like ${
-                            likedIds.has(diagram.id)
-                              ? 'text-red-500'
-                              : 'text-text-muted hover:text-red-400'
-                          }`}
-                        >
-                          <Heart
-                            className={`w-3.5 h-3.5 transition-transform ${
-                              likedIds.has(diagram.id)
-                                ? 'fill-current scale-110'
-                                : 'group-hover/like:scale-110'
-                            }`}
-                          />
-                          <span className="font-medium">{formatNumber(diagram.likes)}</span>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedCommentId(
-                              expandedCommentId === diagram.id ? null : diagram.id
-                            );
-                          }}
-                          className="flex items-center gap-1.5 text-text-muted hover:text-primary transition-all"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span className="font-medium">{commentCounts[diagram.id] || 0}</span>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-3.5 h-3.5" />
-                          {formatNumber(diagram.views)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expandable Comment Thread */}
-                  {expandedCommentId === diagram.id && (
-                    <Suspense
-                      fallback={
-                        <div className="px-5 py-4 border-t border-border/50 flex justify-center">
-                          <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
-                        </div>
-                      }
-                    >
-                      <CommentThread
-                        diagramId={diagram.id}
-                        user={user || null}
-                        onOpenAuth={onOpenAuth}
-                      />
-                    </Suspense>
-                  )}
-                </div>
+                  onFork={() => handleForkWithStats(diagram)}
+                  onLike={(e) => handleLike(e, diagram.id, diagram.likes)}
+                  onToggleComments={() =>
+                    setExpandedCommentId(expandedCommentId === diagram.id ? null : diagram.id)
+                  }
+                />
               ))}
-            </div>
-          )}
-
-          {/* Empty State / CTA */}
-          {!isLoading && filteredData.length === 0 && (
-            <div className="mt-20 p-10 rounded-2xl bg-gradient-to-br from-surface to-surface-hover border border-border text-center">
-              <p className="text-text-muted">No diagrams found matching your search.</p>
-            </div>
-          )}
-
-          {!isLoading && (
-            <div className="mt-20 p-10 rounded-2xl bg-gradient-to-br from-surface to-surface-hover border border-border text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Contribution Rewards Program</h3>
-              <p className="text-text-muted max-w-lg mx-auto mb-6">
-                Publish your best diagrams to the community. Top contributors receive Archigram Pro
-                for free and exclusive profile badges.
-              </p>
-              <button
-                onClick={() => onNavigate('app')}
-                className="bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-colors"
-              >
-                Create Submission
-              </button>
             </div>
           )}
         </div>
@@ -475,7 +388,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       {/* Import Modal */}
       {showImport && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md animate-slide-up">
+          <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
               <LinkIcon className="w-5 h-5 text-primary" />
               Import from Link
@@ -491,6 +404,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
               placeholder="https://archigram.ai/#..."
               className="w-full bg-background border border-border rounded-lg p-3 text-sm text-text focus:outline-none focus:border-primary mb-2"
               autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleImport()}
             />
 
             {importError && <p className="text-xs text-red-500 mb-3">{importError}</p>}
@@ -520,7 +434,248 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   );
 };
 
-const FilterButton = ({
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+type DiagramCardProps = {
+  diagram: CommunityDiagram;
+  index: number;
+  isHovered: boolean;
+  isLiked: boolean;
+  commentCount: number;
+  isExpanded: boolean;
+  user?: User | null;
+  onOpenAuth?: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onFork: () => void;
+  onLike: (e: React.MouseEvent) => void;
+  onToggleComments: () => void;
+};
+
+const DiagramCard = React.memo(
+  ({
+    diagram,
+    index,
+    isHovered,
+    isLiked,
+    commentCount,
+    isExpanded,
+    user,
+    onOpenAuth,
+    onMouseEnter,
+    onMouseLeave,
+    onFork,
+    onLike,
+    onToggleComments,
+  }: DiagramCardProps) => (
+    <div
+      className="group bg-surface border border-border hover:border-primary/40 rounded-2xl overflow-hidden flex flex-col break-inside-avoid transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
+      style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Preview */}
+      <div className="relative bg-[#0d0d10] cursor-pointer overflow-hidden" onClick={onFork}>
+        <div className="p-2 min-h-[200px] max-h-[340px] flex items-center justify-center overflow-hidden">
+          <div className="pointer-events-none transform scale-[0.8] origin-center w-full h-full flex items-center justify-center">
+            <DiagramPreview
+              code={diagram.code}
+              onError={() => {}}
+              theme="midnight"
+              showControls={false}
+            />
+          </div>
+        </div>
+
+        {/* Hover overlay — two CTAs */}
+        <div
+          className={`absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center gap-3 transition-opacity duration-200 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFork();
+            }}
+            className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/30 transition-transform scale-95 group-hover:scale-100"
+          >
+            <GitFork className="w-4 h-4" />
+            Fork
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFork();
+            }}
+            className="bg-white/10 hover:bg-white/20 backdrop-blur text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 border border-white/20 transition-transform scale-95 group-hover:scale-100"
+          >
+            <Code2 className="w-4 h-4" />
+            View Code
+          </button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="font-bold text-base text-text group-hover:text-primary transition-colors line-clamp-1 mb-1">
+          {diagram.title}
+        </h3>
+
+        <p className="text-xs text-text-muted line-clamp-2 mb-3 leading-relaxed">
+          {diagram.description}
+        </p>
+
+        {diagram.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {diagram.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+              {diagram.author.substring(0, 2).toUpperCase()}
+            </div>
+            <span className="text-xs text-text-muted truncate max-w-[80px]">@{diagram.author}</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-text-muted">
+            <button
+              onClick={onLike}
+              className={`flex items-center gap-1 transition-all group/like ${
+                isLiked ? 'text-red-500' : 'text-text-muted hover:text-red-400'
+              }`}
+            >
+              <Heart
+                className={`w-3.5 h-3.5 transition-transform ${
+                  isLiked ? 'fill-current scale-110' : 'group-hover/like:scale-110'
+                }`}
+              />
+              <span className="font-medium tabular-nums">{formatNumber(diagram.likes)}</span>
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleComments();
+              }}
+              className={`flex items-center gap-1 transition-all ${
+                isExpanded ? 'text-primary' : 'hover:text-primary'
+              }`}
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span className="font-medium tabular-nums">{commentCount}</span>
+            </button>
+
+            <div className="flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="tabular-nums">{formatNumber(diagram.views)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable Comment Thread */}
+      {isExpanded && (
+        <Suspense
+          fallback={
+            <div className="px-4 py-4 border-t border-border/50 flex justify-center">
+              <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
+            </div>
+          }
+        >
+          <CommentThread diagramId={diagram.id} user={user || null} onOpenAuth={onOpenAuth} />
+        </Suspense>
+      )}
+    </div>
+  )
+);
+DiagramCard.displayName = 'DiagramCard';
+
+const SkeletonGrid = () => (
+  <div className="columns-1 md:columns-2 lg:columns-3 gap-5 space-y-5">
+    {Array.from({ length: 9 }).map((_, i) => (
+      <div
+        key={i}
+        className="bg-surface border border-border rounded-2xl overflow-hidden break-inside-avoid animate-pulse"
+      >
+        <div className="bg-[#0d0d10]" style={{ height: `${180 + (i % 3) * 60}px` }} />
+        <div className="p-4 space-y-3">
+          <div className="h-4 bg-surface-hover rounded w-3/4" />
+          <div className="h-3 bg-surface-hover rounded w-full" />
+          <div className="h-3 bg-surface-hover rounded w-2/3" />
+          <div className="flex gap-1.5 pt-1">
+            <div className="h-5 w-16 bg-primary/10 rounded-md" />
+            <div className="h-5 w-12 bg-primary/10 rounded-md" />
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+            <div className="h-5 w-5 rounded-full bg-surface-hover" />
+            <div className="flex gap-3">
+              <div className="h-3 w-8 bg-surface-hover rounded" />
+              <div className="h-3 w-8 bg-surface-hover rounded" />
+              <div className="h-3 w-8 bg-surface-hover rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const EmptyState = ({
+  activeTag,
+  searchQuery,
+  onResetTag,
+  onResetSearch,
+}: {
+  activeTag: string;
+  searchQuery: string;
+  onResetTag: () => void;
+  onResetSearch: () => void;
+}) => (
+  <div className="flex flex-col items-center justify-center py-24 text-center">
+    <div className="w-16 h-16 rounded-full bg-surface border border-border flex items-center justify-center mb-4">
+      <Globe className="w-7 h-7 text-text-muted" />
+    </div>
+    <h3 className="text-lg font-bold text-text mb-2">No diagrams match your filter</h3>
+    <p className="text-sm text-text-muted mb-6 max-w-xs">
+      {searchQuery
+        ? `No results for "${searchQuery}".`
+        : activeTag !== 'All'
+          ? `No community diagrams tagged "${activeTag}" yet.`
+          : 'No diagrams available right now.'}
+    </p>
+    <div className="flex gap-2">
+      {activeTag !== 'All' && (
+        <button
+          onClick={onResetTag}
+          className="px-4 py-2 text-sm font-medium bg-surface border border-border rounded-lg hover:bg-surface-hover text-text transition-colors"
+        >
+          Clear tag filter
+        </button>
+      )}
+      {searchQuery && (
+        <button
+          onClick={onResetSearch}
+          className="px-4 py-2 text-sm font-medium bg-surface border border-border rounded-lg hover:bg-surface-hover text-text transition-colors"
+        >
+          Clear search
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const SortButton = ({
   active,
   onClick,
   icon,
@@ -533,19 +688,18 @@ const FilterButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
       active
-        ? 'bg-background text-text shadow-sm ring-1 ring-border'
-        : 'text-text-muted hover:text-text hover:bg-surface-hover'
+        ? 'bg-surface text-text shadow-sm ring-1 ring-border'
+        : 'text-text-muted hover:text-text hover:bg-surface/50'
     }`}
   >
     {icon}
-    {children}
+    <span className="hidden sm:inline">{children}</span>
   </button>
 );
 
-const formatNumber = (num: number) => {
-  return num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num.toString();
-};
+const formatNumber = (num: number) =>
+  num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num.toString();
 
 export default CommunityGallery;
