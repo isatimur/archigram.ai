@@ -182,6 +182,12 @@ async def ingest_document(
     except ParserError as e:
         logger.error("ingest_parse_failed", doc_id=doc_id, error=str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error("ingest_chunk_failed", doc_id=doc_id, error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document chunking failed: {str(e)}",
+        ) from e
 
     try:
 

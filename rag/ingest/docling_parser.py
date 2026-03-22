@@ -7,15 +7,12 @@ Docling is an optional dependency — import errors produce clear guidance.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from config import get_settings
 from middleware.logging import get_logger
 
 from .parser import ParserError
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_logger(__name__)
 
@@ -38,7 +35,7 @@ def _get_docling_modules() -> tuple[Any, ...]:
         from docling.datamodel.document import DocumentStream
         from docling.document_converter import DocumentConverter, PdfFormatOption
         from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-        from docling_core.transforms.chunker import HierarchicalChunker  # noqa: F401
+        from docling_core.transforms.chunker import HybridChunker  # noqa: F401
 
         return InputFormat, DocumentStream, DocumentConverter, PdfFormatOption, StandardPdfPipeline
     except ImportError as exc:
