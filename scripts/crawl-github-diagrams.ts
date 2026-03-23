@@ -211,7 +211,7 @@ ${code}
   try {
     const model = genai.models;
     const response = await model.generateContent({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     const text = response.text ?? '';
