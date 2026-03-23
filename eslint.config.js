@@ -144,6 +144,8 @@ export default [
       // Next.js auto-generated files
       'next-env.d.ts',
       '.next/**',
+      // Git worktrees
+      '.worktrees/**',
     ],
   },
   prettier,
