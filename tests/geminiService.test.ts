@@ -7,11 +7,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const mockGenerateContent = vi.fn();
 
 vi.mock('@google/genai', () => ({
-  GoogleGenAI: vi.fn().mockImplementation(() => ({
-    models: {
-      generateContent: mockGenerateContent,
-    },
-  })),
+  GoogleGenAI: vi.fn().mockImplementation(function () {
+    return {
+      models: {
+        generateContent: mockGenerateContent,
+      },
+    };
+  }),
 }));
 
 vi.mock('../services/ragClient', () => ({
