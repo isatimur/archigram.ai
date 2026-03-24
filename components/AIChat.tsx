@@ -222,14 +222,11 @@ const AIChat: React.FC<AIChatProps> = ({
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="absolute bottom-6 right-6 z-30 group flex items-center justify-center p-0 w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-accent text-white shadow-2xl shadow-primary/40 hover:scale-105 transition-all duration-300 ring-2 ring-white/10"
-        title="Open ArchiGram Copilot (Cmd+/)"
+        className="w-9 h-9 rounded-lg bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover transition-colors flex items-center justify-center"
+        title="AI Copilot"
+        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
       >
-        <Sparkles className="w-6 h-6 animate-pulse-slow" />
-        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-        </span>
+        <Sparkles className="w-4 h-4 text-text-muted" />
       </button>
     );
   }
