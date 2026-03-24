@@ -695,20 +695,24 @@ export default function EditorShell() {
 
       {/* Status bar */}
       <div
-        className="h-6 border-t border-border bg-surface flex items-center px-3 shrink-0 select-none"
+        className="h-[22px] border-t border-border bg-surface flex items-center shrink-0 select-none overflow-hidden"
         role="status"
         aria-label="Editor status"
+        style={{ borderTop: '1px solid rgb(var(--border))' }}
       >
-        <div className="flex items-center gap-2.5 text-[11px] text-text-muted">
+        {/* Left accent strip — primary color */}
+        <div className="w-1 self-stretch bg-primary shrink-0" />
+        {/* Save status */}
+        <div className="flex items-center gap-2 px-3 text-[10px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
-              <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
-              <span className="text-amber-400">Saving…</span>
+              <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0" />
+              <span className="text-amber-400 tracking-wide">SAVING</span>
             </>
           ) : (
             <>
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Saved</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="tracking-wide">SAVED</span>
             </>
           )}
           {lastSaved && (
@@ -718,9 +722,20 @@ export default function EditorShell() {
           )}
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-4 text-[11px] text-text-dim">
-          <span className="hidden md:inline">⌘K Command palette</span>
-          <span className="hidden lg:inline">? Shortcuts</span>
+        {/* Keyboard hint chips */}
+        <div className="flex items-center h-full text-[10px] font-mono text-text-dim">
+          <span
+            className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
+            title="Open command palette"
+          >
+            ⌘K
+          </span>
+          <span
+            className="hidden lg:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
+            title="Keyboard shortcuts"
+          >
+            ?
+          </span>
         </div>
       </div>
 
