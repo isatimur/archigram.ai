@@ -698,7 +698,6 @@ export default function EditorShell() {
         className="h-[22px] border-t border-border bg-surface flex items-center shrink-0 select-none overflow-hidden"
         role="status"
         aria-label="Editor status"
-        style={{ borderTop: '1px solid rgb(var(--border))' }}
       >
         {/* Left accent strip — primary color */}
         <div className="w-1 self-stretch bg-primary shrink-0" />
