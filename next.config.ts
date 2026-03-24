@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   // Map Vite-style import.meta.env.VITE_* → NEXT_PUBLIC_* so existing components
   // continue to work in Next.js without modification during Phase 1 migration.
   // Also falls back to VITE_* env var names so existing Vercel projects work
