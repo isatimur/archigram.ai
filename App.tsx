@@ -59,52 +59,70 @@ type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
 const THEMES: Record<DiagramTheme, ThemeVars> = {
   dark: {
-    // Obsidian / Zinc (Professional Default)
-    '--bg': '9 9 11', // zinc-950
-    '--surface': '24 24 27', // zinc-900
-    '--surface-hover': '39 39 42', // zinc-800
-    '--border': '63 63 70', // zinc-700
-    '--text': '228 228 231', // zinc-200
-    '--text-muted': '161 161 170', // zinc-400
-    '--primary': '99 102 241', // indigo-500
-    '--primary-hover': '79 70 229', // indigo-600
-    '--accent': '168 85 247', // purple-500
+    '--bg': '9 9 11',
+    '--surface': '17 17 20',
+    '--surface-hover': '26 26 30',
+    '--border': '44 44 52',
+    '--text': '230 230 235',
+    '--text-muted': '110 110 122',
+    '--primary': '129 140 248',
+    '--primary-hover': '99 102 241',
+    '--accent': '196 130 249',
   },
   midnight: {
-    // Deep Space / Slate (Sci-Fi)
-    '--bg': '2 6 23', // slate-950
-    '--surface': '15 23 42', // slate-900
-    '--surface-hover': '30 41 59', // slate-800
-    '--border': '51 65 85', // slate-700
-    '--text': '241 245 249', // slate-100
-    '--text-muted': '148 163 184', // slate-400
-    '--primary': '56 189 248', // sky-400
-    '--primary-hover': '14 165 233', // sky-500
-    '--accent': '236 72 153', // pink-500
+    '--bg': '3 7 18',
+    '--surface': '8 16 36',
+    '--surface-hover': '14 28 55',
+    '--border': '28 52 90',
+    '--text': '240 248 255',
+    '--text-muted': '138 158 180',
+    '--primary': '34 211 238',
+    '--primary-hover': '6 182 212',
+    '--accent': '244 114 182',
   },
   forest: {
-    // Matrix / Terminal (Hacker)
-    '--bg': '2 10 5', // Deep green/black
-    '--surface': '5 25 15', // Dark jungle
-    '--surface-hover': '10 40 25',
-    '--border': '20 60 40',
-    '--text': '236 253 245', // emerald-50
-    '--text-muted': '52 211 153', // emerald-400 (bright for muted in terminal)
-    '--primary': '74 222 128', // green-400
-    '--primary-hover': '34 197 94', // green-500
-    '--accent': '250 204 21', // yellow-400
+    '--bg': '4 10 4',
+    '--surface': '7 20 8',
+    '--surface-hover': '10 33 12',
+    '--border': '18 58 22',
+    '--text': '220 252 231',
+    '--text-muted': '74 222 128',
+    '--primary': '74 222 128',
+    '--primary-hover': '34 197 94',
+    '--accent': '253 224 71',
   },
   neutral: {
-    // Paper / Print (Clean Light Mode)
-    '--bg': '255 255 255', // white
-    '--surface': '241 245 249', // slate-100
-    '--surface-hover': '226 232 240', // slate-200
-    '--border': '203 213 225', // slate-300
-    '--text': '15 23 42', // slate-900
-    '--text-muted': '100 116 139', // slate-500
-    '--primary': '37 99 235', // blue-600
-    '--primary-hover': '29 78 216', // blue-700
-    '--accent': '236 72 153', // pink-500
+    '--bg': '255 255 255',
+    '--surface': '245 247 250',
+    '--surface-hover': '233 237 244',
+    '--border': '204 214 228',
+    '--text': '10 15 30',
+    '--text-muted': '88 108 136',
+    '--primary': '37 99 235',
+    '--primary-hover': '29 78 216',
+    '--accent': '248 113 113',
+  },
+  ember: {
+    '--bg': '12 8 6',
+    '--surface': '22 15 10',
+    '--surface-hover': '34 22 14',
+    '--border': '60 38 22',
+    '--text': '255 237 213',
+    '--text-muted': '180 128 80',
+    '--primary': '251 146 60',
+    '--primary-hover': '234 88 12',
+    '--accent': '252 211 77',
+  },
+  dusk: {
+    '--bg': '8 6 20',
+    '--surface': '16 12 38',
+    '--surface-hover': '26 20 58',
+    '--border': '50 38 100',
+    '--text': '240 234 255',
+    '--text-muted': '160 140 210',
+    '--primary': '192 132 252',
+    '--primary-hover': '168 85 247',
+    '--accent': '251 113 133',
   },
 };
 

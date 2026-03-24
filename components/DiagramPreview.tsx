@@ -194,8 +194,18 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
     // Determine unstable condition: HandDrawn look + unsupported diagram type
     const unsafeForHandDrawn = isGitGraph || isMindmap || isArchitecture;
 
+    const MERMAID_THEME_MAP: Record<string, 'dark' | 'forest' | 'neutral' | 'default' | 'base'> = {
+      dark: 'dark',
+      midnight: 'dark',
+      forest: 'forest',
+      neutral: 'default',
+      ember: 'dark',
+      dusk: 'dark',
+    };
     const mermaidTheme =
-      activeStyle.diagramLook === 'handDrawn' ? 'neutral' : theme === 'midnight' ? 'dark' : theme;
+      activeStyle.diagramLook === 'handDrawn'
+        ? ('neutral' as const)
+        : (MERMAID_THEME_MAP[theme] ?? 'dark');
     const isHandDrawn = activeStyle.diagramLook === 'handDrawn';
 
     const themeVariables: Record<string, string | undefined> = {

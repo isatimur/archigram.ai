@@ -1,7 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Share2,
-  Palette,
   Code2,
   Columns,
   Eye,
@@ -164,12 +163,53 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  // Helper for Theme Previews
-  const themeColors: Record<DiagramTheme, string> = {
-    dark: '#6366f1', // Indigo
-    midnight: '#38bdf8', // Sky
-    forest: '#4ade80', // Green
-    neutral: '#f43f5e', // Rose
+  // Theme catalog for the visual picker
+  const THEME_CATALOG: Record<
+    DiagramTheme,
+    { name: string; vibe: string; bg: string; primary: string; accent: string }
+  > = {
+    dark: {
+      name: 'Obsidian',
+      vibe: 'Electric void',
+      bg: '#09090b',
+      primary: '#818cf8',
+      accent: '#c484f9',
+    },
+    midnight: {
+      name: 'Abyss',
+      vibe: 'Deep ocean',
+      bg: '#030712',
+      primary: '#22d3ee',
+      accent: '#f472b6',
+    },
+    forest: {
+      name: 'Phosphor',
+      vibe: 'Terminal green',
+      bg: '#040a04',
+      primary: '#4ade80',
+      accent: '#fde047',
+    },
+    neutral: {
+      name: 'Arctic',
+      vibe: 'Clean & bright',
+      bg: '#ffffff',
+      primary: '#2563eb',
+      accent: '#f87171',
+    },
+    ember: {
+      name: 'Ember',
+      vibe: 'Warm fire glow',
+      bg: '#0c0806',
+      primary: '#fb923c',
+      accent: '#fcd34d',
+    },
+    dusk: {
+      name: 'Dusk',
+      vibe: 'Twilight violet',
+      bg: '#080614',
+      primary: '#c084fc',
+      accent: '#fb7185',
+    },
   };
 
   const isDarkMode = currentTheme !== 'neutral';
@@ -273,46 +313,104 @@ const Header: React.FC<HeaderProps> = ({
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* Theme Dropdown */}
+            {/* Theme Picker */}
             <div className="relative hidden sm:block">
-              <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
-                <button
-                  onClick={() => setShowThemes(!showThemes)}
-                  className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-md transition-colors"
-                  title="Change Theme"
-                >
-                  <Palette className="w-3.5 h-3.5" />
-                  <span className="capitalize hidden lg:inline">{currentTheme}</span>
-                  <ChevronDown className="w-3 h-3 opacity-50" />
-                </button>
-              </div>
+              <button
+                onClick={() => setShowThemes(!showThemes)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg border border-border transition-colors"
+                title="Change Theme"
+              >
+                <span
+                  className="w-3 h-3 rounded-full border border-white/20 shadow-sm shrink-0"
+                  style={{ backgroundColor: THEME_CATALOG[currentTheme].primary }}
+                />
+                <span className="hidden lg:inline">{THEME_CATALOG[currentTheme].name}</span>
+                <ChevronDown className="w-3 h-3 opacity-40" />
+              </button>
 
               {showThemes && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)}></div>
-                  <div className="absolute top-full left-0 mt-2 w-44 py-1 bg-surface border border-border rounded-xl shadow-2xl z-20 flex flex-col overflow-hidden ring-1 ring-border/20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-bold border-b border-border/50 bg-surface-hover/30">
-                      Theme Preset
+                  <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)} />
+                  <div className="absolute top-full left-0 mt-2 z-20 w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 pt-3 pb-2">
+                      <p className="text-[10px] uppercase tracking-widest text-text-dim font-bold">
+                        Color Theme
+                      </p>
                     </div>
-                    {(['dark', 'midnight', 'forest', 'neutral'] as DiagramTheme[]).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          setTheme(t);
-                          setShowThemes(false);
-                        }}
-                        className="text-left px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex items-center justify-between group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-3 h-3 rounded-full border border-border shadow-sm group-hover:scale-110 transition-transform"
-                            style={{ backgroundColor: themeColors[t] }}
-                          ></div>
-                          <span className="capitalize">{t}</span>
-                        </div>
-                        {currentTheme === t && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </button>
-                    ))}
+                    <div className="grid grid-cols-3 gap-2 px-3 pb-3">
+                      {(
+                        Object.entries(THEME_CATALOG) as [
+                          DiagramTheme,
+                          (typeof THEME_CATALOG)[DiagramTheme],
+                        ][]
+                      ).map(([t, meta]) => {
+                        const isActive = currentTheme === t;
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => {
+                              setTheme(t);
+                              setShowThemes(false);
+                            }}
+                            className={`relative flex flex-col items-start p-2.5 rounded-xl border transition-all duration-150 text-left group ${
+                              isActive
+                                ? 'border-transparent ring-1.5 ring-offset-1 ring-offset-surface scale-[0.98]'
+                                : 'border-border/60 hover:border-border hover:scale-[1.02]'
+                            }`}
+                            style={{
+                              background: isActive
+                                ? `radial-gradient(ellipse at 70% 0%, ${meta.primary}22 0%, ${meta.bg} 65%)`
+                                : meta.bg === '#ffffff'
+                                  ? '#f8fafc'
+                                  : `color-mix(in srgb, ${meta.bg} 80%, #ffffff 20%)`,
+                              ...(isActive
+                                ? {
+                                    boxShadow: `0 0 0 1.5px ${meta.primary}88, 0 0 12px ${meta.primary}33`,
+                                  }
+                                : {}),
+                            }}
+                            title={`${meta.name} — ${meta.vibe}`}
+                          >
+                            {/* Color swatches */}
+                            <div className="flex gap-1 mb-2">
+                              <span
+                                className="w-4 h-4 rounded-full border border-white/15 shadow-sm"
+                                style={{
+                                  backgroundColor: meta.bg === '#ffffff' ? '#e2e8f0' : meta.bg,
+                                }}
+                              />
+                              <span
+                                className="w-4 h-4 rounded-full border border-white/15 shadow-sm"
+                                style={{ backgroundColor: meta.primary }}
+                              />
+                              <span
+                                className="w-4 h-4 rounded-full border border-white/15 shadow-sm"
+                                style={{ backgroundColor: meta.accent }}
+                              />
+                            </div>
+                            {/* Name */}
+                            <span
+                              className="text-[11px] font-semibold leading-none"
+                              style={{ color: meta.bg === '#ffffff' ? '#0a0f1e' : '#f0f0f5' }}
+                            >
+                              {meta.name}
+                            </span>
+                            {/* Vibe */}
+                            <span
+                              className="text-[9px] leading-none mt-0.5 opacity-60"
+                              style={{ color: meta.bg === '#ffffff' ? '#0a0f1e' : '#f0f0f5' }}
+                            >
+                              {meta.vibe}
+                            </span>
+                            {isActive && (
+                              <span className="absolute top-1.5 right-1.5">
+                                <Check className="w-2.5 h-2.5" style={{ color: meta.primary }} />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               )}

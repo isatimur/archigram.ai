@@ -14,7 +14,7 @@ export enum ViewMode {
   Preview = 'PREVIEW',
 }
 
-export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral';
+export type DiagramTheme = 'dark' | 'midnight' | 'forest' | 'neutral' | 'ember' | 'dusk';
 
 export type CopilotDomain = 'General' | 'Healthcare' | 'Finance' | 'E-commerce';
 
