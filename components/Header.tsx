@@ -11,7 +11,6 @@ import {
   Plus,
   Pencil,
   UploadCloud,
-  Rocket,
   Sun,
   Moon,
   Save,
@@ -224,17 +223,20 @@ const Header: React.FC<HeaderProps> = ({
               onClick={() => onNavigate('landing')}
               className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
             >
-              <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <Rocket className="w-3 h-3 text-white" />
+              {/* Blueprint Intelligence mark — nested diamond */}
+              <div
+                className="w-6 h-6 border border-cyan-400/60 flex items-center justify-center shrink-0"
+                style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+              >
+                <div
+                  className="w-2.5 h-2.5 bg-cyan-400"
+                  style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                />
               </div>
-              <span className="hidden lg:inline">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
-                  Archi
-                </span>
-                <span className="text-text font-bold">Gram</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 font-extrabold drop-shadow-sm">
-                  .ai
-                </span>
+              <span className="hidden lg:inline font-display tracking-tight text-[15px]">
+                <span className="text-cyan-400 font-bold">Archi</span>
+                <span className="text-text font-semibold">Gram</span>
+                <span className="text-cyan-400/70 font-bold">.ai</span>
               </span>
             </h1>
           </div>
@@ -567,7 +569,7 @@ const Header: React.FC<HeaderProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
                   >
-                    <Code className="w-4 h-4 text-purple-500" />
+                    <Code className="w-4 h-4 text-primary" />
                     Embed Diagram
                   </button>
 
@@ -701,7 +703,7 @@ const Header: React.FC<HeaderProps> = ({
                       aria-pressed={embedMode === m}
                       className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
                         embedMode === m
-                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          ? 'bg-primary border-primary text-white'
                           : 'border-border text-text-muted hover:text-text hover:border-text-muted'
                       }`}
                     >
@@ -727,7 +729,7 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={() => setEmbedWidth('100%')}
                       className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
                         embedWidth === '100%'
-                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          ? 'bg-primary border-primary text-white'
                           : 'border-border text-text-muted hover:text-text'
                       }`}
                     >
@@ -755,7 +757,7 @@ const Header: React.FC<HeaderProps> = ({
                         onClick={() => setEmbedHeight(h)}
                         className={`px-2 py-1.5 rounded-lg text-xs border transition-colors ${
                           embedHeight === h
-                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            ? 'bg-primary border-primary text-white'
                             : 'border-border text-text-muted hover:text-text'
                         }`}
                       >
@@ -782,13 +784,13 @@ const Header: React.FC<HeaderProps> = ({
                   readOnly
                   value={embedCode}
                   rows={6}
-                  className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono text-text resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono text-text resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
                 />
               </div>
 
               <button
                 onClick={handleCopyEmbed}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-xl transition-colors"
               >
                 {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {embedCopied ? 'Copied!' : 'Copy Embed Code'}
