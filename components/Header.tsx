@@ -335,7 +335,7 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="fixed inset-0 z-10" onClick={() => setShowThemes(false)} />
                   <div className="absolute top-full left-0 mt-2 z-20 w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="px-4 pt-3 pb-2">
-                      <p className="text-[10px] uppercase tracking-widest text-text-dim font-bold">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-text-dim font-bold">
                         Color Theme
                       </p>
                     </div>
@@ -392,14 +392,14 @@ const Header: React.FC<HeaderProps> = ({
                             </div>
                             {/* Name */}
                             <span
-                              className="text-[11px] font-semibold leading-none"
+                              className="font-display text-[11px] font-bold leading-none tracking-tight"
                               style={{ color: meta.bg === '#ffffff' ? '#0a0f1e' : '#f0f0f5' }}
                             >
                               {meta.name}
                             </span>
                             {/* Vibe */}
                             <span
-                              className="text-[9px] leading-none mt-0.5 opacity-60"
+                              className="font-mono text-[8px] leading-none mt-0.5 opacity-50 tracking-wide"
                               style={{ color: meta.bg === '#ffffff' ? '#0a0f1e' : '#f0f0f5' }}
                             >
                               {meta.vibe}

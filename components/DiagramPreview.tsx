@@ -1,17 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
-import {
-  RotateCcw,
-  Box,
-  Minus,
-  Plus,
-  Palette,
-  Grid,
-  Layout,
-  Eye,
-  Sliders,
-  Settings2,
-} from 'lucide-react';
+import { RotateCcw, Box, Minus, Plus, Palette, Eye } from 'lucide-react';
 import { DiagramTheme, DiagramStyleConfig, BackgroundPattern } from '../types.ts';
 
 interface DiagramPreviewProps {
@@ -71,6 +60,56 @@ const STYLE_PRESETS: Record<string, DiagramStyleConfig> = {
     nodeColor: '#ffffff',
   },
 };
+
+// Pattern mini-preview SVGs for the style panel
+const PATTERN_OPTIONS: { key: BackgroundPattern; label: string; svg: React.ReactNode }[] = [
+  {
+    key: 'solid',
+    label: 'Solid',
+    svg: (
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <rect x="1" y="1" width="12" height="12" rx="1" fill="currentColor" opacity="0.4" />
+      </svg>
+    ),
+  },
+  {
+    key: 'dots',
+    label: 'Dots',
+    svg: (
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        {[3, 7, 11].map((x) =>
+          [3, 7, 11].map((y) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.2" fill="currentColor" />
+          ))
+        )}
+      </svg>
+    ),
+  },
+  {
+    key: 'grid',
+    label: 'Grid',
+    svg: (
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <path
+          d="M1 5h12M1 9h12M5 1v12M9 1v12"
+          stroke="currentColor"
+          strokeWidth="0.8"
+          opacity="0.8"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'crossline',
+    label: 'Cross',
+    svg: (
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
+        <path d="M1 7h12M7 1v12" stroke="currentColor" strokeWidth="0.8" opacity="0.4" />
+      </svg>
+    ),
+  },
+];
 
 const DiagramPreview: React.FC<DiagramPreviewProps> = ({
   code,
@@ -478,139 +517,205 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
       {showControls && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3">
           {showStyleMenu && onUpdateStyle && (
-            <div className="bg-surface/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl mb-2 w-72 animate-slide-up ring-1 ring-black/20 overflow-hidden">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Palette className="w-3.5 h-3.5" /> Style Studio
-                </span>
-                <button
-                  onClick={() => setShowStyleMenu(false)}
-                  className="text-zinc-400 hover:text-white"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            <div
+              className="backdrop-blur-xl rounded-2xl mb-2 w-72 animate-slide-up overflow-hidden"
+              style={{
+                background: 'rgba(8,8,11,0.96)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 32px 64px rgba(0,0,0,0.85)',
+              }}
+            >
+              {/* Cyan accent top rule */}
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
 
-              <div className="space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2">
-                {/* Presets */}
-                <div>
-                  <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">
-                    Presets
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(STYLE_PRESETS).map((preset) => (
-                      <button
-                        key={preset}
-                        onClick={() => onUpdateStyle(STYLE_PRESETS[preset])}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
-                          JSON.stringify(activeStyle) === JSON.stringify(STYLE_PRESETS[preset])
-                            ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:bg-zinc-700 hover:text-white'
-                        }`}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
+              <div className="p-4">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-400/70 flex items-center gap-1.5">
+                    <Palette className="w-3 h-3" /> Style Studio
+                  </span>
+                  <button
+                    onClick={() => setShowStyleMenu(false)}
+                    className="text-zinc-700 hover:text-zinc-400 transition-colors"
+                    title="Hide panel"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                {/* Colors */}
-                <div>
-                  <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">
-                    Custom Colors
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
-                      <span className="text-xs text-zinc-400">Node</span>
-                      <input
-                        type="color"
-                        value={activeStyle.nodeColor || '#000000'}
-                        onChange={(e) => updateStyle('nodeColor', e.target.value)}
-                        className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
-                      <span className="text-xs text-zinc-400">Line</span>
-                      <input
-                        type="color"
-                        value={activeStyle.lineColor || '#000000'}
-                        onChange={(e) => updateStyle('lineColor', e.target.value)}
-                        className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
-                      <span className="text-xs text-zinc-400">Text</span>
-                      <input
-                        type="color"
-                        value={activeStyle.textColor || '#ffffff'}
-                        onChange={(e) => updateStyle('textColor', e.target.value)}
-                        className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg border border-white/5">
-                      <span className="text-xs text-zinc-400">Bg</span>
-                      <input
-                        type="color"
-                        value={activeStyle.backgroundColor || '#000000'}
-                        onChange={(e) => updateStyle('backgroundColor', e.target.value)}
-                        className="w-5 h-5 rounded cursor-pointer bg-transparent border-none p-0"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Render Mode */}
-                <div>
-                  <label className="text-[10px] text-zinc-500 font-bold uppercase mb-2 block">
-                    Render Mode
-                  </label>
-                  <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
-                    <button
-                      onClick={() => updateStyle('diagramLook', 'classic')}
-                      className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'classic' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                    >
-                      Classic
-                    </button>
-                    <button
-                      onClick={() => updateStyle('diagramLook', 'handDrawn')}
-                      className={`flex-1 py-1.5 rounded-md text-[10px] font-medium transition-colors ${activeStyle.diagramLook === 'handDrawn' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                    >
-                      Sketch
-                    </button>
-                  </div>
-                </div>
-
-                {/* Canvas Pattern & Opacity */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-[10px] text-zinc-500 font-bold uppercase block">
-                      Pattern
+                <div className="space-y-4 max-h-[320px] overflow-y-auto pr-0.5">
+                  {/* Presets */}
+                  <div>
+                    <label className="font-mono text-[9px] uppercase tracking-[0.15em] text-zinc-600 mb-2 block">
+                      Presets
                     </label>
-                    <span className="text-[9px] text-zinc-500">
-                      {(activeStyle.backgroundOpacity || 1) * 100}%
-                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(Object.entries(STYLE_PRESETS) as [string, DiagramStyleConfig][]).map(
+                        ([preset, config]) => {
+                          const isActive = JSON.stringify(activeStyle) === JSON.stringify(config);
+                          return (
+                            <button
+                              key={preset}
+                              onClick={() => onUpdateStyle(config)}
+                              className={`relative px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all border ${
+                                isActive
+                                  ? 'border-cyan-400/30 text-white'
+                                  : 'border-white/5 text-zinc-500 hover:border-white/12 hover:text-zinc-300'
+                              }`}
+                              style={
+                                isActive
+                                  ? {
+                                      background: 'rgba(34,211,238,0.06)',
+                                      boxShadow: '0 0 14px rgba(34,211,238,0.1)',
+                                    }
+                                  : { background: 'rgba(255,255,255,0.02)' }
+                              }
+                            >
+                              {/* Mini palette dots */}
+                              <div className="flex gap-0.5 mb-1.5">
+                                <span
+                                  className="w-2 h-2 rounded-full border border-white/10"
+                                  style={{ backgroundColor: config.nodeColor ?? '#000' }}
+                                />
+                                <span
+                                  className="w-2 h-2 rounded-full border border-white/10"
+                                  style={{ backgroundColor: config.lineColor ?? '#000' }}
+                                />
+                                <span
+                                  className="w-2 h-2 rounded-full border border-white/10"
+                                  style={{ backgroundColor: config.textColor ?? '#fff' }}
+                                />
+                              </div>
+                              <span>{preset}</span>
+                              {isActive && (
+                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                              )}
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2 mb-3">
-                    {(['solid', 'dots', 'grid', 'crossline'] as BackgroundPattern[]).map((pat) => (
-                      <button
-                        key={pat}
-                        onClick={() => updateStyle('backgroundPattern', pat)}
-                        className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                          activeStyle.backgroundPattern === pat
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-white/10 bg-zinc-800 text-zinc-500 hover:border-white/30'
-                        }`}
-                        title={pat}
-                      >
-                        {pat === 'solid' && <Box className="w-3.5 h-3.5" />}
-                        {pat === 'dots' && <Grid className="w-3.5 h-3.5" />}
-                        {pat === 'grid' && <Layout className="w-3.5 h-3.5" />}
-                        {pat === 'crossline' && <Settings2 className="w-3.5 h-3.5" />}
-                      </button>
-                    ))}
+
+                  {/* Custom Colors */}
+                  <div>
+                    <label className="font-mono text-[9px] uppercase tracking-[0.15em] text-zinc-600 mb-2 block">
+                      Colors
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(
+                        [
+                          {
+                            key: 'nodeColor' as const,
+                            label: 'Node',
+                            value: activeStyle.nodeColor ?? '#000000',
+                          },
+                          {
+                            key: 'lineColor' as const,
+                            label: 'Line',
+                            value: activeStyle.lineColor ?? '#000000',
+                          },
+                          {
+                            key: 'textColor' as const,
+                            label: 'Text',
+                            value: activeStyle.textColor ?? '#ffffff',
+                          },
+                          {
+                            key: 'backgroundColor' as const,
+                            label: 'Canvas',
+                            value: activeStyle.backgroundColor ?? '#000000',
+                          },
+                        ] as { key: keyof DiagramStyleConfig; label: string; value: string }[]
+                      ).map(({ key, label, value }) => (
+                        <label
+                          key={key}
+                          className="flex items-center justify-between px-2.5 py-2 rounded-lg border border-white/5 cursor-pointer hover:border-white/10 transition-colors group"
+                          style={{ background: 'rgba(255,255,255,0.02)' }}
+                        >
+                          <span className="font-mono text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                            {label}
+                          </span>
+                          <div className="relative flex items-center">
+                            <div
+                              className="w-5 h-5 rounded border border-white/15 shadow-inner"
+                              style={{ backgroundColor: value }}
+                            />
+                            <input
+                              type="color"
+                              value={value}
+                              onChange={(e) => updateStyle(key, e.target.value)}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            />
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-3 h-3 text-zinc-600" />
+
+                  {/* Render Mode */}
+                  <div>
+                    <label className="font-mono text-[9px] uppercase tracking-[0.15em] text-zinc-600 mb-2 block">
+                      Render
+                    </label>
+                    <div
+                      className="flex rounded-lg p-0.5 border border-white/5"
+                      style={{ background: 'rgba(0,0,0,0.4)' }}
+                    >
+                      {[
+                        { value: 'classic', label: 'Classic' },
+                        { value: 'handDrawn', label: 'Sketch' },
+                      ].map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => updateStyle('diagramLook', value)}
+                          className={`flex-1 py-1.5 rounded-md font-mono text-[10px] font-medium transition-all ${
+                            activeStyle.diagramLook === value
+                              ? 'text-white border border-white/10 shadow-sm'
+                              : 'text-zinc-600 hover:text-zinc-400'
+                          }`}
+                          style={
+                            activeStyle.diagramLook === value
+                              ? { background: 'rgba(255,255,255,0.07)' }
+                              : {}
+                          }
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pattern */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="font-mono text-[9px] uppercase tracking-[0.15em] text-zinc-600 block">
+                        Pattern
+                      </label>
+                      <span className="font-mono text-[9px] text-zinc-700">
+                        {Math.round((activeStyle.backgroundOpacity ?? 1) * 100)}%
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5 mb-2.5">
+                      {PATTERN_OPTIONS.map(({ key, label, svg }) => (
+                        <button
+                          key={key}
+                          onClick={() => updateStyle('backgroundPattern', key)}
+                          className={`flex-1 h-8 rounded-lg border flex items-center justify-center transition-all ${
+                            activeStyle.backgroundPattern === key
+                              ? 'border-cyan-400/35 text-cyan-400'
+                              : 'border-white/5 text-zinc-600 hover:border-white/12 hover:text-zinc-400'
+                          }`}
+                          style={
+                            activeStyle.backgroundPattern === key
+                              ? { background: 'rgba(34,211,238,0.06)' }
+                              : { background: 'rgba(255,255,255,0.02)' }
+                          }
+                          title={label}
+                        >
+                          {svg}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="range"
                       min="0"
@@ -618,7 +723,8 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
                       step="0.05"
                       value={activeStyle.backgroundOpacity ?? 1}
                       onChange={(e) => updateStyle('backgroundOpacity', parseFloat(e.target.value))}
-                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                      className="w-full h-1 rounded-full appearance-none cursor-pointer accent-cyan-400"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}
                     />
                   </div>
                 </div>
@@ -676,7 +782,7 @@ const DiagramPreview: React.FC<DiagramPreviewProps> = ({
           className="fixed z-50 px-3 py-2 bg-zinc-900/90 border border-white/10 text-white rounded-lg shadow-xl backdrop-blur-md pointer-events-none animate-fade-in"
           style={{ left: tooltip.x + 15, top: tooltip.y + 15, maxWidth: '250px' }}
         >
-          <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">
+          <div className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider mb-0.5">
             {tooltip.type}
           </div>
           <div className="text-xs font-medium">{tooltip.content}</div>
