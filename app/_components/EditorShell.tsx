@@ -3,7 +3,7 @@
 // App.tsx's sidebar state and layout are intentionally NOT updated here;
 // App.tsx will be removed in Phase 2 of the migration.
 
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Loader2 } from 'lucide-react';
 import ActivityBar from '@/app/_components/ActivityBar';
@@ -181,6 +181,38 @@ export default function EditorShell() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [pendingPromptText, setPendingPromptText] = useState('');
   const [pendingPromptResultCode, setPendingPromptResultCode] = useState<string | undefined>();
+
+  // Resizable split pane
+  const [splitPercent, setSplitPercent] = useState(35);
+  const splitDragging = useRef(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!splitDragging.current || !splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(Math.min(Math.max(pct, 15), 80));
+    };
+    const onUp = () => {
+      if (!splitDragging.current) return;
+      splitDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  const startSplitDrag = () => {
+    splitDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   // Navigation helper
   const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
@@ -429,6 +461,7 @@ export default function EditorShell() {
     handleDuplicateDiagram,
     handleShare,
     openPublishModal,
+    setViewMode,
   });
 
   const appStyle = THEMES[theme] || THEMES.dark;
@@ -539,78 +572,123 @@ export default function EditorShell() {
           </div>
         )}
 
-        {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
-          <div
-            className={`
-              flex flex-col transition-all duration-300 ease-in-out border-r border-border
-              ${viewMode === ViewMode.Split ? 'w-1/3' : 'w-full'}
-            `}
-          >
-            <Suspense fallback={<div className="w-full h-full bg-background animate-pulse" />}>
-              <CodeEditor
-                code={code}
-                onChange={setCode}
-                onUndo={undo}
-                onRedo={redo}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                error={error}
-                selectionRequest={selectionRequest}
-                theme={theme}
-                onFixError={handleFixError}
-                isFixing={isFixing}
-              />
-            </Suspense>
-          </div>
-        )}
-
-        {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
-          <div
-            className={`${viewMode === ViewMode.Split ? 'w-2/3' : 'w-full'} bg-surface/50 relative`}
-          >
-            <Suspense
-              fallback={
-                <div className="w-full h-full flex items-center justify-center text-text-muted">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                </div>
-              }
+        {/* Resizable editor panes */}
+        <div ref={splitContainerRef} className="flex-1 flex overflow-hidden">
+          {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
+            <div
+              style={viewMode === ViewMode.Split ? { width: `${splitPercent}%` } : undefined}
+              className={`flex flex-col border-r border-border overflow-hidden ${viewMode === ViewMode.Code ? 'flex-1' : 'shrink-0'}`}
             >
-              <DiagramPreview
-                code={code}
-                onError={setError}
-                theme={theme}
-                customStyle={customStyle}
-                onUpdateStyle={setCustomStyle}
-                onElementClick={(text) => {
-                  setSelectionRequest({ text, ts: Date.now() });
-                  if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
-                }}
-              />
-            </Suspense>
+              <Suspense fallback={<div className="w-full h-full bg-background animate-pulse" />}>
+                <CodeEditor
+                  code={code}
+                  onChange={setCode}
+                  onUndo={undo}
+                  onRedo={redo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  error={error}
+                  selectionRequest={selectionRequest}
+                  theme={theme}
+                  onFixError={handleFixError}
+                  isFixing={isFixing}
+                />
+              </Suspense>
+            </div>
+          )}
 
-            <Suspense fallback={null}>
-              <AIChat
-                projectId={activeProjectId}
-                currentCode={code}
-                onCodeUpdate={handleAIUpdate}
-                theme={theme}
-                versions={activeProject?.versions || []}
-                onRestoreVersion={handleRestoreVersion}
-                onSaveVersion={handleManualSnapshot}
-                isExpanded={isAIChatExpanded}
-                onToggleExpanded={setIsAIChatExpanded}
-                onSharePrompt={handleOpenPublishPrompt}
-                externalPrompt={pendingPromptText || undefined}
-                externalResultCode={pendingPromptResultCode}
-                onConsumeExternalPrompt={() => {
-                  setPendingPromptText('');
-                  setPendingPromptResultCode(undefined);
-                }}
-              />
-            </Suspense>
-          </div>
-        )}
+          {/* Drag handle */}
+          {viewMode === ViewMode.Split && (
+            <div
+              onMouseDown={startSplitDrag}
+              onDoubleClick={() => setSplitPercent(35)}
+              role="separator"
+              aria-label="Resize editor panels"
+              className="w-1 shrink-0 bg-border hover:bg-primary/60 cursor-col-resize transition-colors duration-150 relative group z-10"
+              title="Drag to resize · Double-click to reset"
+            >
+              {/* Wider invisible hit area */}
+              <div className="absolute inset-y-0 -left-1.5 -right-1.5" />
+            </div>
+          )}
+
+          {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
+            <div className="flex-1 flex flex-col bg-surface/50 relative overflow-hidden">
+              <Suspense
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center text-text-muted">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  </div>
+                }
+              >
+                <DiagramPreview
+                  code={code}
+                  onError={setError}
+                  theme={theme}
+                  customStyle={customStyle}
+                  onUpdateStyle={setCustomStyle}
+                  onElementClick={(text) => {
+                    setSelectionRequest({ text, ts: Date.now() });
+                    if (viewMode === ViewMode.Preview) setViewMode(ViewMode.Split);
+                  }}
+                />
+              </Suspense>
+
+              <Suspense fallback={null}>
+                <AIChat
+                  projectId={activeProjectId}
+                  currentCode={code}
+                  onCodeUpdate={handleAIUpdate}
+                  theme={theme}
+                  versions={activeProject?.versions || []}
+                  onRestoreVersion={handleRestoreVersion}
+                  onSaveVersion={handleManualSnapshot}
+                  isExpanded={isAIChatExpanded}
+                  onToggleExpanded={setIsAIChatExpanded}
+                  onSharePrompt={handleOpenPublishPrompt}
+                  externalPrompt={pendingPromptText || undefined}
+                  externalResultCode={pendingPromptResultCode}
+                  onConsumeExternalPrompt={() => {
+                    setPendingPromptText('');
+                    setPendingPromptResultCode(undefined);
+                  }}
+                />
+              </Suspense>
+            </div>
+          )}
+        </div>
       </main>
+
+      {/* Status bar */}
+      <div
+        className="h-6 border-t border-border bg-surface flex items-center px-3 shrink-0 select-none"
+        role="status"
+        aria-label="Editor status"
+      >
+        <div className="flex items-center gap-2.5 text-[11px] text-text-muted">
+          {saveStatus === 'saving' ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+              <span className="text-amber-400">Saving…</span>
+            </>
+          ) : (
+            <>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Saved</span>
+            </>
+          )}
+          {lastSaved && (
+            <span className="text-text-dim hidden sm:inline">
+              {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+        <div className="flex-1" />
+        <div className="flex items-center gap-4 text-[11px] text-text-dim">
+          <span className="hidden md:inline">⌘K Command palette</span>
+          <span className="hidden lg:inline">? Shortcuts</span>
+        </div>
+      </div>
 
       {/* Delete Confirmation */}
       {pendingDeleteId && (

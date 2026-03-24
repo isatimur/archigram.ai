@@ -241,21 +241,22 @@ const Header: React.FC<HeaderProps> = ({
           {/* View Switcher */}
           <div className="hidden md:flex items-center bg-surface p-1 rounded-lg border border-border shadow-inner">
             {[
-              { mode: ViewMode.Code, icon: Code2, label: 'Code' },
-              { mode: ViewMode.Split, icon: Columns, label: 'Split' },
-              { mode: ViewMode.Preview, icon: Eye, label: 'Preview' },
-            ].map(({ mode, icon: Icon, label }) => (
+              { mode: ViewMode.Code, icon: Code2, label: 'Code', shortcut: '⌘1' },
+              { mode: ViewMode.Split, icon: Columns, label: 'Split', shortcut: '⌘2' },
+              { mode: ViewMode.Preview, icon: Eye, label: 'Preview', shortcut: '⌘3' },
+            ].map(({ mode, icon: Icon, label, shortcut }) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`p-2 rounded-md transition-all duration-200 flex items-center gap-2 ${
+                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 ${
                   viewMode === mode
                     ? 'bg-background text-text shadow-sm ring-1 ring-border'
                     : 'text-text-muted hover:text-text hover:bg-surface-hover'
                 }`}
-                title={label}
+                title={`${label} (${shortcut})`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium hidden lg:inline">{label}</span>
               </button>
             ))}
           </div>

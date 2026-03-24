@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { analytics } from '../utils/analytics.ts';
-import { AppView } from '../types.ts';
+import { AppView, ViewMode } from '../types.ts';
 
 interface UseKeyboardShortcutsOptions {
   currentView: AppView;
@@ -23,6 +23,7 @@ interface UseKeyboardShortcutsOptions {
   handleDuplicateDiagram: () => void;
   handleShare: () => void;
   openPublishModal: () => void;
+  setViewMode?: (mode: ViewMode) => void;
 }
 
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void {
@@ -46,6 +47,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     handleDuplicateDiagram,
     handleShare,
     openPublishModal,
+    setViewMode,
   } = options;
 
   useEffect(() => {
@@ -89,6 +91,24 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modKey && e.key === '1' && !e.shiftKey) {
+        e.preventDefault();
+        setViewMode?.(ViewMode.Code);
+        return;
+      }
+
+      if (modKey && e.key === '2' && !e.shiftKey) {
+        e.preventDefault();
+        setViewMode?.(ViewMode.Split);
+        return;
+      }
+
+      if (modKey && e.key === '3' && !e.shiftKey) {
+        e.preventDefault();
+        setViewMode?.(ViewMode.Preview);
+        return;
+      }
 
       if (modKey && e.key === 's' && !e.shiftKey) {
         e.preventDefault();
@@ -185,5 +205,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     handleDuplicateDiagram,
     handleShare,
     openPublishModal,
+    setViewMode,
   ]);
 }
