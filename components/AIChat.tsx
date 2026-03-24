@@ -233,13 +233,13 @@ const AIChat: React.FC<AIChatProps> = ({
 
   return (
     <div className="absolute bottom-6 right-6 z-30 w-[420px] flex flex-col max-h-[calc(100vh-120px)] transition-all duration-300 ease-in-out font-sans">
-      <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
+      <div className="bg-surface/90 backdrop-blur-2xl border border-white/10 rounded-xl shadow-xl overflow-hidden flex flex-col flex-1 ring-1 ring-black/5">
         {/* Header with Domain Selector */}
-        <div className="border-b border-border/50 bg-gradient-to-r from-surface-hover/50 to-transparent flex flex-col shrink-0">
+        <div className="border-b border-border/50 bg-surface-hover/30 flex flex-col shrink-0">
           <div className="flex justify-between items-center p-4 pb-2">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-                <Bot className="w-4 h-4 text-white" />
+              <div className="w-7 h-7 rounded border border-primary/30 bg-primary/10 flex items-center justify-center shrink-0">
+                <Bot className="w-3.5 h-3.5 text-primary" />
               </div>
               <div className="flex flex-col relative">
                 <span className="text-text font-bold text-sm tracking-tight flex items-center gap-1">
@@ -345,7 +345,7 @@ const AIChat: React.FC<AIChatProps> = ({
                       <button
                         key={i}
                         onClick={() => handleSubmit(txt)}
-                        className="p-3 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-xl text-[10px] text-text-muted hover:text-text transition-all duration-200"
+                        className="px-3 py-2 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-md text-[10px] text-text-muted hover:text-text transition-all duration-200"
                       >
                         {txt}
                       </button>
