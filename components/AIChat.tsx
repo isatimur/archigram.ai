@@ -76,6 +76,7 @@ const AIChat: React.FC<AIChatProps> = ({
 
   // Project-Specific Message Handling
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [snapshotSaving, setSnapshotSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Load chat for specific project
@@ -345,7 +346,7 @@ const AIChat: React.FC<AIChatProps> = ({
                       <button
                         key={i}
                         onClick={() => handleSubmit(txt)}
-                        className="px-3 py-2 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-md text-[10px] text-text-muted hover:text-text transition-all duration-200"
+                        className="px-3 py-2 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-md text-[10px] text-text-muted hover:text-text transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                       >
                         {txt}
                       </button>
@@ -412,7 +413,7 @@ const AIChat: React.FC<AIChatProps> = ({
                     <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleFeedback(msg.id, 'helpful')}
-                        className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
+                        className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
                         title="Helpful"
                         aria-label="Mark as helpful"
                       >
@@ -420,7 +421,7 @@ const AIChat: React.FC<AIChatProps> = ({
                       </button>
                       <button
                         onClick={() => handleFeedback(msg.id, 'unhelpful')}
-                        className={`p-1 rounded hover:bg-surface-hover ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
+                        className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
                         title="Unhelpful"
                         aria-label="Mark as unhelpful"
                       >
@@ -437,8 +438,9 @@ const AIChat: React.FC<AIChatProps> = ({
                               onSharePrompt(userMsg.text, msg.codeSnapshot);
                             }
                           }}
-                          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-primary"
+                          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-primary cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                           title="Share this prompt"
+                          aria-label="Share this prompt"
                         >
                           <Share2 className="w-3 h-3" />
                         </button>
@@ -453,7 +455,7 @@ const AIChat: React.FC<AIChatProps> = ({
                   <button
                     onClick={handleRegenerate}
                     title="Regenerate response"
-                    className="flex items-center gap-1.5 text-[10px] font-medium text-text-muted hover:text-primary transition-colors py-1.5 px-2.5 rounded-lg hover:bg-surface-hover"
+                    className="flex items-center gap-1.5 text-[10px] font-medium text-text-muted hover:text-primary transition-colors py-1.5 px-2.5 rounded-lg hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <RefreshCw className="w-3 h-3" />
                     Regenerate
@@ -481,11 +483,21 @@ const AIChat: React.FC<AIChatProps> = ({
               {/* Manual Save Button */}
               <div className="p-3 border-b border-border bg-surface/50">
                 <button
-                  onClick={() => onSaveVersion('Manual Snapshot')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all"
+                  onClick={() => {
+                    if (snapshotSaving) return;
+                    setSnapshotSaving(true);
+                    onSaveVersion('Manual Snapshot');
+                    setTimeout(() => setSnapshotSaving(false), 1500);
+                  }}
+                  disabled={snapshotSaving}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
-                  <Archive className="w-3.5 h-3.5 text-primary" />
-                  Create Snapshot
+                  {snapshotSaving ? (
+                    <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                  ) : (
+                    <Archive className="w-3.5 h-3.5 text-primary" />
+                  )}
+                  {snapshotSaving ? 'Saving...' : 'Create Snapshot'}
                 </button>
               </div>
 
@@ -507,7 +519,7 @@ const AIChat: React.FC<AIChatProps> = ({
                               className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border transition-colors ${
                                 version.source === 'manual'
                                   ? 'bg-emerald-500 border-emerald-600'
-                                  : 'bg-surface border-border group-hover:bg-primary group-hover:border-primary'
+                                  : 'bg-border border-transparent group-hover:bg-primary group-hover:border-primary'
                               }`}
                             ></div>
 
@@ -544,15 +556,18 @@ const AIChat: React.FC<AIChatProps> = ({
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => onRestoreVersion(version)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors group/restore"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors group/restore cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                                 >
                                   <RotateCcw className="w-3 h-3 group-hover/restore:rotate-[-45deg] transition-transform" />
                                   Restore
                                 </button>
                                 <button
                                   onClick={() => handleCopyCode(version.code, version.id)}
-                                  className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background"
+                                  className="p-1.5 text-text-muted hover:text-text border border-border rounded-lg hover:bg-background cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                                   title="Copy Code"
+                                  aria-label={
+                                    justCopied === version.id ? 'Code copied' : 'Copy code'
+                                  }
                                 >
                                   {justCopied === version.id ? (
                                     <Check className="w-3 h-3 text-green-500" />
@@ -589,6 +604,7 @@ const AIChat: React.FC<AIChatProps> = ({
                   }
                 }}
                 placeholder={`Ask ArchiGram.ai (${selectedDomain})...`}
+                aria-label="Ask ArchiGram AI"
                 className="w-full bg-transparent text-sm text-text placeholder:text-text-muted/50 p-2 max-h-32 min-h-[40px] resize-none focus:outline-none scrollbar-none"
                 disabled={isLoading}
               />
@@ -611,7 +627,7 @@ const AIChat: React.FC<AIChatProps> = ({
               {messages.length > 0 && (
                 <button
                   onClick={handleClearHistory}
-                  className={`text-[9px] transition-colors ${confirmingClear ? 'text-red-500 font-semibold' : 'text-text-muted hover:text-red-500'}`}
+                  className={`text-[9px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500/50 rounded ${confirmingClear ? 'text-red-500 font-semibold' : 'text-text-muted hover:text-red-500'}`}
                 >
                   {confirmingClear ? 'Confirm Clear?' : 'Clear Chat'}
                 </button>
