@@ -238,7 +238,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => startEditing(project, e)}
-                      className="p-1.5 rounded-md hover:bg-surface hover:text-text text-text-muted transition-colors"
+                      className="p-1.5 rounded-md hover:bg-surface hover:text-text text-text-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                       title="Rename"
                       aria-label="Rename"
                     >
@@ -252,7 +252,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           e.nativeEvent.stopImmediatePropagation();
                           onDeleteProject(project.id, e);
                         }}
-                        className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-text-muted transition-colors"
+                        className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-text-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500/50"
                         title="Delete"
                         aria-label="Delete"
                       >
@@ -269,7 +269,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       e.stopPropagation();
                       submitRename(project.id);
                     }}
-                    className="p-1.5 rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"
+                    className="p-1.5 rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500/50"
                     aria-label="Confirm Rename"
                   >
                     <Check className="w-3.5 h-3.5" />
@@ -301,6 +301,19 @@ const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
 
+          {projects.length === 0 && !searchQuery && (
+            <div className="px-4 py-10 text-center">
+              <Box className="w-8 h-8 mx-auto mb-3 text-text-dim opacity-40" />
+              <p className="text-xs text-text-muted mb-3">No diagrams yet.</p>
+              <button
+                onClick={onCreateProject}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-lg hover:bg-primary/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create first diagram
+              </button>
+            </div>
+          )}
           {filteredProjects.length === 0 && searchQuery && (
             <div className="px-4 py-8 text-center text-text-muted text-xs">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
