@@ -50,6 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <a href="#main" className="skip-link">
+          Skip to editor
+        </a>
         <AuthProvider>
           {/* Redirect old hash-based bookmarks to clean URLs */}
           <LegacyHashRouter />

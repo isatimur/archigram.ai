@@ -607,7 +607,7 @@ export default function EditorShell() {
         )}
 
         {/* Resizable editor panes */}
-        <div ref={splitContainerRef} className="flex-1 flex overflow-hidden">
+        <div id="main" ref={splitContainerRef} className="flex-1 flex overflow-hidden">
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
             <div
               style={viewMode === ViewMode.Split ? { width: `${splitPercent}%` } : undefined}
