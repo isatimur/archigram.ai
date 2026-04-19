@@ -502,7 +502,7 @@ export default function EditorShell() {
 
   return (
     <div
-      className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
+      className="min-h-dvh w-full flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
       style={appStyle}
     >
       <Suspense fallback={<div className="h-16 border-b border-border bg-background/80" />}>
