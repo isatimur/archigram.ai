@@ -325,7 +325,7 @@ const Header: React.FC<HeaderProps> = ({
                 title="Change Theme"
                 aria-label="Change editor theme"
                 aria-expanded={showThemes}
-                aria-haspopup="listbox"
+                aria-haspopup="true"
               >
                 <span
                   className="w-3 h-3 rounded-full border border-white/20 shadow-sm shrink-0"
