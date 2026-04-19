@@ -637,6 +637,7 @@ export default function EditorShell() {
               onMouseDown={startSplitDrag}
               onDoubleClick={() => setSplitPercent(35)}
               role="separator"
+              aria-orientation="vertical"
               aria-label="Resize editor panels"
               className="w-1 shrink-0 bg-border hover:bg-primary/60 cursor-col-resize transition-colors duration-150 relative group z-10"
               title="Drag to resize · Double-click to reset"
@@ -765,13 +766,14 @@ export default function EditorShell() {
               <div className="flex items-center gap-3 w-full mt-2">
                 <button
                   onClick={() => setPendingDeleteId(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text active:scale-95 transition-all text-sm font-medium"
+                  autoFocus
+                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text active:scale-95 transition-all text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeleteProject}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium shadow-lg shadow-red-500/20"
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium shadow-lg shadow-red-500/20 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                 >
                   Delete
                 </button>
