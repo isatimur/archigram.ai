@@ -309,8 +309,10 @@ const Header: React.FC<HeaderProps> = ({
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setTheme(isDarkMode ? 'neutral' : 'dark')}
-              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-pressed={isDarkMode}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -319,8 +321,11 @@ const Header: React.FC<HeaderProps> = ({
             <div className="relative hidden sm:block">
               <button
                 onClick={() => setShowThemes(!showThemes)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg border border-border transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg border border-border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 title="Change Theme"
+                aria-label="Change editor theme"
+                aria-expanded={showThemes}
+                aria-haspopup="listbox"
               >
                 <span
                   className="w-3 h-3 rounded-full border border-white/20 shadow-sm shrink-0"
