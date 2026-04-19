@@ -672,7 +672,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Embed Modal */}
         {showEmbedModal && (
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowEmbedModal(false)}
           >
             <div
