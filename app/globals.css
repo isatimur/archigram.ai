@@ -2,6 +2,7 @@
 
 /* Custom theme using CSS variables (matches CDN Tailwind config from index.html) */
 @theme {
+  --font-family-display: 'Syne', sans-serif;
   --font-family-sans: 'Inter', sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
 
