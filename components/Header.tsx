@@ -482,7 +482,7 @@ const Header: React.FC<HeaderProps> = ({
           {/* Publish Button */}
           <button
             onClick={onPublish}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg transition-all"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 rounded-lg transition-all"
             title="Publish to Community Gallery (Cmd+Shift+P)"
             aria-label="Publish diagram to community gallery"
           >
@@ -493,7 +493,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 active:scale-95 rounded-lg transition-all"
               title="Share Diagram"
               aria-label="Share diagram"
               aria-expanded={showShareMenu}

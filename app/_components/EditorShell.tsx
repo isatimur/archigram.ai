@@ -765,13 +765,13 @@ export default function EditorShell() {
               <div className="flex items-center gap-3 w-full mt-2">
                 <button
                   onClick={() => setPendingDeleteId(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text active:scale-95 transition-all text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeleteProject}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium shadow-lg shadow-red-500/20"
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium shadow-lg shadow-red-500/20"
                 >
                   Delete
                 </button>
