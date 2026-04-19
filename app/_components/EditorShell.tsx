@@ -702,7 +702,7 @@ export default function EditorShell() {
         {/* Left accent strip — primary color */}
         <div className="w-1 self-stretch bg-primary shrink-0" />
         {/* Save status */}
-        <div className="flex items-center gap-2 px-3 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
               <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0" />
@@ -722,7 +722,7 @@ export default function EditorShell() {
         </div>
         <div className="flex-1" />
         {/* Keyboard hint chips */}
-        <div className="flex items-center h-full text-[10px] font-mono text-text-dim">
+        <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
           <span
             className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
             title="Open command palette"
