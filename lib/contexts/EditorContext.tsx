@@ -15,10 +15,11 @@ const EditorContext = createContext<EditorContextValue | null>(null);
 
 export function EditorProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { setIsSidebarOpen, setViewMode } = useUI();
+  const { setActivePanel, setViewMode } = useUI();
   const router = useRouter();
 
   const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
+  const setIsSidebarOpen = (open: boolean) => setActivePanel(open ? 'projects' : null);
 
   const projectsState = useProjects({ setCurrentView, setIsSidebarOpen, setViewMode });
   useDiagramSync({
