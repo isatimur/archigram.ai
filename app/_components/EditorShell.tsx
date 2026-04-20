@@ -502,7 +502,7 @@ export default function EditorShell() {
 
   return (
     <div
-      className="h-screen w-screen flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
+      className="min-h-dvh w-full flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
       style={appStyle}
     >
       <Suspense fallback={<div className="h-16 border-b border-border bg-background/80" />}>
@@ -607,7 +607,7 @@ export default function EditorShell() {
         )}
 
         {/* Resizable editor panes */}
-        <div ref={splitContainerRef} className="flex-1 flex overflow-hidden">
+        <div id="main" ref={splitContainerRef} className="flex-1 flex overflow-hidden">
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
             <div
               style={viewMode === ViewMode.Split ? { width: `${splitPercent}%` } : undefined}
@@ -637,6 +637,7 @@ export default function EditorShell() {
               onMouseDown={startSplitDrag}
               onDoubleClick={() => setSplitPercent(35)}
               role="separator"
+              aria-orientation="vertical"
               aria-label="Resize editor panels"
               className="w-1 shrink-0 bg-border hover:bg-primary/60 cursor-col-resize transition-colors duration-150 relative group z-10"
               title="Drag to resize · Double-click to reset"
@@ -702,7 +703,7 @@ export default function EditorShell() {
         {/* Left accent strip — primary color */}
         <div className="w-1 self-stretch bg-primary shrink-0" />
         {/* Save status */}
-        <div className="flex items-center gap-2 px-3 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
               <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0" />
@@ -722,7 +723,7 @@ export default function EditorShell() {
         </div>
         <div className="flex-1" />
         {/* Keyboard hint chips */}
-        <div className="flex items-center h-full text-[10px] font-mono text-text-dim">
+        <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
           <span
             className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
             title="Open command palette"
@@ -765,13 +766,14 @@ export default function EditorShell() {
               <div className="flex items-center gap-3 w-full mt-2">
                 <button
                   onClick={() => setPendingDeleteId(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text transition-colors text-sm font-medium"
+                  autoFocus
+                  className="flex-1 px-4 py-2 rounded-lg border border-border text-text-muted hover:bg-surface-hover hover:text-text active:scale-95 transition-all text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeleteProject}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium shadow-lg shadow-red-500/20"
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium shadow-lg shadow-red-500/20 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                 >
                   Delete
                 </button>

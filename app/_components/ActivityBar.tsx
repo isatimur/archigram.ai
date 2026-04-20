@@ -38,7 +38,7 @@ export default function ActivityBar({
               aria-pressed={isActive}
               onClick={() => onPanelToggle(id)}
               className={`
-                relative w-10 h-10 flex items-center justify-center rounded-md transition-colors
+                relative w-10 h-10 flex items-center justify-center rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
                 ${
                   isActive
                     ? 'text-primary bg-primary-bg'
@@ -61,7 +61,7 @@ export default function ActivityBar({
           title="AI Copilot"
           aria-label="Open AI Copilot"
           onClick={onOpenCopilot}
-          className="w-10 h-10 flex items-center justify-center rounded-md text-text-dim hover:text-text-muted hover:bg-surface-hover transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-md text-text-dim hover:text-text-muted hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Sparkles className="w-4 h-4" />
         </button>

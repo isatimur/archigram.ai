@@ -309,8 +309,10 @@ const Header: React.FC<HeaderProps> = ({
             {/* Dark Mode Toggle */}
             <button
               onClick={() => setTheme(isDarkMode ? 'neutral' : 'dark')}
-              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-pressed={isDarkMode}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -319,8 +321,11 @@ const Header: React.FC<HeaderProps> = ({
             <div className="relative hidden sm:block">
               <button
                 onClick={() => setShowThemes(!showThemes)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg border border-border transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover rounded-lg border border-border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 title="Change Theme"
+                aria-label="Change editor theme"
+                aria-expanded={showThemes}
+                aria-haspopup="true"
               >
                 <span
                   className="w-3 h-3 rounded-full border border-white/20 shadow-sm shrink-0"
@@ -482,7 +487,7 @@ const Header: React.FC<HeaderProps> = ({
           {/* Publish Button */}
           <button
             onClick={onPublish}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-lg transition-all"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 rounded-lg transition-all"
             title="Publish to Community Gallery (Cmd+Shift+P)"
             aria-label="Publish diagram to community gallery"
           >
@@ -493,7 +498,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 active:scale-95 rounded-lg transition-all"
               title="Share Diagram"
               aria-label="Share diagram"
               aria-expanded={showShareMenu}
@@ -672,7 +677,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Embed Modal */}
         {showEmbedModal && (
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowEmbedModal(false)}
           >
             <div

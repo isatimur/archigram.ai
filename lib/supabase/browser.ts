@@ -32,11 +32,18 @@ const SUPABASE_KEY =
   (process.env.NEXT_PUBLIC_SUPABASE_KEY as string | undefined) ||
   '';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.warn('[Supabase/browser] Missing configuration. Community features may not work.');
+const isConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+if (!isConfigured) {
+  console.warn('[Supabase/browser] Missing configuration. Community features will not work.');
 }
 
 export function createClient() {
+  if (!isConfigured) {
+    throw new Error(
+      'Supabase is not configured — set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY'
+    );
+  }
   return createBrowserClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
@@ -98,6 +105,7 @@ export const signInWithOAuth = async (provider: 'github' | 'google') => {
 };
 
 export const getCurrentUser = async (): Promise<User | null> => {
+  if (!isConfigured) return null;
   try {
     const supabase = createClient();
     const {
@@ -118,6 +126,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
+  if (!isConfigured) {
+    return { data: { subscription: { unsubscribe: () => {} } } };
+  }
   const supabase = createClient();
   return supabase.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user) {

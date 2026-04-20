@@ -26,7 +26,10 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('[Supabase] Missing configuration. Community features may not work.');
 }
 
-export const supabase: SupabaseClient = createClient(SUPABASE_URL || '', SUPABASE_KEY || '');
+export const supabase: SupabaseClient = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  SUPABASE_KEY || 'placeholder-anon-key'
+);
 
 // Auth Methods
 export const signUp = async (email: string, password: string, username?: string) => {
