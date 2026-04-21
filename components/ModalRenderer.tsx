@@ -24,7 +24,7 @@ export type Props = {
   submitPublish: () => Promise<void>;
   pendingPromptText: string;
   pendingPromptResultCode: string | undefined;
-  consumeExternalPrompt: () => void;
+  consumeExternalPrompt?: () => void;
   onScanImage: () => void;
   onNavigate?: (view: AppView) => void;
   onNewProject?: () => void;
@@ -45,7 +45,7 @@ export default function ModalRenderer({
   submitPublish,
   pendingPromptText,
   pendingPromptResultCode,
-  _consumeExternalPrompt,
+  consumeExternalPrompt: _consumeExternalPrompt,
   onScanImage,
   onNavigate,
   onNewProject,
