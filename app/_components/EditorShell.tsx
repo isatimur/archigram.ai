@@ -1,13 +1,8 @@
 'use client';
-// Next.js editor shell — replaces App.tsx (the legacy Vite entry).
-// App.tsx's sidebar state and layout are intentionally NOT updated here;
-// App.tsx will be removed in Phase 2 of the migration.
 
-import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Loader2 } from 'lucide-react';
-import ActivityBar from '@/app/_components/ActivityBar';
-import type { ActivePanel } from '@/lib/contexts/UIContext';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -15,28 +10,19 @@ import { useEditor } from '@/lib/contexts/EditorContext';
 import { VIEW_TO_PATH } from '@/app/_components/NavigationAdapter';
 import { ViewMode } from '@/types';
 import type { DiagramTheme, AppView } from '@/types';
-import { publishDiagram } from '@/lib/supabase/browser';
-import type { AuditReport } from '@/services/geminiService';
 import { encodeCodeToUrl } from '@/utils/url';
-import { analytics } from '@/utils/analytics';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { AUTHOR_KEY } from '@/constants';
+import { useSplitPane } from '@/hooks/useSplitPane';
+import { useExportHandlers } from '@/hooks/useExportHandlers';
+import { usePublishFlow } from '@/hooks/usePublishFlow';
 
-// Dynamic Component Imports
-const Header = lazy(() => import('@/components/Header'));
+const CommandBar = lazy(() => import('@/components/CommandBar'));
+const LeftPanel = lazy(() => import('@/components/LeftPanel'));
+const CopilotPanel = lazy(() => import('@/components/CopilotPanel'));
+const ModalRenderer = lazy(() => import('@/components/ModalRenderer'));
 const CodeEditor = lazy(() => import('@/components/CodeEditor'));
 const DiagramPreview = lazy(() => import('@/components/DiagramPreview'));
-const AIChat = lazy(() => import('@/components/AIChat'));
-const Sidebar = lazy(() => import('@/components/Sidebar'));
-const ImageImportModal = lazy(() => import('@/components/ImageImportModal'));
-const AuditModal = lazy(() => import('@/components/AuditModal'));
-const CommandPalette = lazy(() => import('@/components/CommandPalette'));
-const AuthModal = lazy(() => import('@/components/AuthModal'));
-const PublishModal = lazy(() => import('@/components/PublishModal'));
-const PublishPromptModal = lazy(() => import('@/components/PublishPromptModal'));
-const KeyboardShortcutsModal = lazy(() => import('@/components/KeyboardShortcutsModal'));
 
-// Theme CSS variable configuration (RGB tuples)
 type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
 const THEMES: Record<DiagramTheme, ThemeVars> = {
@@ -135,16 +121,7 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
 export default function EditorShell() {
   const router = useRouter();
 
-  // Contexts
-  const {
-    user,
-    isAuthModalOpen,
-    authModalMode,
-    setIsAuthModalOpen,
-    openAuth,
-    onAuthSuccess,
-    requireAuth,
-  } = useAuth();
+  const { user, requireAuth } = useAuth();
 
   const {
     viewMode,
@@ -152,7 +129,8 @@ export default function EditorShell() {
     activePanel,
     setActivePanel,
     theme,
-    setTheme,
+    isCopilotOpen,
+    setIsCopilotOpen,
     isPublishModalOpen,
     setIsPublishModalOpen,
     isImageImportModalOpen,
@@ -163,10 +141,7 @@ export default function EditorShell() {
     setIsCommandPaletteOpen,
     isShortcutsModalOpen,
     setIsShortcutsModalOpen,
-    isPublishPromptModalOpen,
     setIsPublishPromptModalOpen,
-    isAIChatExpanded,
-    setIsAIChatExpanded,
   } = useUI();
 
   const {
@@ -187,82 +162,33 @@ export default function EditorShell() {
     redo,
     handleCreateProject,
     handleCreateFromTemplate,
-    handleSelectProject,
-    handleRenameProject,
-    handleDeleteProject,
-    confirmDeleteProject,
-    handleImageImport,
-    handleDuplicateDiagram,
     handleAIUpdate,
     handleManualSnapshot,
     handleRestoreVersion,
+    handleDuplicateDiagram,
+    confirmDeleteProject,
   } = useEditor();
 
-  // Editor-local state
   const [error, setError] = useState<string | null>(null);
   const [selectionRequest, setSelectionRequest] = useState<{ text: string; ts: number } | null>(
     null
   );
   const [isFixing, setIsFixing] = useState(false);
-  const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
-  const [isAuditing, setIsAuditing] = useState(false);
-  const [publishData, setPublishData] = useState({
-    title: '',
-    author: '',
-    description: '',
-    tags: '',
-  });
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [pendingPromptText, setPendingPromptText] = useState('');
-  const [pendingPromptResultCode, setPendingPromptResultCode] = useState<string | undefined>();
 
-  // Resizable split pane
-  const [splitPercent, setSplitPercent] = useState(35);
-  const splitDragging = useRef(false);
-  const splitContainerRef = useRef<HTMLDivElement>(null);
+  const { splitPercent, startDrag, snapToDefault, containerRef } = useSplitPane(
+    35,
+    'archigram-split-pct'
+  );
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!splitDragging.current || !splitContainerRef.current) return;
-      const rect = splitContainerRef.current.getBoundingClientRect();
-      const pct = ((e.clientX - rect.left) / rect.width) * 100;
-      setSplitPercent(Math.min(Math.max(pct, 15), 80));
-    };
-    const onUp = () => {
-      if (!splitDragging.current) return;
-      splitDragging.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, []);
+  const { handleExportSvg, handleExportPng } = useExportHandlers({ code, theme, customStyle });
 
-  const startSplitDrag = () => {
-    splitDragging.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  };
-
-  // Navigation helper
   const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
-
-  const handlePanelToggle = (panel: Exclude<ActivePanel, null>) => {
-    setActivePanel(activePanel === panel ? null : panel);
-  };
-
-  // --- Export/Share Handlers ---
 
   const handleShare = () => {
     const hash = encodeCodeToUrl(code);
     let shareUrl = window.location.href.split('#')[0];
     if (shareUrl.endsWith('/')) shareUrl = shareUrl.slice(0, -1);
     const fullUrl = `${shareUrl}#${hash}`;
-
     navigator.clipboard
       .writeText(fullUrl)
       .then(() => toast.success('Link copied to clipboard'))
@@ -272,173 +198,29 @@ export default function EditorShell() {
       });
   };
 
-  const getSvgData = () => {
-    const container = document.getElementById('diagram-output-container');
-    const svg = container?.querySelector('svg');
-    if (!svg) return null;
-
-    const clone = svg.cloneNode(true) as SVGElement;
-
-    let width = 0,
-      height = 0;
-    const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
-
-    if (viewBox && viewBox.length === 4) {
-      width = viewBox[2];
-      height = viewBox[3];
-    } else {
-      const rect = svg.getBoundingClientRect();
-      const transform = container?.style.transform;
-      const scaleMatch = transform?.match(/scale\(([\d.]+)\)/);
-      const currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-      width = rect.width / currentScale;
-      height = rect.height / currentScale;
-    }
-
-    clone.setAttribute('width', width.toString());
-    clone.setAttribute('height', height.toString());
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-    const bgColor = customStyle.backgroundColor || (theme === 'neutral' ? '#ffffff' : '#131316');
-    clone.style.backgroundColor = bgColor;
-
-    return { clone, width, height, bgColor };
-  };
-
-  const handleExportSvg = () => {
-    const data = getSvgData();
-    if (!data) {
-      toast.error('Export failed: No diagram found');
-      return;
-    }
-    const { clone } = data;
-    try {
-      analytics.exportSvg();
-      const serializer = new XMLSerializer();
-      const svgData = serializer.serializeToString(clone);
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `archigram-${Date.now()}.svg`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('SVG Export failed:', e);
-      toast.error('SVG Export failed');
-    }
-  };
-
-  const handleExportPng = () => {
-    const data = getSvgData();
-    if (!data) return;
-    const { clone, width, height, bgColor } = data;
-    try {
-      analytics.exportPng();
-      const serializer = new XMLSerializer();
-      const svgData = serializer.serializeToString(clone);
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const scale = 3;
-        canvas.width = width * scale;
-        canvas.height = height * scale;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = bgColor;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const link = document.createElement('a');
-          link.download = `archigram-${Date.now()}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        }
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = (e) => {
-        console.error('Image load error for PNG export', e);
-        toast.error('PNG Generation failed');
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
-    } catch (e) {
-      console.error('PNG Export failed:', e);
-      toast.error('PNG Export failed');
-    }
-  };
-
-  // --- Publish Handlers ---
-
-  const openPublishModal = () => {
-    requireAuth(() => {
-      const activeP = projects.find((p) => p.id === activeProjectId);
-      setPublishData({
-        title: activeP?.name || '',
-        author: localStorage.getItem(AUTHOR_KEY) || '',
-        description: '',
-        tags: '',
-      });
-      setIsPublishModalOpen(true);
-    });
-  };
-
-  const submitPublish = async () => {
-    if (!publishData.title.trim() || !code.trim()) return;
-    setIsPublishing(true);
-    if (publishData.author) localStorage.setItem(AUTHOR_KEY, publishData.author);
-
-    const tagsArray = publishData.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const success = await publishDiagram({
-      title: publishData.title,
-      author: user?.username || publishData.author || 'Anonymous',
-      description: publishData.description,
-      code,
-      tags: tagsArray,
-    });
-
-    setIsPublishing(false);
-    if (success) {
-      analytics.diagramPublished(tagsArray);
-      setIsPublishModalOpen(false);
-      toast.success('Diagram successfully published to Gallery!');
-    } else {
-      toast.error('Failed to publish. Try again.');
-    }
-  };
-
-  // --- Audit Handler ---
-
-  const handleAudit = async () => {
-    analytics.auditRun();
-    setIsAuditModalOpen(true);
-    setIsAuditing(true);
-    setAuditReport(null);
-    try {
-      const res = await fetch('/api/v1/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Audit failed');
-      const report: AuditReport = await res.json();
-      setAuditReport(report);
-    } catch (e) {
-      console.error(e);
-      toast.error('Audit failed. Please try again.');
-      setIsAuditModalOpen(false);
-    } finally {
-      setIsAuditing(false);
-    }
-  };
-
-  // --- Syntax Fix Handler ---
+  const {
+    auditReport,
+    isAuditing,
+    isPublishing,
+    publishData,
+    setPublishData,
+    pendingPromptText,
+    pendingPromptResultCode,
+    openPublishModal,
+    submitPublish,
+    handleAudit,
+    handleOpenPublishPrompt,
+    consumeExternalPrompt,
+  } = usePublishFlow({
+    code,
+    activeProjectId,
+    projects,
+    user,
+    requireAuth,
+    setIsPublishModalOpen,
+    setIsAuditModalOpen,
+    setIsPublishPromptModalOpen,
+  });
 
   const handleFixError = async () => {
     if (!code || !error) return;
@@ -465,16 +247,6 @@ export default function EditorShell() {
     }
   };
 
-  // --- Prompt Handlers ---
-
-  const handleOpenPublishPrompt = (promptText: string, resultCode?: string) => {
-    setPendingPromptText(promptText);
-    setPendingPromptResultCode(resultCode);
-    setIsPublishPromptModalOpen(true);
-  };
-
-  // --- Keyboard Shortcuts ---
-
   useKeyboardShortcuts({
     currentView: 'app',
     isPublishModalOpen,
@@ -483,7 +255,7 @@ export default function EditorShell() {
     isCommandPaletteOpen,
     isShortcutsModalOpen,
     setCurrentView,
-    setIsAIChatExpanded,
+    setIsCopilotOpen,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
     setIsImageImportModalOpen,
@@ -505,109 +277,72 @@ export default function EditorShell() {
       className="min-h-dvh w-full flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
       style={appStyle}
     >
-      <Suspense fallback={<div className="h-16 border-b border-border bg-background/80" />}>
-        <Header
-          viewMode={viewMode}
-          setViewMode={setViewMode}
+      {/* Skip link */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:bg-primary focus:text-white focus:rounded-md focus:text-sm focus:font-medium"
+      >
+        Skip to editor
+      </a>
+
+      {/* CommandBar */}
+      <Suspense fallback={<div className="h-11 border-b border-border bg-background shrink-0" />}>
+        <CommandBar
           onExportPng={handleExportPng}
           onExportSvg={handleExportSvg}
-          currentTheme={theme}
-          setTheme={setTheme}
           onShare={handleShare}
-          onNewProject={handleCreateProject}
-          activeProject={activeProject}
-          onRenameProject={handleRenameProject}
           onPublish={openPublishModal}
-          onNavigate={setCurrentView}
-          onSaveVersion={handleManualSnapshot}
           onAudit={handleAudit}
-          user={user}
-          onOpenAuth={(mode) => openAuth(mode)}
+          onNavigate={setCurrentView}
         />
       </Suspense>
 
-      <main className="flex-1 flex overflow-hidden relative">
-        {/* Activity Bar — always visible */}
-        <ActivityBar
-          activePanel={activePanel}
-          onPanelToggle={handlePanelToggle}
-          onOpenCopilot={() => setIsAIChatExpanded(true)}
-        />
-
-        {/* Side Panel — slides open when activePanel is set */}
+      {/* Main area */}
+      <main id="main" className="flex-1 flex overflow-hidden relative">
+        {/* LeftPanel — desktop inline */}
         <div
-          className={`
-            hidden md:flex h-full transition-[width] duration-150 ease-out overflow-hidden shrink-0
-            border-r border-border bg-surface
-            ${activePanel !== null ? 'w-60' : 'w-0'}
-          `}
+          className={`hidden md:flex h-full transition-[width] duration-150 ease-out overflow-hidden shrink-0 ${activePanel !== null ? 'w-60' : 'w-0'}`}
         >
           <div className="w-60 h-full overflow-hidden">
-            <Suspense fallback={<div className="w-full h-full bg-surface" />}>
-              <Sidebar
-                projects={projects}
-                activeProjectId={activeProjectId}
-                onSelectProject={handleSelectProject}
+            <Suspense fallback={<div className="w-60 h-full bg-surface" />}>
+              <LeftPanel
                 onCreateProject={handleCreateProject}
                 onCreateFromTemplate={handleCreateFromTemplate}
-                onDeleteProject={handleDeleteProject}
-                onClose={() => setActivePanel(null)}
-                lastSaved={lastSaved}
-                saveStatus={saveStatus}
-                onRenameProject={handleRenameProject}
-                isCollapsed={false}
-                toggleCollapse={() => setActivePanel(null)}
-                onOpenGallery={() => setCurrentView('gallery')}
                 onScanImage={() => setIsImageImportModalOpen(true)}
+                onOpenGallery={() => setCurrentView('gallery')}
               />
             </Suspense>
           </div>
         </div>
 
-        {/* Mobile Side Panel Overlay */}
+        {/* Mobile overlay */}
         {activePanel !== null && (
           <div className="md:hidden absolute inset-0 z-40 flex">
-            <div className="w-60 h-full shadow-2xl relative z-50 bg-surface">
-              <Suspense fallback={<div className="w-full h-full bg-surface" />}>
-                <Sidebar
-                  projects={projects}
-                  activeProjectId={activeProjectId}
-                  onSelectProject={(id) => {
-                    handleSelectProject(id);
-                    setActivePanel(null);
-                  }}
+            <div className="w-60 h-full shadow-lg relative z-50 bg-surface">
+              <Suspense fallback={null}>
+                <LeftPanel
                   onCreateProject={() => {
                     handleCreateProject();
                     setActivePanel(null);
                   }}
-                  onCreateFromTemplate={(name, code) => {
-                    handleCreateFromTemplate(name, code);
+                  onCreateFromTemplate={(n, c) => {
+                    handleCreateFromTemplate(n, c);
                     setActivePanel(null);
                   }}
-                  onDeleteProject={handleDeleteProject}
-                  onClose={() => setActivePanel(null)}
-                  lastSaved={lastSaved}
-                  saveStatus={saveStatus}
-                  onRenameProject={handleRenameProject}
-                  isCollapsed={false}
-                  toggleCollapse={() => setActivePanel(null)}
+                  onScanImage={() => setIsImageImportModalOpen(true)}
                   onOpenGallery={() => {
                     setCurrentView('gallery');
                     setActivePanel(null);
                   }}
-                  onScanImage={() => setIsImageImportModalOpen(true)}
                 />
               </Suspense>
             </div>
-            <div
-              className="flex-1 bg-black/50 backdrop-blur-sm"
-              onClick={() => setActivePanel(null)}
-            />
+            <div className="flex-1 bg-black/50" onClick={() => setActivePanel(null)} />
           </div>
         )}
 
-        {/* Resizable editor panes */}
-        <div id="main" ref={splitContainerRef} className="flex-1 flex overflow-hidden">
+        {/* Split pane */}
+        <div ref={containerRef} className="flex-1 flex overflow-hidden">
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
             <div
               style={viewMode === ViewMode.Split ? { width: `${splitPercent}%` } : undefined}
@@ -631,18 +366,16 @@ export default function EditorShell() {
             </div>
           )}
 
-          {/* Drag handle */}
           {viewMode === ViewMode.Split && (
             <div
-              onMouseDown={startSplitDrag}
-              onDoubleClick={() => setSplitPercent(35)}
+              onMouseDown={startDrag}
+              onDoubleClick={snapToDefault}
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize editor panels"
               className="w-1 shrink-0 bg-border hover:bg-primary/60 cursor-col-resize transition-colors duration-150 relative group z-10"
               title="Drag to resize · Double-click to reset"
             >
-              {/* Wider invisible hit area */}
               <div className="absolute inset-y-0 -left-1.5 -right-1.5" />
             </div>
           )}
@@ -651,8 +384,8 @@ export default function EditorShell() {
             <div className="flex-1 flex flex-col bg-surface/50 relative overflow-hidden">
               <Suspense
                 fallback={
-                  <div className="w-full h-full flex items-center justify-center text-text-muted">
-                    <Loader2 className="w-8 h-8 animate-spin" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-text-muted" />
                   </div>
                 }
               >
@@ -668,30 +401,27 @@ export default function EditorShell() {
                   }}
                 />
               </Suspense>
-
-              <Suspense fallback={null}>
-                <AIChat
-                  projectId={activeProjectId}
-                  currentCode={code}
-                  onCodeUpdate={handleAIUpdate}
-                  theme={theme}
-                  versions={activeProject?.versions || []}
-                  onRestoreVersion={handleRestoreVersion}
-                  onSaveVersion={handleManualSnapshot}
-                  isExpanded={isAIChatExpanded}
-                  onToggleExpanded={setIsAIChatExpanded}
-                  onSharePrompt={handleOpenPublishPrompt}
-                  externalPrompt={pendingPromptText || undefined}
-                  externalResultCode={pendingPromptResultCode}
-                  onConsumeExternalPrompt={() => {
-                    setPendingPromptText('');
-                    setPendingPromptResultCode(undefined);
-                  }}
-                />
-              </Suspense>
             </div>
           )}
         </div>
+
+        {/* Copilot panel — right dock */}
+        {isCopilotOpen && (
+          <Suspense fallback={null}>
+            <CopilotPanel
+              projectId={activeProjectId}
+              currentCode={code}
+              onCodeUpdate={handleAIUpdate}
+              versions={activeProject?.versions || []}
+              onRestoreVersion={handleRestoreVersion}
+              onSaveVersion={handleManualSnapshot}
+              onSharePrompt={handleOpenPublishPrompt}
+              externalPrompt={pendingPromptText || undefined}
+              externalResultCode={pendingPromptResultCode}
+              onConsumeExternalPrompt={consumeExternalPrompt}
+            />
+          </Suspense>
+        )}
       </main>
 
       {/* Status bar */}
@@ -700,9 +430,7 @@ export default function EditorShell() {
         role="status"
         aria-label="Editor status"
       >
-        {/* Left accent strip — primary color */}
         <div className="w-1 self-stretch bg-primary shrink-0" />
-        {/* Save status */}
         <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
@@ -722,7 +450,6 @@ export default function EditorShell() {
           )}
         </div>
         <div className="flex-1" />
-        {/* Keyboard hint chips */}
         <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
           <span
             className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
@@ -739,10 +466,10 @@ export default function EditorShell() {
         </div>
       </div>
 
-      {/* Delete Confirmation */}
+      {/* Delete confirmation dialog */}
       {pendingDeleteId && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-dialog-title"
@@ -750,7 +477,7 @@ export default function EditorShell() {
             if (e.key === 'Escape') setPendingDeleteId(null);
           }}
         >
-          <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all scale-100 animate-slide-up">
+          <div className="bg-surface border border-border rounded-xl shadow-md p-6 max-w-sm w-full mx-4">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
                 <Trash2 className="w-6 h-6" />
@@ -773,7 +500,7 @@ export default function EditorShell() {
                 </button>
                 <button
                   onClick={confirmDeleteProject}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium shadow-lg shadow-red-500/20 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white transition-all text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                 >
                   Delete
                 </button>
@@ -783,92 +510,29 @@ export default function EditorShell() {
         </div>
       )}
 
-      {/* Modals */}
-      {isImageImportModalOpen && (
-        <Suspense fallback={null}>
-          <ImageImportModal
-            onClose={() => setIsImageImportModalOpen(false)}
-            onImport={handleImageImport}
-          />
-        </Suspense>
-      )}
-
-      {isAuditModalOpen && (
-        <Suspense fallback={null}>
-          <AuditModal
-            onClose={() => setIsAuditModalOpen(false)}
-            isLoading={isAuditing}
-            report={auditReport}
-          />
-        </Suspense>
-      )}
-
-      {isPublishModalOpen && (
-        <Suspense fallback={null}>
-          <PublishModal
-            isOpen={isPublishModalOpen}
-            onClose={() => setIsPublishModalOpen(false)}
-            publishData={publishData}
-            onPublishDataChange={setPublishData}
-            onSubmit={submitPublish}
-            isPublishing={isPublishing}
-            code={code}
-            user={user}
-          />
-        </Suspense>
-      )}
-
-      {isCommandPaletteOpen && (
-        <Suspense fallback={null}>
-          <CommandPalette
-            isOpen={isCommandPaletteOpen}
-            onClose={() => setIsCommandPaletteOpen(false)}
-            onNavigate={setCurrentView}
-            onNewProject={handleCreateProject}
-            onExportPng={handleExportPng}
-            onExportSvg={handleExportSvg}
-            onShare={handleShare}
-            onPublish={openPublishModal}
-            onDuplicate={handleDuplicateDiagram}
-            onAudit={handleAudit}
-            onScanImage={() => setIsImageImportModalOpen(true)}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-          />
-        </Suspense>
-      )}
-
-      {isShortcutsModalOpen && (
-        <Suspense fallback={null}>
-          <KeyboardShortcutsModal
-            isOpen={isShortcutsModalOpen}
-            onClose={() => setIsShortcutsModalOpen(false)}
-          />
-        </Suspense>
-      )}
-
-      {isPublishPromptModalOpen && (
-        <Suspense fallback={null}>
-          <PublishPromptModal
-            isOpen={isPublishPromptModalOpen}
-            onClose={() => setIsPublishPromptModalOpen(false)}
-            promptText={pendingPromptText}
-            resultCode={pendingPromptResultCode}
-            username={user?.username || ''}
-          />
-        </Suspense>
-      )}
-
-      {isAuthModalOpen && (
-        <Suspense fallback={null}>
-          <AuthModal
-            isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
-            onAuthSuccess={onAuthSuccess}
-            initialMode={authModalMode}
-          />
-        </Suspense>
-      )}
+      {/* All modals via registry */}
+      <Suspense fallback={null}>
+        <ModalRenderer
+          auditReport={auditReport}
+          isAuditing={isAuditing}
+          isPublishing={isPublishing}
+          publishData={publishData}
+          setPublishData={setPublishData}
+          submitPublish={submitPublish}
+          pendingPromptText={pendingPromptText}
+          pendingPromptResultCode={pendingPromptResultCode}
+          consumeExternalPrompt={consumeExternalPrompt}
+          onScanImage={() => setIsImageImportModalOpen(true)}
+          onNavigate={setCurrentView}
+          onNewProject={handleCreateProject}
+          onExportPng={handleExportPng}
+          onExportSvg={handleExportSvg}
+          onShare={handleShare}
+          onPublish={openPublishModal}
+          onDuplicate={handleDuplicateDiagram}
+          onAudit={handleAudit}
+        />
+      </Suspense>
     </div>
   );
 }

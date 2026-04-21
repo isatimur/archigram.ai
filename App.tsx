@@ -482,7 +482,7 @@ function App() {
     isCommandPaletteOpen,
     isShortcutsModalOpen,
     setCurrentView,
-    setIsAIChatExpanded,
+    setIsCopilotOpen: setIsAIChatExpanded,
     setIsCommandPaletteOpen,
     setIsPublishModalOpen,
     setIsImageImportModalOpen,
