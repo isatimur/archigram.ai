@@ -205,7 +205,16 @@ const CommandBar: React.FC<CommandBarProps> = ({
           <div className="flex flex-col justify-center select-none shrink-0">
             <h1
               onClick={() => onNavigate('landing')}
-              className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onNavigate('landing');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label="ArchiGram.ai — go to home"
+              className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
             >
               {/* Blueprint Intelligence mark — nested diamond */}
               <div
@@ -274,7 +283,9 @@ const CommandBar: React.FC<CommandBarProps> = ({
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                aria-label={`${label} view (${shortcut})`}
+                aria-pressed={viewMode === mode}
+                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
                   viewMode === mode
                     ? 'bg-background text-text shadow-sm ring-1 ring-border'
                     : 'text-text-muted hover:text-text hover:bg-surface-hover'
@@ -343,7 +354,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                               setTheme(t);
                               setShowThemes(false);
                             }}
-                            className={`relative flex flex-col items-start p-2.5 rounded-xl border transition-all duration-150 text-left group ${
+                            className={`relative flex flex-col items-start p-2.5 rounded-lg border transition-all duration-150 text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                               isActive
                                 ? 'border-transparent ring-1 ring-primary/70 scale-[0.97]'
                                 : 'border-border/60 opacity-75 hover:opacity-100 hover:scale-[1.02]'
@@ -407,7 +418,10 @@ const CommandBar: React.FC<CommandBarProps> = ({
             {user ? (
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+                aria-label="User menu"
+                aria-expanded={showUserMenu}
+                aria-haspopup="menu"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <User className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">
@@ -417,7 +431,8 @@ const CommandBar: React.FC<CommandBarProps> = ({
             ) : (
               <button
                 onClick={() => openAuth('signin')}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all"
+                aria-label="Sign in"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <User className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Sign In</span>
@@ -437,7 +452,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       onNavigate('profile');
                       setShowUserMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <User className="w-4 h-4 text-text-muted" />
                     My Profile
@@ -449,7 +464,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       setShowUserMenu(false);
                       window.location.reload();
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <LogOut className="w-4 h-4 text-text-muted" />
                     Sign Out
@@ -473,7 +488,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 active:scale-95 rounded-lg transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 active:scale-95 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               title="Share Diagram"
               aria-label="Share diagram"
               aria-expanded={showShareMenu}
@@ -496,7 +511,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       onShare();
                       setShowShareMenu(false);
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <Link2 className="w-4 h-4 text-primary" />
                     Get Share Link
@@ -504,7 +519,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
                   <button
                     onClick={handleCopyLink}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     {copied ? (
                       <Check className="w-4 h-4 text-emerald-500" />
@@ -518,7 +533,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
                   <button
                     onClick={handleShareTwitter}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <Twitter className="w-4 h-4 text-sky-500" />
                     Share on Twitter
@@ -526,7 +541,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
                   <button
                     onClick={handleShareLinkedIn}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <Linkedin className="w-4 h-4 text-blue-600" />
                     Share on LinkedIn
@@ -534,7 +549,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
                   <button
                     onClick={handleShareEmail}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <Mail className="w-4 h-4 text-emerald-500" />
                     Share via Email
@@ -547,7 +562,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       setShowEmbedModal(true);
                       setShowShareMenu(false);
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <Code className="w-4 h-4 text-primary" />
                     Embed Diagram
@@ -567,7 +582,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowOverflow(!showOverflow)}
-              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               title="More options"
               aria-label="More options"
               aria-expanded={showOverflow}
@@ -593,7 +608,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       onAudit();
                       setShowOverflow(false);
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <ShieldCheck className="w-4 h-4 text-text-muted" />
                     Run Audit
@@ -605,7 +620,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       onExportSvg();
                       setShowOverflow(false);
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <FileCode className="w-4 h-4 text-text-muted" />
                     Export SVG
@@ -616,7 +631,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       onExportPng();
                       setShowOverflow(false);
                     }}
-                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3"
+                    className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     <ImageIcon className="w-4 h-4 text-text-muted" />
                     Export PNG
@@ -630,18 +645,18 @@ const CommandBar: React.FC<CommandBarProps> = ({
         {/* Embed Modal */}
         {showEmbedModal && (
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
             onClick={() => setShowEmbedModal(false)}
           >
             <div
-              className="bg-surface border border-border rounded-2xl w-full max-w-lg shadow-2xl p-6"
+              className="bg-surface border border-border rounded-xl w-full max-w-lg shadow-md p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-base font-semibold text-text">Embed Diagram</h3>
                 <button
                   onClick={() => setShowEmbedModal(false)}
-                  className="p-2 text-text-muted hover:text-text rounded-lg transition-colors"
+                  className="p-2 text-text-muted hover:text-text rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Close embed modal"
                 >
                   <X className="w-4 h-4" />
@@ -659,7 +674,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       key={m}
                       onClick={() => setEmbedMode(m)}
                       aria-pressed={embedMode === m}
-                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors capitalize cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
                         embedMode === m
                           ? 'bg-primary border-primary text-white'
                           : 'border-border text-text-muted hover:text-text hover:border-text-muted'
@@ -685,7 +700,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEmbedWidth('100%')}
-                      className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                      className={`px-3 py-1.5 rounded-lg text-xs border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
                         embedWidth === '100%'
                           ? 'bg-primary border-primary text-white'
                           : 'border-border text-text-muted hover:text-text'
@@ -713,7 +728,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                       <button
                         key={h}
                         onClick={() => setEmbedHeight(h)}
-                        className={`px-2 py-1.5 rounded-lg text-xs border transition-colors ${
+                        className={`px-2 py-1.5 rounded-lg text-xs border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
                           embedHeight === h
                             ? 'bg-primary border-primary text-white'
                             : 'border-border text-text-muted hover:text-text'
@@ -742,13 +757,13 @@ const CommandBar: React.FC<CommandBarProps> = ({
                   readOnly
                   value={embedCode}
                   rows={6}
-                  className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono text-text resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  className="w-full bg-background border border-border rounded-lg p-3 text-xs font-mono text-text resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
                 />
               </div>
 
               <button
                 onClick={handleCopyEmbed}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {embedCopied ? 'Copied!' : 'Copy Embed Code'}
