@@ -16,6 +16,8 @@ import { useSplitPane } from '@/hooks/useSplitPane';
 import { useExportHandlers } from '@/hooks/useExportHandlers';
 import { usePublishFlow } from '@/hooks/usePublishFlow';
 
+import ActivityBar from '@/app/_components/ActivityBar';
+
 const CommandBar = lazy(() => import('@/components/CommandBar'));
 const LeftPanel = lazy(() => import('@/components/LeftPanel'));
 const CopilotPanel = lazy(() => import('@/components/CopilotPanel'));
@@ -299,9 +301,12 @@ export default function EditorShell() {
 
       {/* Main area */}
       <main id="main" className="flex-1 flex overflow-hidden relative">
-        {/* LeftPanel — desktop inline */}
+        {/* ActivityBar — always visible, owns panel navigation */}
+        <ActivityBar />
+
+        {/* LeftPanel — desktop inline, slides open next to ActivityBar */}
         <div
-          className={`hidden md:flex h-full transition-[width] duration-150 ease-out overflow-hidden shrink-0 ${activePanel !== null ? 'w-60' : 'w-0'}`}
+          className={`hidden md:flex h-full transition-[width] duration-200 ease-out overflow-hidden shrink-0 ${activePanel !== null ? 'w-60' : 'w-0'}`}
         >
           <div className="w-60 h-full overflow-hidden">
             <Suspense fallback={<div className="w-60 h-full bg-surface" />}>
@@ -373,10 +378,17 @@ export default function EditorShell() {
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize editor panels"
-              className="w-1 shrink-0 bg-border hover:bg-primary/60 cursor-col-resize transition-colors duration-150 relative group z-10"
+              className="w-1 shrink-0 bg-border hover:bg-primary/50 cursor-col-resize transition-colors duration-150 relative group z-10 flex items-center justify-center"
               title="Drag to resize · Double-click to reset"
             >
-              <div className="absolute inset-y-0 -left-1.5 -right-1.5" />
+              {/* Expanded hit area */}
+              <div className="absolute inset-y-0 -left-2 -right-2" />
+              {/* Grip dots */}
+              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="w-1 h-1 rounded-full bg-primary/70" />
+                ))}
+              </div>
             </div>
           )}
 
@@ -405,31 +417,36 @@ export default function EditorShell() {
           )}
         </div>
 
-        {/* Copilot panel — right dock */}
-        {isCopilotOpen && (
-          <Suspense fallback={null}>
-            <CopilotPanel
-              projectId={activeProjectId}
-              currentCode={code}
-              onCodeUpdate={handleAIUpdate}
-              versions={activeProject?.versions || []}
-              onRestoreVersion={handleRestoreVersion}
-              onSaveVersion={handleManualSnapshot}
-              onSharePrompt={handleOpenPublishPrompt}
-              externalPrompt={pendingPromptText || undefined}
-              externalResultCode={pendingPromptResultCode}
-              onConsumeExternalPrompt={consumeExternalPrompt}
-            />
-          </Suspense>
-        )}
+        {/* Copilot panel — right dock with slide animation */}
+        <div
+          className={`shrink-0 transition-[width] duration-200 ease-out overflow-hidden ${isCopilotOpen ? 'w-80' : 'w-0'}`}
+        >
+          {isCopilotOpen && (
+            <Suspense fallback={null}>
+              <CopilotPanel
+                projectId={activeProjectId}
+                currentCode={code}
+                onCodeUpdate={handleAIUpdate}
+                versions={activeProject?.versions || []}
+                onRestoreVersion={handleRestoreVersion}
+                onSaveVersion={handleManualSnapshot}
+                onSharePrompt={handleOpenPublishPrompt}
+                externalPrompt={pendingPromptText || undefined}
+                externalResultCode={pendingPromptResultCode}
+                onConsumeExternalPrompt={consumeExternalPrompt}
+              />
+            </Suspense>
+          )}
+        </div>
       </main>
 
-      {/* Status bar */}
+      {/* Status bar — VS Code-style */}
       <div
         className="h-[22px] border-t border-border bg-surface flex items-center shrink-0 select-none overflow-hidden"
         role="status"
         aria-label="Editor status"
       >
+        {/* Left accent stripe + save state */}
         <div className="w-1 self-stretch bg-primary shrink-0" />
         <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
@@ -449,20 +466,32 @@ export default function EditorShell() {
             </span>
           )}
         </div>
-        <div className="flex-1" />
+
+        {/* Center: diagram info */}
+        <div className="flex-1 flex items-center justify-center">
+          <span className="hidden md:block text-[11px] font-mono text-text-dim truncate max-w-xs">
+            {activeProject?.name ?? 'Untitled'}
+          </span>
+        </div>
+
+        {/* Right: clickable shortcut hints */}
         <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
-          <span
-            className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
-            title="Open command palette"
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+            title="Open command palette (⌘K)"
+            aria-label="Open command palette"
           >
             ⌘K
-          </span>
-          <span
-            className="hidden lg:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-default transition-colors"
+          </button>
+          <button
+            onClick={() => setIsShortcutsModalOpen(true)}
+            className="hidden lg:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
             title="Keyboard shortcuts"
+            aria-label="Keyboard shortcuts"
           >
             ?
-          </span>
+          </button>
         </div>
       </div>
 

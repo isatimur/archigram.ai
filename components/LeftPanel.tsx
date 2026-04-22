@@ -12,8 +12,10 @@ import {
   Globe,
   Check,
   ScanLine,
-  FolderOpen,
+  X,
+  ChevronRight,
 } from 'lucide-react';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { TEMPLATES, ML_TEMPLATES, C4_TEMPLATES } from '../constants.ts';
 import { useUI } from '@/lib/contexts/UIContext';
 import { useEditor } from '@/lib/contexts/EditorContext';
@@ -25,11 +27,11 @@ type LeftPanelProps = {
   onOpenGallery: () => void;
 };
 
-const TABS = [
-  { id: 'projects' as const, icon: FolderOpen, label: 'Projects' },
-  { id: 'templates' as const, icon: LayoutTemplate, label: 'Templates' },
-  { id: 'community' as const, icon: Globe, label: 'Community' },
-] as const;
+const PANEL_LABELS: Record<string, string> = {
+  projects: 'Projects',
+  templates: 'Templates',
+  community: 'Community',
+};
 
 const LeftPanel: React.FC<LeftPanelProps> = ({
   onCreateProject,
@@ -38,6 +40,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   onOpenGallery,
 }) => {
   const { activePanel, setActivePanel } = useUI();
+  const { user } = useAuth();
   const {
     projects,
     activeProjectId,
@@ -79,6 +82,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     }
   };
 
+  const displayName = user ? user.username || user.email?.split('@')[0] || 'User' : 'Guest';
+  const userInitial = displayName[0]?.toUpperCase() ?? 'G';
+
   const highlightMatch = (text: string, query: string) => {
     if (!query || !text) return text;
     const parts = text.split(new RegExp(`(${query})`, 'gi'));
@@ -93,48 +99,28 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     );
   };
 
-  const handleTabClick = (tabId: 'projects' | 'templates' | 'community') => {
-    if (activePanel === tabId) {
-      setActivePanel(null);
-    } else {
-      setActivePanel(tabId);
-    }
-  };
-
   return (
     <div className="w-60 h-full flex flex-col bg-surface border-r border-border overflow-hidden">
-      {/* Tab strip */}
-      <div className="flex border-b border-border shrink-0" role="tablist" aria-label="Left panel">
-        {TABS.map(({ id, icon: Icon, label }) => {
-          const isActive = activePanel === id;
-          return (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`leftpanel-${id}`}
-              onClick={() => handleTabClick(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
-                isActive
-                  ? 'border-primary text-primary bg-primary/5'
-                  : 'border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
-              }`}
-              title={label}
-              aria-label={label}
-            >
-              <Icon className="w-3.5 h-3.5 shrink-0" />
-              <span>{label}</span>
-            </button>
-          );
-        })}
+      {/* Panel header */}
+      <div className="h-10 flex items-center justify-between px-3 shrink-0 border-b border-border">
+        <div className="flex items-center gap-1.5">
+          <ChevronRight className="w-3 h-3 text-text-dim" />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted select-none">
+            {activePanel ? PANEL_LABELS[activePanel] : ''}
+          </span>
+        </div>
+        <button
+          onClick={() => setActivePanel(null)}
+          aria-label="Close panel"
+          title="Close panel"
+          className="w-6 h-6 flex items-center justify-center rounded-md text-text-dim hover:text-text hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Panel content */}
-      <div
-        id={`leftpanel-${activePanel ?? 'none'}`}
-        role="tabpanel"
-        className="flex-1 flex flex-col overflow-hidden"
-      >
+      <div className="flex-1 flex flex-col overflow-hidden">
         {activePanel === 'projects' && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Actions */}
@@ -330,14 +316,14 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
 
             {/* Footer */}
             <div className="border-t border-border bg-surface/30 p-3 shrink-0">
-              <div className="flex items-center gap-2 p-2 rounded-md hover:bg-surface transition-colors cursor-pointer group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-background group-hover:ring-primary/20 transition-all shrink-0">
-                  AI
+              <div className="flex items-center gap-2 p-2 rounded-md hover:bg-surface transition-colors cursor-default group">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-background group-hover:ring-primary/20 transition-all shrink-0 select-none">
+                  {userInitial}
                 </div>
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-xs font-bold text-text truncate">ArchiGram User</span>
+                  <span className="text-xs font-bold text-text truncate">{displayName}</span>
                   <span className="text-[10px] text-text-muted truncate">
-                    {lastSaved ? 'Synced just now' : 'Online'}
+                    {saveStatus === 'saving' ? 'Saving…' : lastSaved ? 'Saved' : 'Local'}
                   </span>
                 </div>
               </div>
