@@ -30,6 +30,8 @@ export default defineConfig({
       '.opencode/**',
       '.claude/**',
       '.worktrees/**',
+      // App.tsx is the legacy Vite SPA (Phase 1); retired components deleted in editor-redesign
+      'tests/App.embed.test.tsx',
     ],
     coverage: {
       provider: 'v8',
