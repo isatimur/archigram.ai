@@ -199,7 +199,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
   return (
     <>
-      <header className="h-11 bg-background border-b border-border flex items-center justify-between px-3 shrink-0">
+      <header className="h-11 glass-panel border-b border-white/5 flex items-center justify-between px-3 shrink-0">
         {/* 1. Brand Identity & Project Title */}
         <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
           <div className="flex flex-col justify-center select-none shrink-0">
@@ -248,7 +248,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 autoFocus
                 maxLength={100}
                 aria-label="Project title"
-                className="bg-surface border border-primary/50 text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 w-full min-w-[120px]"
+                className="bg-[#0A0A0A] border border-blue-500 text-white text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[120px]"
               />
             ) : (
               <div
@@ -274,7 +274,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
         {/* 2. Middle: View & Tools */}
         <div className="flex items-center gap-2 md:gap-4">
           {/* View Switcher */}
-          <div className="hidden md:flex items-center bg-surface border border-border p-0.5 rounded-md">
+          <div className="hidden md:inline-flex items-center bg-[#0A0A0A] border border-white/5 p-0.5 rounded-lg shadow-inner">
             {[
               { mode: ViewMode.Code, icon: Code2, label: 'Code', shortcut: '⌘1' },
               { mode: ViewMode.Split, icon: Columns, label: 'Split', shortcut: '⌘2' },
@@ -285,10 +285,10 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 onClick={() => setViewMode(mode)}
                 aria-label={`${label} view (${shortcut})`}
                 aria-pressed={viewMode === mode}
-                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
+                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 ${
                   viewMode === mode
-                    ? 'bg-background text-text shadow-sm ring-1 ring-border'
-                    : 'text-text-muted hover:text-text hover:bg-surface-hover'
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                 }`}
                 title={`${label} (${shortcut})`}
               >
@@ -477,7 +477,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
           {/* Publish Button */}
           <button
             onClick={onPublish}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover active:scale-95 rounded-md"
+            className="hidden lg:flex items-center gap-2 px-4 py-1.5 text-xs font-semibold text-black bg-white hover:bg-gray-200 active:scale-95 rounded-md shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:scale-105 transition-all"
             title="Publish to Community Gallery (Cmd+Shift+P)"
             aria-label="Publish diagram to community gallery"
           >

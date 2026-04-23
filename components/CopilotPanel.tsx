@@ -10,7 +10,6 @@ import {
   Copy,
   RefreshCw,
   Check,
-  Zap,
   ThumbsUp,
   ThumbsDown,
   ChevronDown,
@@ -212,12 +211,15 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
   const canRegenerate = !isLoading && lastMessage?.role === 'model';
 
   return (
-    <div className="w-80 bg-surface border-l border-border flex flex-col h-full shrink-0 font-sans">
+    <div className="w-80 glass-panel border-l border-white/10 flex flex-col h-full shrink-0 font-sans relative overflow-hidden">
+      {/* Indigo ambient glow */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none z-0" />
+
       {/* Panel Header */}
-      <div className="h-11 flex items-center gap-2 px-3 border-b border-border shrink-0">
+      <div className="h-11 flex items-center gap-2 px-3 border-b border-white/10 shrink-0 relative z-10">
         {/* Title */}
         <div className="flex items-center gap-2 mr-auto">
-          <Sparkles className="w-4 h-4 text-primary shrink-0" />
+          <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
           <span className="text-sm font-semibold text-text">AI Copilot</span>
         </div>
 
@@ -225,10 +227,10 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`text-xs px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`text-xs px-2.5 py-1 transition-colors flex items-center gap-1.5 border-b-2 ${
               activeTab === 'chat'
-                ? 'bg-primary/10 text-primary'
-                : 'text-text-muted hover:text-text hover:bg-surface-hover'
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
             <MessageSquare className="w-3 h-3" />
@@ -236,15 +238,15 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`text-xs px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`text-xs px-2.5 py-1 transition-colors flex items-center gap-1.5 border-b-2 ${
               activeTab === 'history'
-                ? 'bg-primary/10 text-primary'
-                : 'text-text-muted hover:text-text hover:bg-surface-hover'
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
             <HistoryIcon className="w-3 h-3" />
             History
-            <span className="bg-surface-hover border border-border text-text-muted px-1 rounded-full text-[9px] font-mono">
+            <span className="bg-white/5 border border-white/10 text-text-muted px-1 rounded-full text-[9px] font-mono">
               {versions.length}
             </span>
           </button>
@@ -253,7 +255,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
         {/* Close button */}
         <button
           onClick={() => setIsCopilotOpen(false)}
-          className="text-text-muted hover:text-text transition-colors p-1 hover:bg-surface-hover rounded-md ml-1"
+          className="text-text-muted hover:text-text transition-colors p-1 hover:bg-white/5 rounded-md ml-1"
           title="Close Copilot"
           aria-label="Close AI Copilot"
         >
@@ -262,7 +264,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
       </div>
 
       {/* Domain Selector */}
-      <div className="px-3 py-2 border-b border-border shrink-0">
+      <div className="px-3 py-2 border-b border-white/10 shrink-0 relative z-10">
         <div className="relative">
           <button
             onClick={() => setShowDomainDropdown(!showDomainDropdown)}
@@ -279,7 +281,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowDomainDropdown(false)}
               ></div>
-              <div className="absolute top-full left-0 mt-1 w-36 rounded-lg shadow-md bg-surface border border-border z-20 py-1">
+              <div className="absolute top-full left-0 mt-1 w-36 rounded-lg shadow-md bg-[#0A0A0A] border border-white/10 z-20 py-1">
                 {DOMAINS.map((d) => (
                   <button
                     key={d}
@@ -299,7 +301,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto bg-background/40 relative">
+      <div className="flex-1 overflow-y-auto bg-black/20 relative z-10">
         {/* --- TAB: CHAT --- */}
         {activeTab === 'chat' && (
           <div
@@ -345,36 +347,31 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                     p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm break-words max-w-full
                     ${
                       msg.role === 'user'
-                        ? 'bg-primary text-white rounded-br-sm shadow-primary/20'
+                        ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-sm shadow-lg shadow-indigo-500/20'
                         : msg.isError
                           ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-bl-sm'
-                          : 'bg-surface border border-border text-text rounded-bl-sm'
+                          : 'bg-white/5 border border-white/10 text-gray-200 rounded-bl-sm'
                     }
                   `}
                 >
                   {msg.text}
 
                   {msg.codeSnapshot && (
-                    <div className="mt-3 rounded-lg overflow-hidden border border-border bg-background/50">
-                      <div className="flex justify-between items-center px-2 py-1 bg-surface-hover/30 border-b border-border/50">
-                        <span className="text-[10px] font-mono text-text-muted flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-accent" />
-                          Pipeline Updated
+                    <div className="mt-3 rounded-xl overflow-hidden border border-white/10 bg-[#050505] shadow-xl">
+                      <div className="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/10">
+                        <span className="text-[10px] font-mono text-gray-400 tracking-wider uppercase">
+                          Suggestion
                         </span>
                         <button
                           onClick={() => handleCopyCode(msg.codeSnapshot ?? '', msg.id)}
-                          className="p-1 hover:bg-surface-hover rounded text-text-muted hover:text-primary transition-colors"
-                          title="Copy Code"
+                          className="text-[10px] bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white border border-indigo-500/30 px-2 py-1 rounded transition-colors"
+                          title="Apply suggestion"
                         >
-                          {justCopied === msg.id ? (
-                            <Check className="w-3 h-3" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
+                          {justCopied === msg.id ? <Check className="w-3 h-3 inline" /> : 'Apply'}
                         </button>
                       </div>
-                      <div className="p-2 overflow-x-auto">
-                        <pre className="text-[10px] font-mono text-text-muted whitespace-pre">
+                      <div className="p-3 overflow-x-auto">
+                        <pre className="text-xs font-mono text-indigo-200 whitespace-pre-wrap leading-relaxed">
                           {msg.codeSnapshot.slice(0, 150)}...
                         </pre>
                       </div>
@@ -439,11 +436,11 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
 
             {isLoading && (
               <div className="flex flex-col gap-2 max-w-[85%] mr-auto items-start animate-pulse">
-                <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-primary">
+                <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-indigo-400">
                   <span>Generating</span>
                 </div>
-                <div className="bg-surface border border-border p-4 rounded-2xl rounded-bl-sm text-text-muted text-sm flex items-center gap-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-bl-sm text-gray-300 text-sm flex items-center gap-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
                   <span>Designing Pipeline...</span>
                 </div>
               </div>
@@ -455,7 +452,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
         {activeTab === 'history' && (
           <div className="flex flex-col h-full">
             {/* Manual Save Button */}
-            <div className="p-3 border-b border-border bg-surface/50">
+            <div className="p-3 border-b border-white/10 bg-white/5">
               <button
                 onClick={() => {
                   if (snapshotSaving) return;
@@ -464,7 +461,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                   setTimeout(() => setSnapshotSaving(false), 1500);
                 }}
                 disabled={snapshotSaving}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-text transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
               >
                 {snapshotSaving ? (
                   <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
@@ -561,10 +558,10 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
 
       {/* Input Area (Only visible in Chat Tab) */}
       {activeTab === 'chat' && (
-        <div className="p-3 bg-surface border-t border-border">
+        <div className="p-3 bg-[#050505]/80 border-t border-white/10 relative z-10">
           <form
             onSubmit={handleSubmit}
-            className="flex items-end gap-2 bg-background border border-border rounded-xl p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner"
+            className="flex items-end gap-2 bg-[#050505] border border-white/10 rounded-xl p-2 focus-within:border-indigo-500/50 focus-within:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all"
           >
             <textarea
               value={prompt}
@@ -583,7 +580,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
             <button
               type="submit"
               disabled={isLoading || !prompt.trim()}
-              className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-muted text-white rounded-lg transition-all shadow-lg shadow-primary/20 disabled:shadow-none mb-0.5"
+              className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/5 disabled:text-gray-600 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/20 disabled:shadow-none mb-0.5"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

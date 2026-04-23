@@ -28,20 +28,20 @@ const DiagramPreview = lazy(() => import('@/components/DiagramPreview'));
 type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
 const THEMES: Record<DiagramTheme, ThemeVars> = {
-  // Obsidian — void black with electric indigo
+  // Obsidian — true-black glass with electric blue
   dark: {
-    '--bg': '9 9 11',
-    '--surface': '17 17 20',
-    '--surface-hover': '26 26 30',
-    '--surface-elevated': '35 35 42',
-    '--border': '44 44 52',
-    '--text': '230 230 235',
-    '--text-muted': '110 110 122',
-    '--text-dim': '58 58 68',
-    '--primary': '129 140 248',
-    '--primary-hover': '99 102 241',
-    '--primary-bg': '28 28 62',
-    '--accent': '196 130 249',
+    '--bg': '5 5 5',
+    '--surface': '20 20 22',
+    '--surface-hover': '28 28 32',
+    '--surface-elevated': '36 36 40',
+    '--border': '38 38 42',
+    '--text': '237 237 237',
+    '--text-muted': '113 113 122',
+    '--text-dim': '63 63 70',
+    '--primary': '59 130 246',
+    '--primary-hover': '37 99 235',
+    '--primary-bg': '30 50 100',
+    '--accent': '99 102 241',
   },
   // Abyss — deep ocean with electric cyan
   midnight: {
@@ -372,28 +372,24 @@ export default function EditorShell() {
           )}
 
           {viewMode === ViewMode.Split && (
-            <div
-              onMouseDown={startDrag}
-              onDoubleClick={snapToDefault}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize editor panels"
-              className="w-1 shrink-0 bg-border hover:bg-primary/50 cursor-col-resize transition-colors duration-150 relative group z-10 flex items-center justify-center"
-              title="Drag to resize · Double-click to reset"
-            >
-              {/* Expanded hit area */}
-              <div className="absolute inset-y-0 -left-2 -right-2" />
-              {/* Grip dots */}
-              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="w-1 h-1 rounded-full bg-primary/70" />
-                ))}
+            <div className="relative w-0 h-full z-20">
+              <div
+                className="splitter-hitbox absolute top-0 bottom-0 -left-2 -right-2 cursor-col-resize z-10 flex justify-center"
+                onMouseDown={startDrag}
+                onDoubleClick={snapToDefault}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize editor panels"
+                title="Drag to resize · Double-click to reset"
+              >
+                <div className="splitter-line" />
               </div>
             </div>
           )}
 
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
             <div className="flex-1 flex flex-col bg-surface/50 relative overflow-hidden">
+              <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none z-0" />
               <Suspense
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
@@ -442,12 +438,12 @@ export default function EditorShell() {
 
       {/* Status bar — VS Code-style */}
       <div
-        className="h-[22px] border-t border-border bg-surface flex items-center shrink-0 select-none overflow-hidden"
+        className="h-[22px] glass-panel border-t border-white/5 flex items-center shrink-0 select-none overflow-hidden"
         role="status"
         aria-label="Editor status"
       >
         {/* Left accent stripe + save state */}
-        <div className="w-1 self-stretch bg-primary shrink-0" />
+        <div className="w-1 self-stretch bg-blue-500 shrink-0" />
         <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
@@ -456,7 +452,7 @@ export default function EditorShell() {
             </>
           ) : (
             <>
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_8px_#10b981]" />
               <span className="tracking-wide">SAVED</span>
             </>
           )}
@@ -478,19 +474,23 @@ export default function EditorShell() {
         <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="hidden md:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="hidden md:flex items-center h-full px-3 border-l border-white/5 hover:bg-white/5 hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
             title="Open command palette (⌘K)"
             aria-label="Open command palette"
           >
-            ⌘K
+            <kbd className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px]">
+              ⌘K
+            </kbd>
           </button>
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="hidden lg:flex items-center h-full px-3 border-l border-border hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="hidden lg:flex items-center h-full px-3 border-l border-white/5 hover:bg-white/5 hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
             title="Keyboard shortcuts"
             aria-label="Keyboard shortcuts"
           >
-            ?
+            <kbd className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px]">
+              ?
+            </kbd>
           </button>
         </div>
       </div>
