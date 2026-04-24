@@ -1,8 +1,7 @@
 'use client';
+import { Icon } from '@iconify/react';
 
 import React, { useState, Suspense, lazy } from 'react';
-import { useRouter } from 'next/navigation';
-import { Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -24,6 +23,7 @@ const CopilotPanel = lazy(() => import('@/components/CopilotPanel'));
 const ModalRenderer = lazy(() => import('@/components/ModalRenderer'));
 const CodeEditor = lazy(() => import('@/components/CodeEditor'));
 const DiagramPreview = lazy(() => import('@/components/DiagramPreview'));
+const WebGLParticles = lazy(() => import('@/components/WebGLParticles'));
 
 type ThemeVars = React.CSSProperties & Record<`--${string}`, string>;
 
@@ -42,6 +42,7 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--primary-hover': '37 99 235',
     '--primary-bg': '30 50 100',
     '--accent': '99 102 241',
+    '--grid': '255 255 255',
   },
   // Abyss — deep ocean with electric cyan
   midnight: {
@@ -57,6 +58,7 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--primary-hover': '6 182 212',
     '--primary-bg': '8 28 58',
     '--accent': '244 114 182',
+    '--grid': '148 163 184',
   },
   // Phosphor — terminal green on near-void
   forest: {
@@ -72,21 +74,23 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--primary-hover': '34 197 94',
     '--primary-bg': '4 40 12',
     '--accent': '253 224 71',
+    '--grid': '134 239 172',
   },
   // Arctic — crisp white with cobalt precision
   neutral: {
-    '--bg': '255 255 255',
-    '--surface': '245 247 250',
-    '--surface-hover': '233 237 244',
-    '--surface-elevated': '220 228 240',
-    '--border': '204 214 228',
-    '--text': '10 15 30',
-    '--text-muted': '88 108 136',
-    '--text-dim': '150 170 195',
+    '--bg': '248 250 252',
+    '--surface': '255 255 255',
+    '--surface-hover': '241 245 249',
+    '--surface-elevated': '226 232 240',
+    '--border': '203 213 225',
+    '--text': '15 23 42',
+    '--text-muted': '71 85 105',
+    '--text-dim': '148 163 184',
     '--primary': '37 99 235',
     '--primary-hover': '29 78 216',
-    '--primary-bg': '214 232 255',
+    '--primary-bg': '219 234 254',
     '--accent': '248 113 113',
+    '--grid': '15 23 42',
   },
   // Ember — warm charcoal with amber fire
   ember: {
@@ -102,6 +106,7 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--primary-hover': '234 88 12',
     '--primary-bg': '48 24 8',
     '--accent': '252 211 77',
+    '--grid': '251 146 60',
   },
   // Dusk — twilight indigo with rose gold
   dusk: {
@@ -117,12 +122,11 @@ const THEMES: Record<DiagramTheme, ThemeVars> = {
     '--primary-hover': '168 85 247',
     '--primary-bg': '30 20 65',
     '--accent': '251 113 133',
+    '--grid': '192 132 252',
   },
 };
 
 export default function EditorShell() {
-  const router = useRouter();
-
   const { user, requireAuth } = useAuth();
 
   const {
@@ -184,7 +188,9 @@ export default function EditorShell() {
 
   const { handleExportSvg, handleExportPng } = useExportHandlers({ code, theme, customStyle });
 
-  const setCurrentView = (view: AppView) => router.push(VIEW_TO_PATH[view]);
+  const setCurrentView = (_view: AppView) => {
+    void VIEW_TO_PATH;
+  };
 
   const handleShare = () => {
     const hash = encodeCodeToUrl(code);
@@ -276,7 +282,7 @@ export default function EditorShell() {
 
   return (
     <div
-      className="min-h-dvh w-full flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20"
+      className="h-dvh w-full flex flex-col bg-background text-text overflow-hidden font-sans transition-colors duration-500 selection:bg-primary/20 editor-studio-shell"
       style={appStyle}
     >
       {/* Skip link */}
@@ -300,7 +306,7 @@ export default function EditorShell() {
       </Suspense>
 
       {/* Main area */}
-      <main id="main" className="flex-1 flex overflow-hidden relative">
+      <main id="main" className="flex-1 min-h-0 flex overflow-hidden relative editor-studio-main">
         {/* ActivityBar — always visible, owns panel navigation */}
         <ActivityBar />
 
@@ -347,11 +353,14 @@ export default function EditorShell() {
         )}
 
         {/* Split pane */}
-        <div ref={containerRef} className="flex-1 flex overflow-hidden">
+        <div
+          ref={containerRef}
+          className="flex-1 min-w-0 min-h-0 flex overflow-hidden p-0 md:p-3 md:gap-3"
+        >
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Code) && (
             <div
               style={viewMode === ViewMode.Split ? { width: `${splitPercent}%` } : undefined}
-              className={`flex flex-col border-r border-border overflow-hidden ${viewMode === ViewMode.Code ? 'flex-1' : 'shrink-0'}`}
+              className={`flex min-h-0 flex-col overflow-hidden studio-pane ${viewMode === ViewMode.Code ? 'flex-1' : 'shrink-0'}`}
             >
               <Suspense fallback={<div className="w-full h-full bg-background animate-pulse" />}>
                 <CodeEditor
@@ -372,7 +381,7 @@ export default function EditorShell() {
           )}
 
           {viewMode === ViewMode.Split && (
-            <div className="relative w-0 h-full z-20">
+            <div className="relative w-0 h-full z-20 -mx-1">
               <div
                 className="splitter-hitbox absolute top-0 bottom-0 -left-2 -right-2 cursor-col-resize z-10 flex justify-center"
                 onMouseDown={startDrag}
@@ -388,12 +397,17 @@ export default function EditorShell() {
           )}
 
           {(viewMode === ViewMode.Split || viewMode === ViewMode.Preview) && (
-            <div className="flex-1 flex flex-col bg-surface/50 relative overflow-hidden">
-              <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none z-0" />
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col relative overflow-hidden studio-canvas">
+              {/* CSS grid fallback (reduced-motion / no-JS) */}
+              <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none z-0" />
+              {/* WebGL particle field — lazy, pointer-reactive */}
+              <Suspense fallback={null}>
+                <WebGLParticles />
+              </Suspense>
               <Suspense
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-text-muted" />
+                    <Icon icon="lucide:loader-2" className="w-8 h-8 animate-spin text-text-muted" />
                   </div>
                 }
               >
@@ -438,16 +452,19 @@ export default function EditorShell() {
 
       {/* Status bar — VS Code-style */}
       <div
-        className="h-[22px] glass-panel border-t border-white/5 flex items-center shrink-0 select-none overflow-hidden"
+        className="h-[24px] glass-panel border-t border-border/70 flex items-center shrink-0 select-none overflow-hidden"
         role="status"
         aria-label="Editor status"
       >
         {/* Left accent stripe + save state */}
-        <div className="w-1 self-stretch bg-blue-500 shrink-0" />
+        <div className="w-1 self-stretch bg-primary shrink-0" />
         <div className="flex items-center gap-2 px-3 text-[11px] font-mono text-text-muted">
           {saveStatus === 'saving' ? (
             <>
-              <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0" />
+              <Icon
+                icon="lucide:loader-2"
+                className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0"
+              />
               <span className="text-amber-400 tracking-wide">SAVING</span>
             </>
           ) : (
@@ -474,21 +491,21 @@ export default function EditorShell() {
         <div className="flex items-center h-full text-[11px] font-mono text-text-dim">
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="hidden md:flex items-center h-full px-3 border-l border-white/5 hover:bg-white/5 hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
+            className="hidden md:flex items-center h-full px-3 border-l border-border/70 hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
             title="Open command palette (⌘K)"
             aria-label="Open command palette"
           >
-            <kbd className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px]">
+            <kbd className="bg-surface-hover border border-border rounded px-1.5 py-0.5 text-[10px]">
               ⌘K
             </kbd>
           </button>
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="hidden lg:flex items-center h-full px-3 border-l border-white/5 hover:bg-white/5 hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
+            className="hidden lg:flex items-center h-full px-3 border-l border-border/70 hover:bg-surface-hover hover:text-text-muted cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
             title="Keyboard shortcuts"
             aria-label="Keyboard shortcuts"
           >
-            <kbd className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[10px]">
+            <kbd className="bg-surface-hover border border-border rounded px-1.5 py-0.5 text-[10px]">
               ?
             </kbd>
           </button>
@@ -509,7 +526,7 @@ export default function EditorShell() {
           <div className="bg-surface border border-border rounded-xl shadow-md p-6 max-w-sm w-full mx-4">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-                <Trash2 className="w-6 h-6" />
+                <Icon icon="lucide:trash-2" className="w-6 h-6" />
               </div>
               <div>
                 <h3 id="delete-dialog-title" className="text-lg font-bold text-text">

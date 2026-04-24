@@ -1,5 +1,5 @@
+import { Icon } from '@iconify/react';
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Send, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Comment, User } from '../types.ts';
 import { fetchComments, addComment, deleteComment } from '../services/supabaseClient.ts';
@@ -74,7 +74,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ diagramId, user, onOpenAu
   return (
     <div className="border-t border-border/50 px-5 py-4">
       <div className="flex items-center gap-2 mb-3">
-        <MessageCircle className="w-4 h-4 text-text-muted" />
+        <Icon icon="lucide:message-circle" className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-medium text-text-muted">
           {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
         </span>
@@ -82,7 +82,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ diagramId, user, onOpenAu
 
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
+          <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin text-text-muted" />
         </div>
       ) : (
         <div className="space-y-3 max-h-[200px] overflow-y-auto">
@@ -101,7 +101,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ diagramId, user, onOpenAu
                       className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all ml-auto"
                       title="Delete comment"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Icon icon="lucide:trash-2" className="w-3 h-3" />
                     </button>
                   )}
                 </div>
@@ -127,9 +127,9 @@ const CommentThread: React.FC<CommentThreadProps> = ({ diagramId, user, onOpenAu
           className="p-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isSubmitting ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <Icon icon="lucide:loader-2" className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Send className="w-3.5 h-3.5" />
+            <Icon icon="lucide:send" className="w-3.5 h-3.5" />
           )}
         </button>
       </form>

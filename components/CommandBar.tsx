@@ -1,29 +1,5 @@
+import { Icon } from '@iconify/react';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import {
-  Share2,
-  Code2,
-  Columns,
-  Eye,
-  Image as ImageIcon,
-  FileCode,
-  Check,
-  ChevronDown,
-  Pencil,
-  UploadCloud,
-  Sun,
-  Moon,
-  ShieldCheck,
-  Twitter,
-  Linkedin,
-  Link2,
-  Copy,
-  Code,
-  X,
-  User,
-  LogOut,
-  Mail,
-  MoreHorizontal,
-} from 'lucide-react';
 import { toast } from 'sonner';
 import { ViewMode, DiagramTheme, AppView, EmbedMode } from '../types.ts';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -98,7 +74,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
   onNavigate,
 }) => {
   const { viewMode, setViewMode, theme: currentTheme, setTheme } = useUI();
-  const { user, openAuth } = useAuth();
+  const { user, openAuth, handleSignOut } = useAuth();
   const { activeProject, handleRenameProject } = useEditor();
 
   const [showThemes, setShowThemes] = useState(false);
@@ -199,7 +175,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
 
   return (
     <>
-      <header className="h-11 glass-panel border-b border-white/5 flex items-center justify-between px-3 shrink-0">
+      <header className="h-12 glass-panel border-b border-border/70 flex items-center justify-between px-3 shrink-0 z-30">
         {/* 1. Brand Identity & Project Title */}
         <div className="flex items-center gap-3 md:gap-4 max-w-[40%] md:max-w-none">
           <div className="flex flex-col justify-center select-none shrink-0">
@@ -216,10 +192,13 @@ const CommandBar: React.FC<CommandBarProps> = ({
               aria-label="ArchiGram.ai — go to home"
               className="text-lg font-bold tracking-tight text-text flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
             >
-              {/* Blueprint Intelligence mark — nested diamond */}
+              {/* Blueprint Intelligence mark — nested diamond with pulse */}
               <div
-                className="w-6 h-6 border border-cyan-400/60 flex items-center justify-center shrink-0"
-                style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                className="w-6 h-6 border border-cyan-400/70 flex items-center justify-center shrink-0"
+                style={{
+                  clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                  animation: 'diamondPulse 3s ease-in-out infinite',
+                }}
               >
                 <div
                   className="w-2.5 h-2.5 bg-cyan-400"
@@ -227,14 +206,26 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 />
               </div>
               <span className="hidden lg:inline font-display tracking-tight text-[15px]">
-                <span className="text-cyan-400 font-bold">Archi</span>
+                <span
+                  className="font-bold"
+                  style={{
+                    background: 'linear-gradient(90deg, #22d3ee, #818cf8, #c484f9, #22d3ee)',
+                    backgroundSize: '200% auto',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    animation: 'gradientFlow 4s ease infinite',
+                  }}
+                >
+                  Archi
+                </span>
                 <span className="text-text font-semibold">Gram</span>
                 <span className="text-cyan-400/70 font-bold">.ai</span>
               </span>
             </h1>
           </div>
 
-          <div className="h-6 w-px bg-border/50 hidden md:block"></div>
+          <div className="h-6 w-px bg-border hidden md:block"></div>
 
           {/* Project Title (Editable) */}
           <div className="flex items-center relative group min-w-0 flex-1">
@@ -248,7 +239,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 autoFocus
                 maxLength={100}
                 aria-label="Project title"
-                className="bg-[#0A0A0A] border border-blue-500 text-white text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[120px]"
+                className="bg-background border border-primary text-text text-sm font-medium px-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-primary w-full min-w-[120px]"
               />
             ) : (
               <div
@@ -265,7 +256,10 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 title="Click to rename"
               >
                 <span className="truncate">{activeProject?.name || 'Untitled Diagram'}</span>
-                <Pencil className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Icon
+                  icon="lucide:pencil"
+                  className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                />
               </div>
             )}
           </div>
@@ -274,12 +268,12 @@ const CommandBar: React.FC<CommandBarProps> = ({
         {/* 2. Middle: View & Tools */}
         <div className="flex items-center gap-2 md:gap-4">
           {/* View Switcher */}
-          <div className="hidden md:inline-flex items-center bg-[#0A0A0A] border border-white/5 p-0.5 rounded-lg shadow-inner">
+          <div className="hidden md:inline-flex items-center bg-background/80 border border-border p-0.5 rounded-lg shadow-inner">
             {[
-              { mode: ViewMode.Code, icon: Code2, label: 'Code', shortcut: '⌘1' },
-              { mode: ViewMode.Split, icon: Columns, label: 'Split', shortcut: '⌘2' },
-              { mode: ViewMode.Preview, icon: Eye, label: 'Preview', shortcut: '⌘3' },
-            ].map(({ mode, icon: Icon, label, shortcut }) => (
+              { mode: ViewMode.Code, icon: 'lucide:code-2', label: 'Code', shortcut: '⌘1' },
+              { mode: ViewMode.Split, icon: 'lucide:columns-2', label: 'Split', shortcut: '⌘2' },
+              { mode: ViewMode.Preview, icon: 'lucide:eye', label: 'Preview', shortcut: '⌘3' },
+            ].map(({ mode, icon, label, shortcut }) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -287,18 +281,18 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 aria-pressed={viewMode === mode}
                 className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500/50 ${
                   viewMode === mode
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                    ? 'bg-surface text-text shadow-sm'
+                    : 'text-text-muted hover:text-text hover:bg-surface-hover'
                 }`}
                 title={`${label} (${shortcut})`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon icon={icon} className="w-3.5 h-3.5" />
                 <span className="text-xs font-medium hidden lg:inline">{label}</span>
               </button>
             ))}
           </div>
 
-          <div className="hidden md:block h-6 w-px bg-border/50"></div>
+          <div className="hidden md:block h-6 w-px bg-border"></div>
 
           <div className="flex items-center gap-2">
             {/* Dark Mode Toggle */}
@@ -309,7 +303,11 @@ const CommandBar: React.FC<CommandBarProps> = ({
               aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-pressed={isDarkMode}
             >
-              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDarkMode ? (
+                <Icon icon="lucide:sun" className="w-4 h-4" />
+              ) : (
+                <Icon icon="lucide:moon" className="w-4 h-4" />
+              )}
             </button>
 
             {/* Theme Picker */}
@@ -327,7 +325,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                   style={{ backgroundColor: THEME_CATALOG[currentTheme].primary }}
                 />
                 <span className="hidden lg:inline">{THEME_CATALOG[currentTheme].name}</span>
-                <ChevronDown className="w-3 h-3 opacity-40" />
+                <Icon icon="lucide:chevron-down" className="w-3 h-3 opacity-40" />
               </button>
 
               {showThemes && (
@@ -397,7 +395,11 @@ const CommandBar: React.FC<CommandBarProps> = ({
                             </span>
                             {isActive && (
                               <span className="absolute top-1.5 right-1.5">
-                                <Check className="w-2.5 h-2.5" style={{ color: meta.primary }} />
+                                <Icon
+                                  icon="lucide:check"
+                                  className="w-2.5 h-2.5"
+                                  style={{ color: meta.primary }}
+                                />
                               </span>
                             )}
                           </button>
@@ -423,7 +425,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 aria-haspopup="menu"
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                <User className="w-3.5 h-3.5" />
+                <Icon icon="lucide:user" className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">
                   {user.username || user.email?.split('@')[0]}
                 </span>
@@ -434,7 +436,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 aria-label="Sign in"
                 className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text border border-border hover:border-text-muted/50 rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                <User className="w-3.5 h-3.5" />
+                <Icon icon="lucide:user" className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Sign In</span>
               </button>
             )}
@@ -454,19 +456,17 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <User className="w-4 h-4 text-text-muted" />
+                    <Icon icon="lucide:user" className="w-4 h-4 text-text-muted" />
                     My Profile
                   </button>
                   <button
                     onClick={async () => {
-                      const { signOut } = await import('../services/supabaseClient.ts');
-                      await signOut();
+                      await handleSignOut();
                       setShowUserMenu(false);
-                      window.location.reload();
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <LogOut className="w-4 h-4 text-text-muted" />
+                    <Icon icon="lucide:log-out" className="w-4 h-4 text-text-muted" />
                     Sign Out
                   </button>
                 </div>
@@ -477,11 +477,11 @@ const CommandBar: React.FC<CommandBarProps> = ({
           {/* Publish Button */}
           <button
             onClick={onPublish}
-            className="hidden lg:flex items-center gap-2 px-4 py-1.5 text-xs font-semibold text-black bg-white hover:bg-gray-200 active:scale-95 rounded-md shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:scale-105 transition-all"
+            className="hidden lg:flex items-center gap-2 px-4 py-1.5 text-xs font-semibold text-background bg-text hover:bg-text/90 active:scale-95 rounded-md shadow-sm hover:scale-105 transition-all"
             title="Publish to Community Gallery (Cmd+Shift+P)"
             aria-label="Publish diagram to community gallery"
           >
-            <UploadCloud className="w-3.5 h-3.5" />
+            <Icon icon="lucide:upload-cloud" className="w-3.5 h-3.5" />
             <span className="hidden xl:inline">Publish</span>
           </button>
 
@@ -494,7 +494,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
               aria-expanded={showShareMenu}
               aria-haspopup="menu"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Icon icon="lucide:share-2" className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Share</span>
             </button>
 
@@ -513,7 +513,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <Link2 className="w-4 h-4 text-primary" />
+                    <Icon icon="lucide:link-2" className="w-4 h-4 text-primary" />
                     Get Share Link
                   </button>
 
@@ -522,9 +522,9 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
                     {copied ? (
-                      <Check className="w-4 h-4 text-emerald-500" />
+                      <Icon icon="lucide:check" className="w-4 h-4 text-emerald-500" />
                     ) : (
-                      <Copy className="w-4 h-4 text-text-muted" />
+                      <Icon icon="lucide:copy" className="w-4 h-4 text-text-muted" />
                     )}
                     {copied ? 'Copied!' : 'Copy Link'}
                   </button>
@@ -535,7 +535,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     onClick={handleShareTwitter}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <Twitter className="w-4 h-4 text-sky-500" />
+                    <Icon icon="lucide:twitter" className="w-4 h-4 text-sky-500" />
                     Share on Twitter
                   </button>
 
@@ -543,7 +543,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     onClick={handleShareLinkedIn}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <Linkedin className="w-4 h-4 text-blue-600" />
+                    <Icon icon="lucide:linkedin" className="w-4 h-4 text-blue-600" />
                     Share on LinkedIn
                   </button>
 
@@ -551,7 +551,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     onClick={handleShareEmail}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <Mail className="w-4 h-4 text-emerald-500" />
+                    <Icon icon="lucide:mail" className="w-4 h-4 text-emerald-500" />
                     Share via Email
                   </button>
 
@@ -564,7 +564,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <Code className="w-4 h-4 text-primary" />
+                    <Icon icon="lucide:code" className="w-4 h-4 text-primary" />
                     Embed Diagram
                   </button>
 
@@ -588,7 +588,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
               aria-expanded={showOverflow}
               aria-haspopup="menu"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <Icon icon="lucide:more-horizontal" className="w-4 h-4" />
             </button>
 
             {showOverflow && (
@@ -610,7 +610,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <ShieldCheck className="w-4 h-4 text-text-muted" />
+                    <Icon icon="lucide:shield-check" className="w-4 h-4 text-text-muted" />
                     Run Audit
                   </button>
                   <div className="h-px bg-border/50 my-1" />
@@ -622,7 +622,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <FileCode className="w-4 h-4 text-text-muted" />
+                    <Icon icon="lucide:file-code" className="w-4 h-4 text-text-muted" />
                     Export SVG
                   </button>
                   <button
@@ -633,7 +633,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                     }}
                     className="text-left px-4 py-2.5 text-sm text-text hover:bg-surface-hover transition-colors flex items-center gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                   >
-                    <ImageIcon className="w-4 h-4 text-text-muted" />
+                    <Icon icon="lucide:image" className="w-4 h-4 text-text-muted" />
                     Export PNG
                   </button>
                 </div>
@@ -659,7 +659,7 @@ const CommandBar: React.FC<CommandBarProps> = ({
                   className="p-2 text-text-muted hover:text-text rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Close embed modal"
                 >
-                  <X className="w-4 h-4" />
+                  <Icon icon="lucide:x" className="w-4 h-4" />
                 </button>
               </div>
 
@@ -765,7 +765,11 @@ const CommandBar: React.FC<CommandBarProps> = ({
                 onClick={handleCopyEmbed}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                {embedCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {embedCopied ? (
+                  <Icon icon="lucide:check" className="w-4 h-4" />
+                ) : (
+                  <Icon icon="lucide:copy" className="w-4 h-4" />
+                )}
                 {embedCopied ? 'Copied!' : 'Copy Embed Code'}
               </button>
             </div>

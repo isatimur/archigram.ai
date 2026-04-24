@@ -34,7 +34,7 @@ const UIContext = createContext<UIContextValue | null>(null);
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Split);
   const [activePanel, setActivePanel] = useState<ActivePanel>('projects');
-  const [theme, setTheme] = useState<DiagramTheme>('dark');
+  const [theme, setTheme] = useState<DiagramTheme>('neutral');
   const [isCopilotOpen, setIsCopilotOpen] = useState(true);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isImageImportModalOpen, setIsImageImportModalOpen] = useState(false);

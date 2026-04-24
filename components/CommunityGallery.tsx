@@ -1,21 +1,6 @@
+import { Icon } from '@iconify/react';
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { trendingScore } from '../utils/trending.ts';
-import {
-  Search,
-  GitFork,
-  Heart,
-  Eye,
-  ArrowLeft,
-  Globe,
-  Star,
-  TrendingUp,
-  Clock,
-  Code2,
-  Link as LinkIcon,
-  Download,
-  Loader2,
-  MessageCircle,
-} from 'lucide-react';
 import { toast } from 'sonner';
 import { AppView, CommunityDiagram, User } from '../types.ts';
 import { COMMUNITY_DATA, LIKED_IDS_KEY } from '../constants.ts';
@@ -233,11 +218,11 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             className="p-2 hover:bg-surface-hover rounded-lg text-text-muted hover:text-text transition-colors"
             title="Back to Home"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Icon icon="lucide:arrow-left" className="w-5 h-5" />
           </button>
           <div className="h-6 w-px bg-border hidden md:block" />
           <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-accent hidden sm:block" />
+            <Icon icon="lucide:globe" className="w-5 h-5 text-accent hidden sm:block" />
             <span className="font-bold text-sm md:text-lg tracking-tight hidden sm:inline">
               Community Gallery
             </span>
@@ -246,7 +231,10 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
         {/* Search */}
         <div className="relative flex-1 min-w-0 max-w-sm mx-2 md:mx-4 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors pointer-events-none" />
+          <Icon
+            icon="lucide:search"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors pointer-events-none"
+          />
           <input
             type="text"
             placeholder="Search diagrams..."
@@ -262,7 +250,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             className="flex items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-text-muted hover:text-text border border-border hover:bg-surface rounded-lg transition-all"
             title="Import from URL"
           >
-            <Download className="w-4 h-4" />
+            <Icon icon="lucide:download" className="w-4 h-4" />
             <span className="hidden md:inline">Import URL</span>
           </button>
 
@@ -309,21 +297,21 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             <SortButton
               active={sort === 'trending'}
               onClick={() => setSort('trending')}
-              icon={<TrendingUp className="w-3.5 h-3.5" />}
+              icon={<Icon icon="lucide:trending-up" className="w-3.5 h-3.5" />}
             >
               Trending
             </SortButton>
             <SortButton
               active={sort === 'new'}
               onClick={() => setSort('new')}
-              icon={<Clock className="w-3.5 h-3.5" />}
+              icon={<Icon icon="lucide:clock" className="w-3.5 h-3.5" />}
             >
               New
             </SortButton>
             <SortButton
               active={sort === 'top'}
               onClick={() => setSort('top')}
-              icon={<Star className="w-3.5 h-3.5" />}
+              icon={<Icon icon="lucide:star" className="w-3.5 h-3.5" />}
             >
               Top
             </SortButton>
@@ -390,7 +378,7 @@ const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-surface border border-border rounded-xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <LinkIcon className="w-5 h-5 text-primary" />
+              <Icon icon="lucide:link" className="w-5 h-5 text-primary" />
               Import from Link
             </h3>
             <p className="text-sm text-text-muted mb-4">
@@ -500,7 +488,7 @@ const DiagramCard = React.memo(
             }}
             className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/30 transition-transform scale-95 group-hover:scale-100"
           >
-            <GitFork className="w-4 h-4" />
+            <Icon icon="lucide:git-fork" className="w-4 h-4" />
             Fork
           </button>
           <button
@@ -510,7 +498,7 @@ const DiagramCard = React.memo(
             }}
             className="bg-white/10 hover:bg-white/20 backdrop-blur text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 border border-white/20 transition-transform scale-95 group-hover:scale-100"
           >
-            <Code2 className="w-4 h-4" />
+            <Icon icon="lucide:code-2" className="w-4 h-4" />
             View Code
           </button>
         </div>
@@ -555,7 +543,8 @@ const DiagramCard = React.memo(
                 isLiked ? 'text-red-500' : 'text-text-muted hover:text-red-400'
               }`}
             >
-              <Heart
+              <Icon
+                icon="lucide:heart"
                 className={`w-3.5 h-3.5 transition-transform ${
                   isLiked ? 'fill-current scale-110' : 'group-hover/like:scale-110'
                 }`}
@@ -572,12 +561,12 @@ const DiagramCard = React.memo(
                 isExpanded ? 'text-primary' : 'hover:text-primary'
               }`}
             >
-              <MessageCircle className="w-3.5 h-3.5" />
+              <Icon icon="lucide:message-circle" className="w-3.5 h-3.5" />
               <span className="font-medium tabular-nums">{commentCount}</span>
             </button>
 
             <div className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" />
+              <Icon icon="lucide:eye" className="w-3.5 h-3.5" />
               <span className="tabular-nums">{formatNumber(diagram.views)}</span>
             </div>
           </div>
@@ -589,7 +578,7 @@ const DiagramCard = React.memo(
         <Suspense
           fallback={
             <div className="px-4 py-4 border-t border-border/50 flex justify-center">
-              <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
+              <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin text-text-muted" />
             </div>
           }
         >
@@ -644,7 +633,7 @@ const EmptyState = ({
 }) => (
   <div className="flex flex-col items-center justify-center py-24 text-center">
     <div className="w-16 h-16 rounded-full bg-surface border border-border flex items-center justify-center mb-4">
-      <Globe className="w-7 h-7 text-text-muted" />
+      <Icon icon="lucide:globe" className="w-7 h-7 text-text-muted" />
     </div>
     <h3 className="text-lg font-bold text-text mb-2">No diagrams match your filter</h3>
     <p className="text-sm text-text-muted mb-6 max-w-xs">

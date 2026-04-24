@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Project, User } from '@/types';
-import { fetchUserDiagrams, upsertUserDiagram } from '@/lib/supabase/browser';
+import { fetchUserDiagrams, upsertUserDiagram } from '@/lib/firebase/client';
 
 /**
  * Merge local and cloud project arrays.
@@ -29,8 +29,8 @@ interface UseDiagramSyncOptions {
 }
 
 /**
- * Syncs localStorage projects with Supabase user_diagrams on sign-in.
- * On every project save, upserts to Supabase in the background (fire-and-forget).
+ * Syncs localStorage projects with Firebase Firestore on sign-in.
+ * On every project save, upserts to Firestore in the background (fire-and-forget).
  */
 export function useDiagramSync({ user, projects, setProjects }: UseDiagramSyncOptions) {
   const syncedUserIdRef = useRef<string | null>(null);

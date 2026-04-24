@@ -1,15 +1,15 @@
 'use client';
+import { Icon } from '@iconify/react';
 
 import React from 'react';
-import { FolderOpen, LayoutTemplate, Globe, Bot, Keyboard } from 'lucide-react';
 import { useUI } from '@/lib/contexts/UIContext';
 
 type Panel = 'projects' | 'templates' | 'community';
 
-const TOP_ITEMS: { id: Panel; icon: React.FC<{ className?: string }>; label: string }[] = [
-  { id: 'projects', icon: FolderOpen, label: 'Projects' },
-  { id: 'templates', icon: LayoutTemplate, label: 'Templates' },
-  { id: 'community', icon: Globe, label: 'Community' },
+const TOP_ITEMS: { id: Panel; icon: string; label: string }[] = [
+  { id: 'projects', icon: 'lucide:folder-open', label: 'Projects' },
+  { id: 'templates', icon: 'lucide:layout-template', label: 'Templates' },
+  { id: 'community', icon: 'lucide:globe', label: 'Community' },
 ];
 
 export default function ActivityBar() {
@@ -22,12 +22,12 @@ export default function ActivityBar() {
 
   return (
     <aside
-      className="w-12 shrink-0 h-full glass-panel border-r border-white/5 flex flex-col items-center py-2 z-20"
+      className="w-12 shrink-0 h-full glass-panel border-r border-border/70 flex flex-col items-center py-2 z-20"
       aria-label="Activity bar"
     >
       {/* Top: panel toggles */}
       <div className="flex flex-col items-center gap-1 flex-1">
-        {TOP_ITEMS.map(({ id, icon: Icon, label }) => {
+        {TOP_ITEMS.map(({ id, icon, label }) => {
           const isActive = activePanel === id;
           return (
             <button
@@ -36,16 +36,16 @@ export default function ActivityBar() {
               aria-label={label}
               aria-pressed={isActive}
               title={label}
-              className={`relative w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 ${
+              className={`relative w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                 isActive
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                  : 'text-text-muted hover:text-text hover:bg-white/5 border border-transparent'
+                  ? 'bg-primary/15 text-primary border border-primary/30 shadow-[0_0_15px_rgb(var(--primary)/0.12)]'
+                  : 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
               }`}
             >
               {isActive && (
-                <span className="absolute left-[-10px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-r-full shadow-[0_0_10px_#3b82f6]" />
+                <span className="absolute left-[-10px] top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-r-full shadow-[0_0_10px_rgb(var(--primary)/0.8)]" />
               )}
-              <Icon className="w-4.5 h-4.5" />
+              <Icon icon={icon} className="w-4.5 h-4.5" />
             </button>
           );
         })}
@@ -53,7 +53,7 @@ export default function ActivityBar() {
 
       {/* Bottom: copilot + shortcuts */}
       <div className="flex flex-col items-center gap-1 pb-1">
-        <div className="w-6 h-px bg-white/10 mb-1" />
+        <div className="w-6 h-px bg-border mb-1" />
 
         <button
           onClick={() => setIsCopilotOpen(!isCopilotOpen)}
@@ -62,23 +62,23 @@ export default function ActivityBar() {
           title="AI Copilot (⌘⇧C)"
           className={`relative w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${
             isCopilotOpen
-              ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-              : 'text-text-muted hover:text-text hover:bg-white/5 border border-transparent'
+              ? 'bg-accent/15 text-accent border border-accent/30 shadow-[0_0_15px_rgb(var(--accent)/0.12)]'
+              : 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
           }`}
         >
           {isCopilotOpen && (
-            <span className="absolute left-[-10px] top-1/2 -translate-y-1/2 w-1 h-4 bg-indigo-500 rounded-r-full shadow-[0_0_10px_#6366f1]" />
+            <span className="absolute left-[-10px] top-1/2 -translate-y-1/2 w-1 h-4 bg-accent rounded-r-full shadow-[0_0_10px_rgb(var(--accent)/0.8)]" />
           )}
-          <Bot className="w-4.5 h-4.5" />
+          <Icon icon="lucide:bot" className="w-4.5 h-4.5" />
         </button>
 
         <button
           onClick={() => setIsShortcutsModalOpen(true)}
           aria-label="Keyboard shortcuts"
           title="Keyboard shortcuts (?)"
-          className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-white/5 border border-transparent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+          className="w-10 h-10 flex items-center justify-center rounded-lg text-text-muted hover:text-text hover:bg-surface-hover border border-transparent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
-          <Keyboard className="w-4 h-4" />
+          <Icon icon="lucide:keyboard" className="w-4 h-4" />
         </button>
       </div>
     </aside>

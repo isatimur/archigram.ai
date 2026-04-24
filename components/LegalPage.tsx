@@ -1,5 +1,5 @@
+import { Icon } from '@iconify/react';
 import React from 'react';
-import { ArrowLeft, Rocket, Shield, FileText, Scale } from 'lucide-react';
 import { AppView } from '../types.ts';
 
 interface LegalPageProps {
@@ -13,7 +13,7 @@ const LegalPage: React.FC<LegalPageProps> = ({ type, onNavigate }) => {
       case 'privacy':
         return {
           title: 'Privacy Policy',
-          icon: <Shield className="w-6 h-6 text-emerald-400" />,
+          icon: <Icon icon="lucide:shield" className="w-6 h-6 text-emerald-400" />,
           content: (
             <div className="space-y-6 text-zinc-400">
               <p>Last Updated: October 26, 2023</p>
@@ -50,7 +50,7 @@ const LegalPage: React.FC<LegalPageProps> = ({ type, onNavigate }) => {
       case 'terms':
         return {
           title: 'Terms of Service',
-          icon: <FileText className="w-6 h-6 text-primary" />,
+          icon: <Icon icon="lucide:file-text" className="w-6 h-6 text-primary" />,
           content: (
             <div className="space-y-6 text-zinc-400">
               <p>Last Updated: October 26, 2023</p>
@@ -81,7 +81,7 @@ const LegalPage: React.FC<LegalPageProps> = ({ type, onNavigate }) => {
       case 'license':
         return {
           title: 'Open Source License',
-          icon: <Scale className="w-6 h-6 text-accent" />,
+          icon: <Icon icon="lucide:scale" className="w-6 h-6 text-accent" />,
           content: (
             <div className="space-y-6 text-zinc-400">
               <div className="p-6 bg-zinc-900/50 border border-white/10 rounded-xl font-mono text-xs leading-relaxed overflow-x-auto">
@@ -130,14 +130,14 @@ const LegalPage: React.FC<LegalPageProps> = ({ type, onNavigate }) => {
             className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
             title="Back to Home"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Icon icon="lucide:arrow-left" className="w-5 h-5" />
           </button>
           <div className="h-6 w-px bg-white/10"></div>
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => onNavigate('landing')}
           >
-            <Rocket className="w-5 h-5 text-indigo-500" />
+            <Icon icon="lucide:rocket" className="w-5 h-5 text-indigo-500" />
             <span className="font-bold text-lg tracking-tight">ArchiGram.ai</span>
           </div>
         </div>

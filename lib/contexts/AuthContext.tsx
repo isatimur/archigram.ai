@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { User } from '@/types';
-import { getCurrentUser, onAuthStateChange, signOut } from '@/lib/supabase/browser';
+import { getCurrentUser, onAuthStateChange, signOutFirebase } from '@/lib/firebase/client';
 
 type AuthContextValue = {
   user: User | null;
@@ -28,12 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     getCurrentUser().then(setUser);
 
-    const {
-      data: { subscription },
-    } = onAuthStateChange(setUser);
+    const unsubscribe = onAuthStateChange(setUser);
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
@@ -62,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    await signOutFirebase();
     setUser(null);
   };
 

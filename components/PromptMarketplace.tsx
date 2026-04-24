@@ -1,18 +1,5 @@
+import { Icon } from '@iconify/react';
 import React, { useState, useEffect } from 'react';
-import {
-  Search,
-  ArrowLeft,
-  Heart,
-  Eye,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Star,
-  Loader2,
-  Play,
-  Copy,
-  Filter,
-} from 'lucide-react';
 import { toast } from 'sonner';
 import { AppView, PromptEntry, PromptDomain } from '../types.ts';
 import { fetchPrompts, updatePromptLikes } from '../services/supabaseClient.ts';
@@ -181,10 +168,10 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
               onClick={() => onNavigate('gallery')}
               className="p-2 hover:bg-white/5 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-zinc-400" />
+              <Icon icon="lucide:arrow-left" className="w-5 h-5 text-zinc-400" />
             </button>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
+              <Icon icon="lucide:sparkles" className="w-5 h-5 text-amber-400" />
               <h1 className="text-lg sm:text-xl font-bold">Prompt Marketplace</h1>
             </div>
           </div>
@@ -210,7 +197,10 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Icon
+              icon="lucide:search"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
+            />
             <input
               type="text"
               value={searchQuery}
@@ -225,11 +215,11 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
             <div className="flex bg-zinc-900 border border-white/10 rounded-xl overflow-hidden">
               {(
                 [
-                  { key: 'trending', icon: TrendingUp, label: 'Trending' },
-                  { key: 'new', icon: Clock, label: 'New' },
-                  { key: 'top', icon: Star, label: 'Top' },
+                  { key: 'trending', icon: 'lucide:trending-up', label: 'Trending' },
+                  { key: 'new', icon: 'lucide:clock', label: 'New' },
+                  { key: 'top', icon: 'lucide:star', label: 'Top' },
                 ] as const
-              ).map(({ key, icon: Icon, label }) => (
+              ).map(({ key, icon, label }) => (
                 <button
                   key={key}
                   onClick={() => setSortBy(key)}
@@ -239,7 +229,7 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
                       : 'text-zinc-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon icon={icon} className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
@@ -259,7 +249,10 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
                   </option>
                 ))}
               </select>
-              <Filter className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+              <Icon
+                icon="lucide:filter"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none"
+              />
             </div>
           </div>
         </div>
@@ -267,11 +260,11 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
         {/* Prompts Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            <Icon icon="lucide:loader-2" className="w-8 h-8 animate-spin text-indigo-500" />
           </div>
         ) : filteredPrompts.length === 0 ? (
           <div className="text-center py-20 text-zinc-500">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <Icon icon="lucide:sparkles" className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <p className="text-lg">No prompts found</p>
             <p className="text-sm mt-2">
               {searchQuery ? 'Try a different search term.' : 'Be the first to share a prompt!'}
@@ -354,14 +347,15 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
                             : 'text-zinc-500 hover:text-pink-400'
                         }`}
                       >
-                        <Heart
+                        <Icon
+                          icon="lucide:heart"
                           className="w-3.5 h-3.5"
                           fill={likedIds.has(prompt.id) ? 'currentColor' : 'none'}
                         />
                         {prompt.likes}
                       </button>
                       <span className="flex items-center gap-1 text-xs text-zinc-500">
-                        <Eye className="w-3.5 h-3.5" />
+                        <Icon icon="lucide:eye" className="w-3.5 h-3.5" />
                         {prompt.views}
                       </span>
                     </div>
@@ -372,13 +366,13 @@ const PromptMarketplace: React.FC<PromptMarketplaceProps> = ({
                         className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-white transition-colors"
                         title="Copy prompt"
                       >
-                        <Copy className="w-3.5 h-3.5" />
+                        <Icon icon="lucide:copy" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleTryPrompt(prompt)}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium transition-colors"
                       >
-                        <Play className="w-3 h-3" />
+                        <Icon icon="lucide:play" className="w-3 h-3" />
                         Try It
                       </button>
                     </div>

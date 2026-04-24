@@ -1,23 +1,5 @@
+import { Icon } from '@iconify/react';
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Sparkles,
-  Loader2,
-  X,
-  Bot,
-  History as HistoryIcon,
-  MessageSquare,
-  Clock,
-  Copy,
-  RefreshCw,
-  Check,
-  ThumbsUp,
-  ThumbsDown,
-  ChevronDown,
-  RotateCcw,
-  Send,
-  Archive,
-  Share2,
-} from 'lucide-react';
 import { ChatMessage, CopilotDomain, ProjectVersion } from '../types.ts';
 import { useUI } from '@/lib/contexts/UIContext';
 
@@ -211,15 +193,15 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
   const canRegenerate = !isLoading && lastMessage?.role === 'model';
 
   return (
-    <div className="w-80 glass-panel border-l border-white/10 flex flex-col h-full shrink-0 font-sans relative overflow-hidden">
+    <div className="w-80 glass-panel border-l border-border/70 flex flex-col h-full shrink-0 font-sans relative overflow-hidden">
       {/* Indigo ambient glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none z-0" />
 
       {/* Panel Header */}
-      <div className="h-11 flex items-center gap-2 px-3 border-b border-white/10 shrink-0 relative z-10">
+      <div className="h-11 flex items-center gap-2 px-3 border-b border-border/70 shrink-0 relative z-10">
         {/* Title */}
         <div className="flex items-center gap-2 mr-auto">
-          <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
+          <Icon icon="lucide:sparkles" className="w-4 h-4 text-primary shrink-0" />
           <span className="text-sm font-semibold text-text">AI Copilot</span>
         </div>
 
@@ -229,24 +211,24 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
             onClick={() => setActiveTab('chat')}
             className={`text-xs px-2.5 py-1 transition-colors flex items-center gap-1.5 border-b-2 ${
               activeTab === 'chat'
-                ? 'border-indigo-500 text-indigo-400'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <MessageSquare className="w-3 h-3" />
+            <Icon icon="lucide:message-square" className="w-3 h-3" />
             Chat
           </button>
           <button
             onClick={() => setActiveTab('history')}
             className={`text-xs px-2.5 py-1 transition-colors flex items-center gap-1.5 border-b-2 ${
               activeTab === 'history'
-                ? 'border-indigo-500 text-indigo-400'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <HistoryIcon className="w-3 h-3" />
+            <Icon icon="lucide:history" className="w-3 h-3" />
             History
-            <span className="bg-white/5 border border-white/10 text-text-muted px-1 rounded-full text-[9px] font-mono">
+            <span className="bg-surface-hover border border-border text-text-muted px-1 rounded-full text-[9px] font-mono">
               {versions.length}
             </span>
           </button>
@@ -255,24 +237,24 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
         {/* Close button */}
         <button
           onClick={() => setIsCopilotOpen(false)}
-          className="text-text-muted hover:text-text transition-colors p-1 hover:bg-white/5 rounded-md ml-1"
+          className="text-text-muted hover:text-text transition-colors p-1 hover:bg-surface-hover rounded-md ml-1"
           title="Close Copilot"
           aria-label="Close AI Copilot"
         >
-          <X className="w-4 h-4" />
+          <Icon icon="lucide:x" className="w-4 h-4" />
         </button>
       </div>
 
       {/* Domain Selector */}
-      <div className="px-3 py-2 border-b border-white/10 shrink-0 relative z-10">
+      <div className="px-3 py-2 border-b border-border/70 shrink-0 relative z-10">
         <div className="relative">
           <button
             onClick={() => setShowDomainDropdown(!showDomainDropdown)}
             className="text-[10px] text-text-muted font-mono uppercase tracking-wider flex items-center gap-1 hover:text-text transition-colors"
           >
-            <Bot className="w-3 h-3 text-primary" />
+            <Icon icon="lucide:bot" className="w-3 h-3 text-primary" />
             Domain: {selectedDomain}
-            <ChevronDown className="w-3 h-3" />
+            <Icon icon="lucide:chevron-down" className="w-3 h-3" />
           </button>
 
           {showDomainDropdown && (
@@ -281,7 +263,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                 className="fixed inset-0 z-10"
                 onClick={() => setShowDomainDropdown(false)}
               ></div>
-              <div className="absolute top-full left-0 mt-1 w-36 rounded-lg shadow-md bg-[#0A0A0A] border border-white/10 z-20 py-1">
+              <div className="absolute top-full left-0 mt-1 w-36 rounded-lg shadow-md bg-surface border border-border z-20 py-1">
                 {DOMAINS.map((d) => (
                   <button
                     key={d}
@@ -301,158 +283,192 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto bg-black/20 relative z-10">
+      <div className="flex-1 overflow-hidden bg-background/25 relative z-10 flex flex-col min-h-0">
         {/* --- TAB: CHAT --- */}
-        {activeTab === 'chat' && (
-          <div
-            ref={scrollRef}
-            className="p-4 space-y-6 min-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border"
-          >
-            {messages.length === 0 && (
-              <div className="flex flex-col h-full min-h-[200px]">
-                <div className="flex-1 flex flex-col items-center justify-center text-text-muted text-xs gap-4 opacity-70">
-                  <Bot className="w-10 h-10 text-primary opacity-50" />
-                  <p>Describe your ML pipeline or system.</p>
-                  <span className="px-2 py-1 bg-surface border border-border rounded text-[10px]">
-                    Active Domain: {selectedDomain}
-                  </span>
+        {activeTab === 'chat' &&
+          (messages.length === 0 ? (
+            /* Empty state — flex-1 so it fills the Content Area height */
+            <div className="flex-1 flex flex-col p-4 min-h-0">
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-text-muted text-xs">
+                {/* Floating orb with orbiting particle */}
+                <div
+                  className="relative w-20 h-20 flex items-center justify-center"
+                  style={{ animation: 'float 4s ease-in-out infinite' }}
+                >
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background:
+                        'radial-gradient(circle, rgb(var(--accent)/0.25) 0%, transparent 70%)',
+                      animation: 'glowPulse 2s ease-in-out infinite',
+                    }}
+                  />
+                  <div
+                    className="w-14 h-14 rounded-full border border-accent/30 flex items-center justify-center"
+                    style={{
+                      background:
+                        'radial-gradient(circle at 35% 35%, rgb(var(--accent)/0.3), rgb(var(--primary)/0.15) 60%, transparent)',
+                    }}
+                  >
+                    <Icon icon="lucide:sparkles" className="w-6 h-6 text-accent/70" />
+                  </div>
+                  <div
+                    className="absolute w-2.5 h-2.5 rounded-full bg-primary/80 shadow-[0_0_6px_rgb(var(--primary)/0.8)]"
+                    style={{
+                      top: 'calc(50% - 5px)',
+                      left: 'calc(50% - 5px)',
+                      animation: 'orbit 4s linear infinite',
+                    }}
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-auto">
-                  {SUGGESTED_PROMPTS.map((txt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSubmit(txt)}
-                      className="px-3 py-2 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-md text-[10px] text-text-muted hover:text-text transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
-                    >
-                      {txt}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-center text-text-muted/70">
+                  Describe your system or architecture.
+                </p>
+                <span className="px-2 py-1 bg-surface border border-border rounded text-[10px] text-text-muted/60">
+                  Domain: {selectedDomain}
+                </span>
               </div>
-            )}
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col gap-1.5 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
-              >
+              <div className="grid grid-cols-2 gap-2">
+                {SUGGESTED_PROMPTS.map((txt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSubmit(txt)}
+                    className="px-3 py-2 text-left bg-surface border border-border hover:border-primary/50 hover:bg-surface-hover rounded-md text-[10px] text-text-muted hover:text-text transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                  >
+                    {txt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Messages list — scrollable */
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+              {messages.map((msg) => (
                 <div
-                  className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider ${msg.role === 'user' ? 'text-primary flex-row-reverse' : 'text-text-muted'}`}
+                  key={msg.id}
+                  className={`flex flex-col gap-1.5 max-w-[90%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}
                 >
-                  <span>{msg.role === 'user' ? 'You' : 'ArchiGram.ai'}</span>
-                </div>
+                  <div
+                    className={`flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider ${msg.role === 'user' ? 'text-primary flex-row-reverse' : 'text-text-muted'}`}
+                  >
+                    <span>{msg.role === 'user' ? 'You' : 'ArchiGram.ai'}</span>
+                  </div>
 
-                <div
-                  className={`
-                    p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm break-words max-w-full
-                    ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-sm shadow-lg shadow-indigo-500/20'
-                        : msg.isError
-                          ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-bl-sm'
-                          : 'bg-white/5 border border-white/10 text-gray-200 rounded-bl-sm'
-                    }
-                  `}
-                >
-                  {msg.text}
+                  <div
+                    className={`
+                      p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm break-words max-w-full
+                      ${
+                        msg.role === 'user'
+                          ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-sm shadow-lg shadow-indigo-500/20'
+                          : msg.isError
+                            ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-bl-sm'
+                            : 'bg-surface border border-border text-text rounded-bl-sm'
+                      }
+                    `}
+                  >
+                    {msg.text}
 
-                  {msg.codeSnapshot && (
-                    <div className="mt-3 rounded-xl overflow-hidden border border-white/10 bg-[#050505] shadow-xl">
-                      <div className="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/10">
-                        <span className="text-[10px] font-mono text-gray-400 tracking-wider uppercase">
-                          Suggestion
-                        </span>
+                    {msg.codeSnapshot && (
+                      <div className="mt-3 rounded-xl overflow-hidden border border-border bg-background shadow-xl">
+                        <div className="flex justify-between items-center px-3 py-1.5 bg-surface-hover border-b border-border">
+                          <span className="text-[10px] font-mono text-text-muted tracking-wider uppercase">
+                            Suggestion
+                          </span>
+                          <button
+                            onClick={() => handleCopyCode(msg.codeSnapshot ?? '', msg.id)}
+                            className="text-[10px] bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white border border-indigo-500/30 px-2 py-1 rounded transition-colors"
+                            title="Apply suggestion"
+                          >
+                            {justCopied === msg.id ? (
+                              <Icon icon="lucide:check" className="w-3 h-3 inline" />
+                            ) : (
+                              'Apply'
+                            )}
+                          </button>
+                        </div>
+                        <div className="p-3 overflow-x-auto">
+                          <pre className="text-xs font-mono text-primary whitespace-pre-wrap leading-relaxed">
+                            {msg.codeSnapshot.slice(0, 150)}...
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback & Share */}
+                  {msg.role === 'model' && !msg.isError && (
+                    <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleFeedback(msg.id, 'helpful')}
+                        className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
+                        title="Helpful"
+                        aria-label="Mark as helpful"
+                      >
+                        <Icon icon="lucide:thumbs-up" className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleFeedback(msg.id, 'unhelpful')}
+                        className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
+                        title="Unhelpful"
+                        aria-label="Mark as unhelpful"
+                      >
+                        <Icon icon="lucide:thumbs-down" className="w-3 h-3" />
+                      </button>
+                      {msg.codeSnapshot && onSharePrompt && (
                         <button
-                          onClick={() => handleCopyCode(msg.codeSnapshot ?? '', msg.id)}
-                          className="text-[10px] bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500 hover:text-white border border-indigo-500/30 px-2 py-1 rounded transition-colors"
-                          title="Apply suggestion"
+                          onClick={() => {
+                            const userMsg = messages
+                              .slice(0, messages.indexOf(msg))
+                              .reverse()
+                              .find((m) => m.role === 'user');
+                            if (userMsg) {
+                              onSharePrompt(userMsg.text, msg.codeSnapshot);
+                            }
+                          }}
+                          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-primary cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                          title="Share this prompt"
+                          aria-label="Share this prompt"
                         >
-                          {justCopied === msg.id ? <Check className="w-3 h-3 inline" /> : 'Apply'}
+                          <Icon icon="lucide:share-2" className="w-3 h-3" />
                         </button>
-                      </div>
-                      <div className="p-3 overflow-x-auto">
-                        <pre className="text-xs font-mono text-indigo-200 whitespace-pre-wrap leading-relaxed">
-                          {msg.codeSnapshot.slice(0, 150)}...
-                        </pre>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
+              ))}
 
-                {/* Feedback & Share */}
-                {msg.role === 'model' && !msg.isError && (
-                  <div className="flex gap-2 mt-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleFeedback(msg.id, 'helpful')}
-                      className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'helpful' ? 'text-green-500' : 'text-text-muted'}`}
-                      title="Helpful"
-                      aria-label="Mark as helpful"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => handleFeedback(msg.id, 'unhelpful')}
-                      className={`p-1 rounded hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${msg.feedback === 'unhelpful' ? 'text-red-500' : 'text-text-muted'}`}
-                      title="Unhelpful"
-                      aria-label="Mark as unhelpful"
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                    </button>
-                    {msg.codeSnapshot && onSharePrompt && (
-                      <button
-                        onClick={() => {
-                          const userMsg = messages
-                            .slice(0, messages.indexOf(msg))
-                            .reverse()
-                            .find((m) => m.role === 'user');
-                          if (userMsg) {
-                            onSharePrompt(userMsg.text, msg.codeSnapshot);
-                          }
-                        }}
-                        className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-primary cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
-                        title="Share this prompt"
-                        aria-label="Share this prompt"
-                      >
-                        <Share2 className="w-3 h-3" />
-                      </button>
-                    )}
+              {canRegenerate && (
+                <div className="flex justify-start pl-2">
+                  <button
+                    onClick={handleRegenerate}
+                    title="Regenerate response"
+                    className="flex items-center gap-1.5 text-[10px] font-medium text-text-muted hover:text-primary transition-colors py-1.5 px-2.5 rounded-lg hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+                  >
+                    <Icon icon="lucide:refresh-cw" className="w-3 h-3" />
+                    Regenerate
+                  </button>
+                </div>
+              )}
+
+              {isLoading && (
+                <div className="flex flex-col gap-2 max-w-[85%] mr-auto items-start animate-pulse">
+                  <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-indigo-400">
+                    <span>Generating</span>
                   </div>
-                )}
-              </div>
-            ))}
-
-            {canRegenerate && (
-              <div className="flex justify-start pl-2">
-                <button
-                  onClick={handleRegenerate}
-                  title="Regenerate response"
-                  className="flex items-center gap-1.5 text-[10px] font-medium text-text-muted hover:text-primary transition-colors py-1.5 px-2.5 rounded-lg hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Regenerate
-                </button>
-              </div>
-            )}
-
-            {isLoading && (
-              <div className="flex flex-col gap-2 max-w-[85%] mr-auto items-start animate-pulse">
-                <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-indigo-400">
-                  <span>Generating</span>
+                  <div className="bg-surface border border-border p-4 rounded-2xl rounded-bl-sm text-text text-sm flex items-center gap-3">
+                    <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin text-primary" />
+                    <span>Designing Pipeline...</span>
+                  </div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-bl-sm text-gray-300 text-sm flex items-center gap-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                  <span>Designing Pipeline...</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          ))}
 
         {/* --- TAB: HISTORY --- */}
         {activeTab === 'history' && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col flex-1 min-h-0">
             {/* Manual Save Button */}
-            <div className="p-3 border-b border-white/10 bg-white/5">
+            <div className="p-3 border-b border-border/70 bg-background/35">
               <button
                 onClick={() => {
                   if (snapshotSaving) return;
@@ -461,12 +477,12 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                   setTimeout(() => setSnapshotSaving(false), 1500);
                 }}
                 disabled={snapshotSaving}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-text transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-bold text-text transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 {snapshotSaving ? (
-                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                  <Icon icon="lucide:loader-2" className="w-3.5 h-3.5 text-primary animate-spin" />
                 ) : (
-                  <Archive className="w-3.5 h-3.5 text-primary" />
+                  <Icon icon="lucide:archive" className="w-3.5 h-3.5 text-primary" />
                 )}
                 {snapshotSaving ? 'Saving...' : 'Create Snapshot'}
               </button>
@@ -475,7 +491,7 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border p-4 space-y-4">
               {versions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs gap-3 opacity-60">
-                  <Clock className="w-8 h-8 opacity-20" />
+                  <Icon icon="lucide:clock" className="w-8 h-8 opacity-20" />
                   <p>No saved versions yet.</p>
                 </div>
               ) : (
@@ -529,7 +545,10 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                                 onClick={() => onRestoreVersion(version)}
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold bg-surface hover:bg-background border border-border rounded-lg transition-colors group/restore cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                               >
-                                <RotateCcw className="w-3 h-3 group-hover/restore:rotate-[-45deg] transition-transform" />
+                                <Icon
+                                  icon="lucide:rotate-ccw"
+                                  className="w-3 h-3 group-hover/restore:rotate-[-45deg] transition-transform"
+                                />
                                 Restore
                               </button>
                               <button
@@ -539,9 +558,9 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
                                 aria-label={justCopied === version.id ? 'Code copied' : 'Copy code'}
                               >
                                 {justCopied === version.id ? (
-                                  <Check className="w-3 h-3 text-green-500" />
+                                  <Icon icon="lucide:check" className="w-3 h-3 text-green-500" />
                                 ) : (
-                                  <Copy className="w-3 h-3" />
+                                  <Icon icon="lucide:copy" className="w-3 h-3" />
                                 )}
                               </button>
                             </div>
@@ -558,10 +577,10 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
 
       {/* Input Area (Only visible in Chat Tab) */}
       {activeTab === 'chat' && (
-        <div className="p-3 bg-[#050505]/80 border-t border-white/10 relative z-10">
+        <div className="p-3 bg-background/80 border-t border-border/70 relative z-10">
           <form
             onSubmit={handleSubmit}
-            className="flex items-end gap-2 bg-[#050505] border border-white/10 rounded-xl p-2 focus-within:border-indigo-500/50 focus-within:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all"
+            className="flex items-end gap-2 bg-surface border border-border rounded-xl p-2 focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgb(var(--primary)/0.12)] transition-all"
           >
             <textarea
               value={prompt}
@@ -580,12 +599,12 @@ const CopilotPanel: React.FC<CopilotPanelProps> = ({
             <button
               type="submit"
               disabled={isLoading || !prompt.trim()}
-              className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/5 disabled:text-gray-600 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/20 disabled:shadow-none mb-0.5"
+              className="p-2 bg-primary hover:bg-primary-hover disabled:bg-surface-hover disabled:text-text-dim text-white rounded-lg transition-all shadow-lg shadow-indigo-500/20 disabled:shadow-none mb-0.5"
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
               ) : (
-                <Send className="w-4 h-4" />
+                <Icon icon="lucide:send" className="w-4 h-4" />
               )}
             </button>
           </form>

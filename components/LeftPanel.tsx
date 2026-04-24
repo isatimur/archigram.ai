@@ -1,20 +1,7 @@
 'use client';
+import { Icon } from '@iconify/react';
 
 import React, { useState, useMemo } from 'react';
-import {
-  Plus,
-  Trash2,
-  Search,
-  Pencil,
-  LayoutTemplate,
-  Zap,
-  Globe,
-  Check,
-  ScanLine,
-  ChevronDown,
-  ChevronRight,
-  Box,
-} from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { TEMPLATES, ML_TEMPLATES, C4_TEMPLATES } from '../constants.ts';
 import { useUI } from '@/lib/contexts/UIContext';
@@ -71,7 +58,11 @@ const SectionHeader: React.FC<{
     aria-expanded={open}
   >
     <span className="text-text-dim group-hover:text-text-muted transition-colors">
-      {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+      {open ? (
+        <Icon icon="lucide:chevron-down" className="w-3 h-3" />
+      ) : (
+        <Icon icon="lucide:chevron-right" className="w-3 h-3" />
+      )}
     </span>
     {icon && <span className="shrink-0">{icon}</span>}
     <span className="font-mono text-[10px] uppercase tracking-[0.12em] font-semibold text-text-dim group-hover:text-text-muted transition-colors flex-1 text-left">
@@ -151,16 +142,16 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   };
 
   return (
-    <div className="w-60 h-full flex flex-col bg-[#0A0A0A]/95 backdrop-blur-xl border-r border-white/5 overflow-hidden">
+    <div className="w-60 h-full min-h-0 flex flex-col bg-surface/95 backdrop-blur-xl border-r border-border/70 overflow-hidden">
       {/* Top actions — always visible */}
       <div className="flex flex-col gap-1.5 px-2 pt-3 pb-2 shrink-0">
         {/* New Diagram — white button matching template */}
         <button
           onClick={onCreateProject}
-          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-md bg-white text-black hover:bg-gray-200 transition-all font-semibold text-xs w-full cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/50 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+          className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-md bg-text text-background hover:bg-text/90 transition-all font-semibold text-xs w-full cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm"
           aria-label="New Diagram"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Icon icon="lucide:plus" className="w-3.5 h-3.5" />
           <span>New Diagram</span>
         </button>
 
@@ -171,27 +162,33 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
           aria-label="Scan Image to Diagram"
         >
           <div className="w-5 h-5 rounded bg-surface-elevated border border-border flex items-center justify-center shrink-0">
-            <ScanLine className="w-3 h-3 text-text-muted group-hover:text-primary transition-colors" />
+            <Icon
+              icon="lucide:scan-line"
+              className="w-3 h-3 text-text-muted group-hover:text-primary transition-colors"
+            />
           </div>
           <span className="text-sm font-medium">Scan Image</span>
         </button>
 
         {/* Search */}
         <div className="relative group mt-0.5">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted group-focus-within:text-primary transition-colors pointer-events-none" />
+          <Icon
+            icon="lucide:search"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted group-focus-within:text-primary transition-colors pointer-events-none"
+          />
           <input
             type="text"
             placeholder="Search diagrams..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#050505] border border-white/10 rounded-md pl-8 pr-3 py-1.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+            className="w-full bg-background/80 border border-border rounded-md pl-8 pr-3 py-1.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
             aria-label="Search diagrams"
           />
         </div>
       </div>
 
       {/* Scrollable unified content */}
-      <div className="flex-1 overflow-y-auto pb-2">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-2">
         {/* PROJECTS */}
         <div className="mb-1">
           <SectionHeader
@@ -213,8 +210,8 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                     onClick={() => !isEditing && handleSelectProject(project.id)}
                     className={`group relative flex items-center gap-2.5 px-2 py-2 rounded-md cursor-pointer transition-all duration-150 ${
                       isActive
-                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        : 'text-text-muted hover:bg-white/5 hover:text-text border border-transparent'
+                        ? 'bg-primary/10 text-primary border border-primary/25'
+                        : 'text-text-muted hover:bg-surface-hover hover:text-text border border-transparent'
                     }`}
                     role="button"
                     tabIndex={0}
@@ -225,7 +222,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                   >
                     {/* Active indicator */}
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-500 rounded-r-full shadow-[0_0_8px_#3b82f6]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full shadow-[0_0_8px_rgb(var(--primary)/0.75)]" />
                     )}
 
                     {/* Gradient avatar — matches v2 solid gradient style */}
@@ -273,7 +270,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                           title="Rename"
                           aria-label="Rename"
                         >
-                          <Pencil className="w-3 h-3" />
+                          <Icon icon="lucide:pencil" className="w-3 h-3" />
                         </button>
                         {projects.length > 1 && (
                           <button
@@ -286,7 +283,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                             title="Delete"
                             aria-label="Delete"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Icon icon="lucide:trash-2" className="w-3 h-3" />
                           </button>
                         )}
                       </div>
@@ -302,7 +299,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                         className="p-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/50 shrink-0"
                         aria-label="Confirm rename"
                       >
-                        <Check className="w-3 h-3" />
+                        <Icon icon="lucide:check" className="w-3 h-3" />
                       </button>
                     )}
 
@@ -324,7 +321,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                     onClick={onCreateProject}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-md hover:bg-primary/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Icon icon="lucide:plus" className="w-3 h-3" />
                     Create first
                   </button>
                 </div>
@@ -337,13 +334,13 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-4 my-2" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mx-4 my-2" />
 
         {/* ML PIPELINES (WEDGE) */}
         <div className="mb-1">
           <SectionHeader
             label="ML Pipelines (Wedge)"
-            icon={<Zap className="w-3 h-3 text-amber-400" />}
+            icon={<Icon icon="lucide:zap" className="w-3 h-3 text-amber-400" />}
             open={showML}
             onToggle={() => setShowML((v) => !v)}
           />
@@ -356,7 +353,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                   className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-all text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                 >
                   <div className="w-5 h-5 rounded bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
-                    <Zap className="w-3 h-3 text-amber-400/70 group-hover:text-amber-400 transition-colors" />
+                    <Icon
+                      icon="lucide:zap"
+                      className="w-3 h-3 text-amber-400/70 group-hover:text-amber-400 transition-colors"
+                    />
                   </div>
                   <span className="text-xs font-medium truncate">{name}</span>
                 </button>
@@ -369,7 +369,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         <div className="mb-1">
           <SectionHeader
             label="C4 Model"
-            icon={<Box className="w-3 h-3 text-sky-400" />}
+            icon={<Icon icon="lucide:box" className="w-3 h-3 text-sky-400" />}
             open={showC4}
             onToggle={() => setShowC4((v) => !v)}
           />
@@ -382,7 +382,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                   className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-all text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                 >
                   <div className="w-5 h-5 rounded bg-sky-400/10 border border-sky-400/20 flex items-center justify-center shrink-0">
-                    <Box className="w-3 h-3 text-sky-400/70 group-hover:text-sky-400 transition-colors" />
+                    <Icon
+                      icon="lucide:box"
+                      className="w-3 h-3 text-sky-400/70 group-hover:text-sky-400 transition-colors"
+                    />
                   </div>
                   <span className="text-xs font-medium truncate">{name}</span>
                 </button>
@@ -395,7 +398,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         <div className="mb-1">
           <SectionHeader
             label="Templates"
-            icon={<LayoutTemplate className="w-3 h-3 text-text-muted" />}
+            icon={<Icon icon="lucide:layout-template" className="w-3 h-3 text-text-muted" />}
             open={showTemplates}
             onToggle={() => setShowTemplates((v) => !v)}
           />
@@ -408,7 +411,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                   className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-all text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
                 >
                   <div className="w-5 h-5 rounded bg-surface-elevated border border-border flex items-center justify-center shrink-0">
-                    <LayoutTemplate className="w-3 h-3 text-text-muted group-hover:text-primary transition-colors" />
+                    <Icon
+                      icon="lucide:layout-template"
+                      className="w-3 h-3 text-text-muted group-hover:text-primary transition-colors"
+                    />
                   </div>
                   <span className="text-xs font-medium truncate">{name}</span>
                 </button>
@@ -418,7 +424,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-4 my-2" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mx-4 my-2" />
 
         {/* Community */}
         <div className="px-2">
@@ -427,7 +433,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
             className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-all text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
           >
             <div className="w-5 h-5 rounded bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Globe className="w-3 h-3 text-primary/60 group-hover:text-primary transition-colors" />
+              <Icon
+                icon="lucide:globe"
+                className="w-3 h-3 text-primary/60 group-hover:text-primary transition-colors"
+              />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-medium text-text-muted group-hover:text-text transition-colors">
@@ -440,7 +449,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       </div>
 
       {/* Footer — user identity */}
-      <div className="border-t border-white/5 px-3 py-2.5 shrink-0">
+      <div className="border-t border-border/70 px-3 py-2.5 shrink-0 bg-background/35">
         <div className="flex items-center gap-2">
           {/* User avatar */}
           <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-[10px] font-bold text-white shrink-0 select-none">
@@ -461,7 +470,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
             aria-label="Collapse sidebar"
             className="p-1 rounded text-text-dim hover:text-text-muted hover:bg-surface-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 shrink-0"
           >
-            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+            <Icon icon="lucide:chevron-right" className="w-3.5 h-3.5 rotate-180" />
           </button>
         </div>
       </div>

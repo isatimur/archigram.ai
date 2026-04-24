@@ -1,5 +1,5 @@
+import { Icon } from '@iconify/react';
 import React, { useState } from 'react';
-import { X, Sparkles, Loader2 } from 'lucide-react';
 import { PromptDomain } from '../types.ts';
 import { publishPrompt } from '../services/supabaseClient.ts';
 import { analytics } from '../utils/analytics.ts';
@@ -77,14 +77,14 @@ const PublishPromptModal: React.FC<PublishPromptModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/5">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+            <Icon icon="lucide:sparkles" className="w-5 h-5 text-amber-400" />
             <h3 className="text-lg font-bold text-white">Share Prompt</h3>
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors"
           >
-            <X className="w-4 h-4" />
+            <Icon icon="lucide:x" className="w-4 h-4" />
           </button>
         </div>
 
@@ -173,12 +173,12 @@ const PublishPromptModal: React.FC<PublishPromptModalProps> = ({
           >
             {isPublishing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Icon icon="lucide:loader-2" className="w-4 h-4 animate-spin" />
                 Publishing...
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <Icon icon="lucide:sparkles" className="w-4 h-4" />
                 Publish Prompt
               </>
             )}
