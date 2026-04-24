@@ -1,41 +1,13 @@
-/**
- * Server-side Supabase client for Next.js.
- *
- * Use in Server Components, Route Handlers, and Server Actions.
- * Reads and writes session cookies to keep auth tokens fresh.
- * NEVER import this in 'use client' components.
- */
+import { createBrowserClient } from '@supabase/ssr';
 
-import { createServerClient as _createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-export async function createServerClient() {
-  const cookieStore = await cookies();
-  // Fall back to VITE_* names for Vercel projects that haven't renamed env vars yet
-  return _createServerClient(
+function createClient() {
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? process.env.VITE_SUPABASE_KEY ?? '',
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // setAll can throw in Server Components — acceptable since
-            // middleware handles session refresh.
-          }
-        },
-      },
-    }
+    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? process.env.VITE_SUPABASE_KEY ?? ''
   );
 }
 
-// ─── Server-only helper types ─────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PublicProfile = {
   id: string;
@@ -59,10 +31,10 @@ export type PublicDiagram = {
   created_at: string;
 };
 
-// ─── Profile queries (Phase 3) ────────────────────────────────────────────────
+// ─── Profile queries ──────────────────────────────────────────────────────────
 
 export async function getPublicProfile(username: string): Promise<PublicProfile | null> {
-  const supabase = await createServerClient();
+  const supabase = createClient();
   const { data } = await supabase
     .from('profiles')
     .select('id, username, bio, social_link, avatar_url, created_at')
@@ -87,7 +59,7 @@ export async function getUserPublishedDiagrams(
   userId: string,
   limit = 24
 ): Promise<PublicDiagram[]> {
-  const supabase = await createServerClient();
+  const supabase = createClient();
   const { data } = await supabase
     .from('community_diagrams')
     .select('id, title, description, code, tags, likes, views, created_at')
@@ -98,7 +70,7 @@ export async function getUserPublishedDiagrams(
 }
 
 export async function getServerUser() {
-  const supabase = await createServerClient();
+  const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
